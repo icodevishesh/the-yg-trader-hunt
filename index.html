@@ -19,6 +19,46 @@
   input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid #c6fb3e; outline-offset: 3px; }
   ::selection { background: #c6fb3e; color: #0c0e0d; }
   input::placeholder { color: #6c7a72; }
+
+  .how-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  @media (max-width: 767px) {
+    .how-grid {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+    .how-item {
+      padding: 24px 16px !important;
+    }
+    .how-item:nth-child(1),
+    .how-item:nth-child(3) {
+      border-right: 1px solid #232925 !important;
+    }
+    .how-item:nth-child(2),
+    .how-item:nth-child(4) {
+      border-right: none !important;
+    }
+    .how-item:nth-child(1),
+    .how-item:nth-child(2) {
+      border-bottom: 1px solid #232925 !important;
+    }
+    .how-item:nth-child(3),
+    .how-item:nth-child(4) {
+      border-bottom: none !important;
+    }
+    .how-item h3 {
+      font-size: 16px !important;
+      margin-top: 12px !important;
+    }
+    .prize-card-1 {
+      padding: 36px 28px 16px 28px !important;
+      border-right: none !important;
+      border-bottom: 1px solid #232925 !important;
+    }
+    .prize-card-2 {
+      padding: 24px 28px 36px 28px !important;
+    }
+  }
 </style>
 </helmet>
 
@@ -93,12 +133,12 @@
   </section>
 
   <section id="prize" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); border-bottom: 1px solid #232925; background: #11150f;">
-    <div style="padding: 56px 28px; border-right: 1px solid #232925;">
+    <div class="prize-card-1" style="padding: 56px 28px; border-right: 1px solid #232925;">
       <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">The prize</div>
       <div style="font-size: clamp(48px, 6vw, 80px); font-weight: 500; letter-spacing: -0.045em; line-height: 1; margin-top: 20px; color: #c6fb3e;">$2,000</div>
       <div style="font-size: 17px; line-height: 1.55; color: #9aa5a0; margin-top: 16px; max-width: 26ch;">Cash Reward, paid by me to the winner.</div>
     </div>
-    <div style="padding: 56px 28px;">
+    <div class="prize-card-2" style="padding: 56px 28px;">
       <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Plus</div>
       <div style="font-size: clamp(48px, 6vw, 80px); font-weight: 500; letter-spacing: -0.045em; line-height: 1; margin-top: 20px;">7 days</div>
       <div style="font-size: 17px; line-height: 1.55; color: #9aa5a0; margin-top: 16px; max-width: 30ch;">Trading live at my desk — travel and stay sponsored.</div>
@@ -107,20 +147,20 @@
 
   <section id="how" style="border-bottom: 1px solid #232925;">
     <div style="padding: 24px 28px; border-bottom: 1px solid #232925; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">How it works</div>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
-      <div style="padding: 36px 28px; border-right: 1px solid #232925;">
+    <div class="how-grid" style="display: grid;">
+      <div class="how-item" style="padding: 36px 28px; border-right: 1px solid #232925;">
         <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">01</div>
         <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25;">Open your account<br>under my link</h3>
       </div>
-      <div style="padding: 36px 28px; border-right: 1px solid #232925;">
+      <div class="how-item" style="padding: 36px 28px; border-right: 1px solid #232925;">
         <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">02</div>
         <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25;">Deposit<br>from $100</h3>
       </div>
-      <div style="padding: 36px 28px; border-right: 1px solid #232925;">
+      <div class="how-item" style="padding: 36px 28px; border-right: 1px solid #232925;">
         <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">03</div>
         <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25;">Register<br>your entry</h3>
       </div>
-      <div style="padding: 36px 28px;">
+      <div class="how-item" style="padding: 36px 28px;">
         <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">04</div>
         <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25;">Trade<br>for seven days</h3>
       </div>
@@ -130,12 +170,9 @@
   <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); border-bottom: 1px solid #232925;">
     <div style="padding: 56px 28px; border-right: 1px solid #232925; display: flex; flex-direction: column; gap: 28px;">
       <h2 style="margin: 0; font-weight: 600; font-size: clamp(26px, 3.2vw, 38px); line-height: 1.1; letter-spacing: -0.035em;">Start here — the account must be under my link.</h2>
-      <a href="https://partners.elefin.com/go/YASH" target="_blank" rel="noopener" style="display: block; background: #c6fb3e; color: #0c0e0d; padding: 26px 28px;" style-hover="background: #d6ff6b; color: #0c0e0d;">
-        <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; opacity: 0.7;">Open account on Elefin</div>
-        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-top: 12px;">
-          <span style="font-weight: 600; font-size: clamp(17px, 1.8vw, 22px); letter-spacing: -0.02em; word-break: break-all;">partners.elefin.com/go/YASH</span>
-          <span style="font-weight: 400; font-size: 22px;">→</span>
-        </div>
+      <a href="https://partners.elefin.com/go/YASH" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; justify-content: space-between; gap: 16px; background: #c6fb3e; color: #0c0e0d; padding: 26px 28px; text-decoration: none; width: fit-content;" style-hover="background: #d6ff6b; color: #0c0e0d;">
+        <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em;">Open account on Elefin</div>
+        <span style="font-weight: 400; font-size: 22px;">→</span>
       </a>
       <div style="font-size: 14px; line-height: 1.6; color: #6c7a72;">Entries I can't verify are disqualified.</div>
     </div>
