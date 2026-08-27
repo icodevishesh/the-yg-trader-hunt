@@ -1,0 +1,25 @@
+{
+  "name": "yg-trader-hunt-competition",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/icodevishesh/the-yg-trader-hunt.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/icodevishesh/the-yg-trader-hunt/issues"
+  },
+  "homepage": "https://github.com/icodevishesh/the-yg-trader-hunt#readme",
+  "dependencies": {
+    "express": "^4.22.2"
+  }
+}
