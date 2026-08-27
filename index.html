@@ -278,7 +278,7 @@
   </footer>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;deadline&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;2026-09-13T23:59:00&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Competition&quot;},&quot;submitLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Lock in my entry&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;},&quot;formEndpoint&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://script.google.com/macros/s/AKfycbzYt2idW8bANWiWpTHv-msMVZn6_o95dhE0H1CLJsprgahOliIXngALkiDsP1b9Ozs39w/exec&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;deadline&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;2026-09-13T23:59:00&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Competition&quot;},&quot;submitLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Lock in my entry&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;},&quot;formEndpoint&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://script.google.com/macros/s/AKfycbwhRZFia2ghXEO3LunEH_0sUlYpmQSfY2hI-p4HP4gI1nIvkPofYjrQVYFZL4HKN4Gi/exec&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;}}">
 class Component extends DCLogic {
   state = { name: "", phone: "", email: "", capital: "", agree: false, errors: {}, submitted: false, now: Date.now() };
 
@@ -329,7 +329,7 @@ class Component extends DCLogic {
         ev.preventDefault();
         const errors = this.validate();
         if (Object.keys(errors).length) { this.setState({ errors }); return; }
-        const endpoint = this.props.formEndpoint || window.YG_FORM_ENDPOINT || "https://script.google.com/macros/s/AKfycbzYt2idW8bANWiWpTHv-msMVZn6_o95dhE0H1CLJsprgahOliIXngALkiDsP1b9Ozs39w/exec";
+        const endpoint = this.props.formEndpoint || window.YG_FORM_ENDPOINT || "https://script.google.com/macros/s/AKfycbwhRZFia2ghXEO3LunEH_0sUlYpmQSfY2hI-p4HP4gI1nIvkPofYjrQVYFZL4HKN4Gi/exec";
         if (endpoint) {
           const body = new URLSearchParams();
           body.append("name", this.state.name);
