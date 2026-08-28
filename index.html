@@ -60,6 +60,35 @@
     .prize-card-2 {
       padding: 24px 24px 32px 24px !important;
     }
+    .hero-section {
+      display: flex !important;
+      flex-direction: column !important;
+    }
+    .hero-image-col {
+      order: 1 !important;
+      border-bottom: 1px solid #232925 !important;
+    }
+    .hero-image-col > div:first-child {
+      min-height: 380px !important;
+      height: 380px !important;
+    }
+    .hero-image-col > div:nth-child(2) {
+      min-height: 0 !important;
+      height: auto !important;
+    }
+    .hero-img {
+      object-position: 58% 10% !important;
+      transform: scale(1.18) !important;
+      transform-origin: 58% 10% !important;
+    }
+    .hero-content-col {
+      order: 2 !important;
+      border-right: none !important;
+      padding-top: 40px !important;
+    }
+    .how-header, .section-label {
+      font-size: 13px !important;
+    }
   }
   @media (max-width: 600px) {
     .how-grid {
@@ -86,8 +115,8 @@
     <a href="https://partners.elefin.com/go/YASH" target="_blank" rel="noopener" style="display: flex; align-items: center; gap: 10px; background: #c6fb3e; color: #0c0e0d; padding: 0 28px; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;" style-hover="background: #d6ff6b; color: #0c0e0d;">Open Elefin account →</a>
   </header>
 
-  <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); border-bottom: 1px solid #232925;">
-    <div style="padding: 72px 28px 0; display: flex; flex-direction: column; gap: 32px; border-right: 1px solid #232925;">
+  <section class="hero-section" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); border-bottom: 1px solid #232925;">
+    <div class="hero-content-col" style="padding: 72px 28px 0; display: flex; flex-direction: column; gap: 32px; border-right: 1px solid #232925;">
       <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">One week · One winner</div>
       <h1 style="margin: 0; font-weight: 600; font-size: clamp(42px, 5.6vw, 78px); line-height: 1.0; letter-spacing: -0.04em;">Get a Chance to<br>Win <span style="color: #c6fb3e;">$2,000</span><br>& spend a week<br>trading with me.</h1>
       <p style="margin: 0; max-width: 34ch; font-size: 18px; line-height: 1.55; color: #9aa5a0;">The top 5 traders by percentage profit get shortlisted then one winner is drawn at random from those five.</p>
@@ -96,7 +125,7 @@
         <a href="#rules" style="display: inline-flex; align-items: center; gap: 10px; border: 1px solid #3a423d; color: #edf2ee; padding: 16px 30px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em;" style-hover="border-color: #c6fb3e; color: #c6fb3e;">Rules</a>
       </div>
       <div style="border-top: 1px solid #232925; padding: 24px 28px; margin-top: auto; margin-left: -28px; margin-right: -28px;">
-        <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Key competition stats</div>
+        <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Key competition stats</div>
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px;">
           <div>
             <div style="font-size: clamp(24px, 2.4vw, 32px); font-weight: 400; line-height: 1; letter-spacing: -0.03em;">$100</div>
@@ -114,16 +143,16 @@
       </div>
     </div>
 
-    <div style="display: flex; flex-direction: column;">
+    <div class="hero-image-col" style="display: flex; flex-direction: column;">
       <div style="position: relative; flex: 1; min-height: 440px; overflow: hidden; background: #141816;">
-        <img src="assets/yash.jpg" alt="Yash Gupta" style="width: 100%; height: 100%; object-fit: cover; object-position: center top; filter: grayscale(1) contrast(1.06) brightness(0.92);">
+        <img class="hero-img" src="assets/yash.jpg" alt="Yash Gupta" style="width: 100%; height: 100%; object-fit: cover; object-position: 58% top; filter: grayscale(1) contrast(1.06) brightness(0.92);">
         <div style="position: absolute; inset: auto 0 0 0; padding: 20px 24px; background: linear-gradient(to top, rgba(12,14,13,0.95), rgba(12,14,13,0));">
-          <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">Host</div>
+          <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">Host</div>
           <div style="font-size: 20px; font-weight: 600; letter-spacing: -0.02em; margin-top: 6px;">Yash Gupta</div>
         </div>
       </div>
-      <!-- <div style="border-top: 1px solid #232925; padding: 24px 28px;">
-        <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Registration closes in</div>
+      <div style="border-top: 1px solid #232925; padding: 24px 28px;">
+        <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Registration closes in</div>
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px;">
           <div>
             <div style="font-size: clamp(24px, 2.4vw, 32px); font-weight: 400; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums;">{{ cdDays }}</div>
@@ -142,7 +171,7 @@
             <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #6c7a72; margin-top: 8px;">Sec</div>
           </div>
         </div>
-      </div> -->
+      </div>
     </div>
   </section>
 
@@ -150,19 +179,19 @@
   <!-- Section 2 -->
   <section id="prize" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); border-bottom: 1px solid #232925; background: #11150f;">
     <div class="prize-card-1" style="padding: 56px 28px; border-right: 1px solid #232925;">
-      <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">The prize</div>
+      <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">The prize</div>
       <div style="font-size: clamp(48px, 6vw, 80px); font-weight: 500; letter-spacing: -0.045em; line-height: 1; margin-top: 20px; color: #c6fb3e;">$2,000</div>
       <div style="font-size: 17px; line-height: 1.55; color: #9aa5a0; margin-top: 16px; max-width: 26ch;">Cash Reward, paid by me to the winner.</div>
     </div>
     <div class="prize-card-2" style="padding: 56px 28px;">
-      <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Plus</div>
+      <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Plus</div>
       <div style="font-size: clamp(48px, 6vw, 80px); font-weight: 500; letter-spacing: -0.045em; line-height: 1; margin-top: 20px;">7 days</div>
       <div style="font-size: 17px; line-height: 1.55; color: #9aa5a0; margin-top: 16px; max-width: 30ch;">Trading live at my desk — travel and stay sponsored.</div>
     </div>
   </section>
 
   <section id="how" style="border-bottom: 1px solid #232925;">
-    <div style="padding: 24px 28px; border-bottom: 1px solid #232925; display: flex; align-items: center; justify-content: space-between; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">
+    <div class="how-header" style="padding: 24px 28px; border-bottom: 1px solid #232925; display: flex; align-items: center; justify-content: space-between; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">
       <span>How it works</span>
     </div>
     <div class="how-grid" style="display: grid;">
@@ -205,17 +234,17 @@
     </div>
   </section>
 
-  <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); border-bottom: 1px solid #232925;">
-    <div style="padding: 56px 28px; border-right: 1px solid #232925; display: flex; flex-direction: column; gap: 28px;">
-      <h2 style="margin: 0; font-weight: 600; font-size: clamp(26px, 3.2vw, 38px); line-height: 1.1; letter-spacing: -0.035em;">Start here — the account must be under my referral.</h2>
-      <a href="https://partners.elefin.com/go/YASH" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; justify-content: space-between; gap: 16px; background: #c6fb3e; color: #0c0e0d; padding: 26px 28px; text-decoration: none; width: fit-content;" style-hover="background: #d6ff6b; color: #0c0e0d;">
+  <section style="border-bottom: 1px solid #232925;">
+    <div style="padding: 56px 28px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 24px;">
+      <h2 style="margin: 0; font-weight: 600; font-size: clamp(26px, 3.2vw, 38px); line-height: 1.1; letter-spacing: -0.035em; max-width: 32ch;">Start here — the account must be under my referral.</h2>
+      <a href="https://partners.elefin.com/go/YASH" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; justify-content: center; gap: 16px; background: #c6fb3e; color: #0c0e0d; padding: 22px 36px; text-decoration: none; width: fit-content;" style-hover="background: #d6ff6b; color: #0c0e0d;">
         <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em;">Open account on Elefin</div>
         <span style="font-weight: 400; font-size: 22px;">→</span>
       </a>
       <div style="font-size: 14px; line-height: 1.6; color: #6c7a72;">Entries I can't verify will be disqualified.</div>
     </div>
-    <div id="rules" style="padding: 56px 28px;">
-      <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Rules</div>
+    <!-- <div id="rules" style="padding: 56px 28px;">
+      <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Rules</div>
       <div style="display: flex; flex-direction: column; margin-top: 20px;">
         <div style="padding: 18px 0; border-top: 1px solid #232925; font-size: 16px; line-height: 1.5; color: #c3ccc7;">Top 5 by percentage profit are shortlisted; the winner is drawn at random <br/>from them.</div>
         <div style="padding: 18px 0; border-top: 1px solid #232925; font-size: 16px; line-height: 1.5; color: #c3ccc7;">Scored on percentage return — every account size competes equally.</div>
@@ -223,12 +252,12 @@
         <div style="padding: 18px 0; border-top: 1px solid #232925; font-size: 16px; line-height: 1.5; color: #c3ccc7;">Your account, your trades. No copy trading, no shared logins.</div>
         <div style="padding: 18px 0; border-top: 1px solid #232925; border-bottom: 1px solid #232925; font-size: 16px; line-height: 1.5; color: #c3ccc7;">All positions closed by the deadline; results verified on statements.</div>
       </div>
-    </div>
+    </div> -->
   </section>
 
   <section id="enter" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); border-bottom: 1px solid #232925;">
     <div style="padding: 56px 28px; border-right: 1px solid #232925; display: flex; flex-direction: column; gap: 20px;">
-      <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">Entry form</div>
+      <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">Entry form</div>
       <h2 style="margin: 0; font-weight: 600; font-size: clamp(30px, 3.8vw, 48px); line-height: 1.05; letter-spacing: -0.04em;">Put your name in the hunt.</h2>
       <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #9aa5a0; max-width: 32ch;">Under a minute. Use the same name and email as your Elefin account.</p>
     </div>
@@ -369,7 +398,7 @@
       <p style="margin: 0; max-width: 56ch; font-size: 12px; line-height: 1.7; color: #6c7a72;">Trading leveraged products carries high risk and can cost you all of your deposit. You trade your own account and are responsible for your results — nothing here is advice or a promise of profit. Prize awarded on verified statements.</p>
     </div>
     <div style="padding: 40px 28px; display: flex; flex-direction: column; gap: 14px;">
-      <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Follow</div>
+      <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Follow</div>
       <div style="display: flex; flex-wrap: wrap; gap: 12px;">
         <a href="https://www.instagram.com/iiamyashgupta" target="_blank" rel="noopener" aria-label="Instagram — @iiamyashgupta" title="Instagram — @iiamyashgupta" style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 1px solid #3a423d; color: #edf2ee;" style-hover="border-color: #c6fb3e; color: #c6fb3e;">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
@@ -386,7 +415,7 @@
   </footer>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;deadline&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;2026-09-13T23:59:00&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Competition&quot;},&quot;submitLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Lock in my entry&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;},&quot;formEndpoint&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://script.google.com/macros/s/AKfycbwhRZFia2ghXEO3LunEH_0sUlYpmQSfY2hI-p4HP4gI1nIvkPofYjrQVYFZL4HKN4Gi/exec&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;deadline&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;2026-09-02T23:59:00&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Competition&quot;},&quot;submitLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Lock in my entry&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;},&quot;formEndpoint&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://script.google.com/macros/s/AKfycbwhRZFia2ghXEO3LunEH_0sUlYpmQSfY2hI-p4HP4gI1nIvkPofYjrQVYFZL4HKN4Gi/exec&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;}}">
 class Component extends DCLogic {
   state = { name: "", phone: "", email: "", capital: "", agree: false, errors: {}, submitted: false, showModal: false, now: Date.now() };
 
@@ -405,8 +434,8 @@ class Component extends DCLogic {
   }
 
   deadline() {
-    const d = new Date(this.props.deadline ?? "2026-09-13T23:59:00");
-    return isNaN(d) ? new Date("2026-09-13T23:59:00") : d;
+    const d = new Date(this.props.deadline ?? "2026-09-02T23:59:00");
+    return isNaN(d) ? new Date("2026-09-02T23:59:00") : d;
   }
 
   validate() {
