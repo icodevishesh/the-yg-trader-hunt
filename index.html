@@ -21,42 +21,56 @@
   input::placeholder { color: #6c7a72; }
 
   .how-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
-  @media (max-width: 767px) {
+  @media (max-width: 900px) {
     .how-grid {
       grid-template-columns: repeat(2, 1fr) !important;
     }
     .how-item {
-      padding: 24px 16px !important;
+      padding: 28px 20px !important;
     }
-    .how-item:nth-child(1),
-    .how-item:nth-child(3) {
+    .how-grid > *:nth-child(1) .how-item,
+    .how-grid > *:nth-child(3) .how-item,
+    .how-grid > *:nth-child(5) .how-item {
       border-right: 1px solid #232925 !important;
     }
-    .how-item:nth-child(2),
-    .how-item:nth-child(4) {
+    .how-grid > *:nth-child(2) .how-item,
+    .how-grid > *:nth-child(4) .how-item,
+    .how-grid > *:nth-child(6) .how-item {
       border-right: none !important;
     }
-    .how-item:nth-child(1),
-    .how-item:nth-child(2) {
+    .how-grid > *:nth-child(1) .how-item,
+    .how-grid > *:nth-child(2) .how-item,
+    .how-grid > *:nth-child(3) .how-item,
+    .how-grid > *:nth-child(4) .how-item {
       border-bottom: 1px solid #232925 !important;
     }
-    .how-item:nth-child(3),
-    .how-item:nth-child(4) {
+    .how-grid > *:nth-child(5) .how-item,
+    .how-grid > *:nth-child(6) .how-item {
       border-bottom: none !important;
     }
-    .how-item h3 {
-      font-size: 16px !important;
-      margin-top: 12px !important;
-    }
+  }
+  @media (max-width: 767px) {
     .prize-card-1 {
-      padding: 36px 28px 16px 28px !important;
+      padding: 32px 24px 20px 24px !important;
       border-right: none !important;
       border-bottom: 1px solid #232925 !important;
     }
     .prize-card-2 {
-      padding: 24px 28px 36px 28px !important;
+      padding: 24px 24px 32px 24px !important;
+    }
+  }
+  @media (max-width: 600px) {
+    .how-grid {
+      grid-template-columns: 1fr !important;
+    }
+    .how-item {
+      border-right: none !important;
+      border-bottom: 1px solid #232925 !important;
+    }
+    .how-grid > *:last-child .how-item {
+      border-bottom: none !important;
     }
   }
 </style>
@@ -74,9 +88,9 @@
 
   <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); border-bottom: 1px solid #232925;">
     <div style="padding: 72px 28px 0; display: flex; flex-direction: column; gap: 32px; border-right: 1px solid #232925;">
-      <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">One week · Real capital · One winner</div>
+      <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">One week · One winner</div>
       <h1 style="margin: 0; font-weight: 600; font-size: clamp(42px, 5.6vw, 78px); line-height: 1.0; letter-spacing: -0.04em;">Get a Chance to<br>Win <span style="color: #c6fb3e;">$2,000</span><br>& spend a week<br>trading with me.</h1>
-      <p style="margin: 0; max-width: 34ch; font-size: 18px; line-height: 1.55; color: #9aa5a0;">Highest percentage return on your own account takes the prize.</p>
+      <p style="margin: 0; max-width: 34ch; font-size: 18px; line-height: 1.55; color: #9aa5a0;">The top 5 traders by percentage profit get shortlisted then one winner is drawn at random from those five.</p>
       <div style="display: flex; flex-wrap: wrap; gap: 12px;">
         <a href="#enter" style="display: inline-flex; align-items: center; gap: 10px; background: #c6fb3e; color: #0c0e0d; padding: 17px 30px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em;" style-hover="background: #d6ff6b; color: #0c0e0d;">Enter now →</a>
         <a href="#rules" style="display: inline-flex; align-items: center; gap: 10px; border: 1px solid #3a423d; color: #edf2ee; padding: 16px 30px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em;" style-hover="border-color: #c6fb3e; color: #c6fb3e;">Rules</a>
@@ -108,7 +122,7 @@
           <div style="font-size: 20px; font-weight: 600; letter-spacing: -0.02em; margin-top: 6px;">Yash Gupta</div>
         </div>
       </div>
-      <div style="border-top: 1px solid #232925; padding: 24px 28px;">
+      <!-- <div style="border-top: 1px solid #232925; padding: 24px 28px;">
         <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Registration closes in</div>
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px;">
           <div>
@@ -128,10 +142,12 @@
             <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #6c7a72; margin-top: 8px;">Sec</div>
           </div>
         </div>
-      </div>
+      </div> -->
     </div>
   </section>
 
+
+  <!-- Section 2 -->
   <section id="prize" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); border-bottom: 1px solid #232925; background: #11150f;">
     <div class="prize-card-1" style="padding: 56px 28px; border-right: 1px solid #232925;">
       <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">The prize</div>
@@ -146,44 +162,66 @@
   </section>
 
   <section id="how" style="border-bottom: 1px solid #232925;">
-    <div style="padding: 24px 28px; border-bottom: 1px solid #232925; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">How it works</div>
+    <div style="padding: 24px 28px; border-bottom: 1px solid #232925; display: flex; align-items: center; justify-content: space-between; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">
+      <span>How it works</span>
+    </div>
     <div class="how-grid" style="display: grid;">
-      <div class="how-item" style="padding: 36px 28px; border-right: 1px solid #232925;">
-        <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">01</div>
-        <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25;">Open your account<br>under my link</h3>
+      <a href="https://partners.elefin.com/go/YASH" target="_blank" rel="noopener" style="text-decoration: none; color: inherit; display: block;">
+        <div class="how-item" style="padding: 38px 28px; border-right: 1px solid #232925; border-bottom: 1px solid #232925; height: 100%; transition: all 0.15s ease; position: relative;" style-hover="background: rgba(198, 251, 62, 0.06); outline: 1px solid #c6fb3e; outline-offset: -1px; z-index: 1;">
+          <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">STEP 1</div>
+          <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25; color: #edf2ee;">Open an account</h3>
+          <p style="margin: 12px 0 0; font-size: 14px; line-height: 1.55; color: #9aa5a0;">Sign up on Elefin using my link.<br>Takes 5 minutes.</p>
+        </div>
+      </a>
+      <div class="how-item" style="padding: 38px 28px; border-right: 1px solid #232925; border-bottom: 1px solid #232925;">
+        <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">STEP 2</div>
+        <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25; color: #edf2ee;">Add money</h3>
+        <p style="margin: 12px 0 0; font-size: 14px; line-height: 1.55; color: #9aa5a0;">Deposit at least $100. The money<br>stays yours.</p>
       </div>
-      <div class="how-item" style="padding: 36px 28px; border-right: 1px solid #232925;">
-        <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">02</div>
-        <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25;">Deposit<br>from $100</h3>
+      <div class="how-item" onClick="{{ openModal }}" style="padding: 38px 28px; border-bottom: 1px solid #232925; cursor: pointer; transition: all 0.15s ease; position: relative;" style-hover="background: rgba(198, 251, 62, 0.06); outline: 1px solid #c6fb3e; outline-offset: -1px; z-index: 1;">        <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">STEP 3</div>
+        <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25; color: #edf2ee;">Fill the form</h3>
+        <p style="margin: 12px 0 0; font-size: 14px; line-height: 1.55; color: #9aa5a0;">Send me your details here so I<br>know you're in.</p>
       </div>
-      <div class="how-item" style="padding: 36px 28px; border-right: 1px solid #232925;">
-        <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">03</div>
-        <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25;">Register<br>your entry</h3>
+      <div class="how-item" style="padding: 38px 28px; border-right: 1px solid #232925;">
+        <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">STEP 4</div>
+        <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25; color: #edf2ee;">Trade for 7 days</h3>
+        <p style="margin: 12px 0 0; font-size: 14px; line-height: 1.55; color: #9aa5a0;">Grow your account as much as<br>you can, in %.</p>
       </div>
-      <div class="how-item" style="padding: 36px 28px;">
-        <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">04</div>
-        <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25;">Trade<br>for seven days</h3>
+      <div class="how-item" style="padding: 38px 28px; border-right: 1px solid #232925;">
+        <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">STEP 5</div>
+        <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25; color: #edf2ee;">We pick the top 5</h3>
+        <p style="margin: 12px 0 0; font-size: 14px; line-height: 1.55; color: #9aa5a0;">My team checks every account<br>and names the 5 highest %.</p>
+      </div>
+      <div class="how-item" style="padding: 38px 28px;">
+        <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">STEP 6</div>
+        <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25; color: #edf2ee;">One winner is drawn</h3>
+        <p style="margin: 12px 0 0; font-size: 14px; line-height: 1.55; color: #9aa5a0;">A random pick from those 5 wins<br>$2,000 and the week with me.</p>
+      </div>
+      <div class="how-item-final" style="grid-column: 1 / -1; padding: 48px 28px; border-top: 1px solid #232925; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #11150f;">
+        <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em; text-transform: uppercase;">Final Step</div>
+        <h3 style="margin: 14px 0 0; font-weight: 600; font-size: clamp(22px, 2.5vw, 30px); letter-spacing: -0.02em; line-height: 1.25; color: #edf2ee;">The Winner Is Announced</h3>
+        <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6; color: #9aa5a0; max-width: 48ch;">The winner will get a chance to trade with me for 7 days — travel and stay sponsored.</p>
       </div>
     </div>
   </section>
 
   <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); border-bottom: 1px solid #232925;">
     <div style="padding: 56px 28px; border-right: 1px solid #232925; display: flex; flex-direction: column; gap: 28px;">
-      <h2 style="margin: 0; font-weight: 600; font-size: clamp(26px, 3.2vw, 38px); line-height: 1.1; letter-spacing: -0.035em;">Start here — the account must be under my link.</h2>
+      <h2 style="margin: 0; font-weight: 600; font-size: clamp(26px, 3.2vw, 38px); line-height: 1.1; letter-spacing: -0.035em;">Start here — the account must be under my referral.</h2>
       <a href="https://partners.elefin.com/go/YASH" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; justify-content: space-between; gap: 16px; background: #c6fb3e; color: #0c0e0d; padding: 26px 28px; text-decoration: none; width: fit-content;" style-hover="background: #d6ff6b; color: #0c0e0d;">
         <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em;">Open account on Elefin</div>
         <span style="font-weight: 400; font-size: 22px;">→</span>
       </a>
-      <div style="font-size: 14px; line-height: 1.6; color: #6c7a72;">Entries I can't verify are disqualified.</div>
+      <div style="font-size: 14px; line-height: 1.6; color: #6c7a72;">Entries I can't verify will be disqualified.</div>
     </div>
     <div id="rules" style="padding: 56px 28px;">
       <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Rules</div>
       <div style="display: flex; flex-direction: column; margin-top: 20px;">
+        <div style="padding: 18px 0; border-top: 1px solid #232925; font-size: 16px; line-height: 1.5; color: #c3ccc7;">Top 5 by percentage profit are shortlisted; the winner is drawn at random <br/>from them.</div>
         <div style="padding: 18px 0; border-top: 1px solid #232925; font-size: 16px; line-height: 1.5; color: #c3ccc7;">Scored on percentage return — every account size competes equally.</div>
         <div style="padding: 18px 0; border-top: 1px solid #232925; font-size: 16px; line-height: 1.5; color: #c3ccc7;">Min $100 deposit, verified Elefin account under my referral.</div>
         <div style="padding: 18px 0; border-top: 1px solid #232925; font-size: 16px; line-height: 1.5; color: #c3ccc7;">Your account, your trades. No copy trading, no shared logins.</div>
-        <div style="padding: 18px 0; border-top: 1px solid #232925; font-size: 16px; line-height: 1.5; color: #c3ccc7;">All positions closed by the deadline; results verified on statements.</div>
-        <div style="padding: 18px 0; border-top: 1px solid #232925; border-bottom: 1px solid #232925; font-size: 16px; line-height: 1.5; color: #c3ccc7;">My decision is final.</div>
+        <div style="padding: 18px 0; border-top: 1px solid #232925; border-bottom: 1px solid #232925; font-size: 16px; line-height: 1.5; color: #c3ccc7;">All positions closed by the deadline; results verified on statements.</div>
       </div>
     </div>
   </section>
@@ -252,6 +290,76 @@
     </div>
   </section>
 
+  <!-- Step 3 Pop-up Modal -->
+  <sc-if value="{{ showModal }}" hint-placeholder-val="{{ false }}">
+    <div style="position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0, 0, 0, 0.82); backdrop-filter: blur(8px);">
+      <div style="position: absolute; inset: 0;" onClick="{{ closeModal }}"></div>
+      <div style="position: relative; z-index: 1001; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; background: #11150f; border: 1px solid #232925; box-shadow: 0 24px 60px rgba(0,0,0,0.85); padding: 40px 32px;">
+        <button type="button" onClick="{{ closeModal }}" aria-label="Close modal" style="position: absolute; top: 20px; right: 20px; background: transparent; border: 0; color: #9aa5a0; font-size: 22px; cursor: pointer; line-height: 1; padding: 6px 10px;" style-hover="color: #c6fb3e;">✕</button>
+
+        <div style="margin-bottom: 28px;">
+          <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">Entry form</div>
+          <h2 style="margin: 8px 0 0; font-weight: 600; font-size: clamp(24px, 3.2vw, 36px); line-height: 1.05; letter-spacing: -0.04em;">Put your name in the hunt.</h2>
+          <p style="margin: 8px 0 0; font-size: 14px; line-height: 1.55; color: #9aa5a0;">Under a minute. Use the same name and email as your Elefin account.</p>
+        </div>
+
+        <sc-if value="{{ submitted }}" hint-placeholder-val="{{ false }}">
+          <div style="border: 1px solid #3a423d; padding: 32px 24px;">
+            <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">Entry received</div>
+            <h3 style="margin: 16px 0 12px; font-weight: 600; font-size: clamp(20px, 2.5vw, 28px); letter-spacing: -0.03em;">You're in, {{ firstName }}.</h3>
+            <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.6; color: #9aa5a0;">I'll verify your account and message you with the start time.</p>
+            <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+              <a href="https://t.me/YashGuptaTrader" target="_blank" rel="noopener" style="background: #c6fb3e; color: #0c0e0d; padding: 14px 22px; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.14em;" style-hover="background: #d6ff6b; color: #0c0e0d;">Join the Telegram →</a>
+              <button type="button" onClick="{{ reset }}" style="border: 1px solid #3a423d; background: transparent; color: #edf2ee; padding: 13px 22px; font-family: inherit; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.14em; cursor: pointer;" style-hover="border-color: #c6fb3e; color: #c6fb3e;">Another entry</button>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ notSubmitted }}" hint-placeholder-val="{{ true }}">
+          <form onSubmit="{{ onSubmit }}" style="display: grid; gap: 24px;">
+            <div style="display: grid; gap: 8px;">
+              <label for="yg-modal-name" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #9aa5a0;">Name <span style="color: #c6fb3e;">*</span></label>
+              <input id="yg-modal-name" type="text" value="{{ name }}" onChange="{{ onName }}" placeholder="Full name" style="width: 100%; padding: 12px 0; font-family: inherit; font-size: 16px; color: #edf2ee; background: transparent; border: 0; border-bottom: 1px solid #3a423d; border-radius: 0;">
+              <sc-if value="{{ errName }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size: 13px; color: #ff8a6b;">{{ errName }}</div>
+              </sc-if>
+            </div>
+            <div style="display: grid; gap: 8px;">
+              <label for="yg-modal-phone" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #9aa5a0;">WhatsApp number <span style="color: #c6fb3e;">*</span></label>
+              <input id="yg-modal-phone" type="tel" value="{{ phone }}" onChange="{{ onPhone }}" placeholder="+91 98765 43210" style="width: 100%; padding: 12px 0; font-family: inherit; font-size: 16px; color: #edf2ee; background: transparent; border: 0; border-bottom: 1px solid #3a423d; border-radius: 0;">
+              <sc-if value="{{ errPhone }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size: 13px; color: #ff8a6b;">{{ errPhone }}</div>
+              </sc-if>
+            </div>
+            <div style="display: grid; gap: 8px;">
+              <label for="yg-modal-email" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #9aa5a0;">Email <span style="color: #c6fb3e;">*</span></label>
+              <input id="yg-modal-email" type="email" value="{{ email }}" onChange="{{ onEmail }}" placeholder="you@email.com" style="width: 100%; padding: 12px 0; font-family: inherit; font-size: 16px; color: #edf2ee; background: transparent; border: 0; border-bottom: 1px solid #3a423d; border-radius: 0;">
+              <sc-if value="{{ errEmail }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size: 13px; color: #ff8a6b;">{{ errEmail }}</div>
+              </sc-if>
+            </div>
+            <div style="display: grid; gap: 8px;">
+              <label for="yg-modal-capital" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #9aa5a0;">Capital deposited <span style="color: #6c7a72;">(optional)</span></label>
+              <div style="display: flex; border-bottom: 1px solid #3a423d;">
+                <span style="display: flex; align-items: center; padding-right: 10px; font-size: 16px; color: #6c7a72;">$</span>
+                <input id="yg-modal-capital" type="number" min="100" step="10" value="{{ capital }}" onChange="{{ onCapital }}" placeholder="100" style="flex: 1; padding: 12px 0; font-family: inherit; font-size: 16px; color: #edf2ee; background: transparent; border: 0; border-radius: 0;">
+              </div>
+            </div>
+            <label for="yg-modal-agree" style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer; font-size: 13px; line-height: 1.55; color: #9aa5a0;">
+              <input id="yg-modal-agree" type="checkbox" checked="{{ agree }}" onChange="{{ onAgree }}" style="width: 18px; height: 18px; accent-color: #c6fb3e; margin: 2px 0 0; flex: 0 0 auto;">
+              <span>My account is under Yash's referral link and I accept the rules.</span>
+            </label>
+            <sc-if value="{{ errAgree }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size: 13px; color: #ff8a6b; margin-top: -16px;">{{ errAgree }}</div>
+            </sc-if>
+            <button type="submit" style="display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; background: #c6fb3e; color: #0c0e0d; border: 0; padding: 18px 24px; font-family: inherit; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.16em; cursor: pointer;" style-hover="background: #d6ff6b; color: #0c0e0d;">
+              <span>{{ submitLabel }}</span><span style="font-size: 18px; letter-spacing: 0;">→</span>
+            </button>
+          </form>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
   <footer style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
     <div style="padding: 40px 28px; border-right: 1px solid #232925; display: flex; flex-direction: column; gap: 16px;">
       <div style="display: flex; align-items: center; gap: 12px;">
@@ -280,12 +388,21 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;deadline&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;2026-09-13T23:59:00&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Competition&quot;},&quot;submitLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Lock in my entry&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;},&quot;formEndpoint&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://script.google.com/macros/s/AKfycbwhRZFia2ghXEO3LunEH_0sUlYpmQSfY2hI-p4HP4gI1nIvkPofYjrQVYFZL4HKN4Gi/exec&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;}}">
 class Component extends DCLogic {
-  state = { name: "", phone: "", email: "", capital: "", agree: false, errors: {}, submitted: false, now: Date.now() };
+  state = { name: "", phone: "", email: "", capital: "", agree: false, errors: {}, submitted: false, showModal: false, now: Date.now() };
 
   componentDidMount() {
     this.timer = setInterval(() => this.setState({ now: Date.now() }), 1000);
+    this.handleKeyDown = (e) => {
+      if (e.key === "Escape" && this.state.showModal) {
+        this.setState({ showModal: false });
+      }
+    };
+    window.addEventListener("keydown", this.handleKeyDown);
   }
-  componentWillUnmount() { clearInterval(this.timer); }
+  componentWillUnmount() {
+    clearInterval(this.timer);
+    window.removeEventListener("keydown", this.handleKeyDown);
+  }
 
   deadline() {
     const d = new Date(this.props.deadline ?? "2026-09-13T23:59:00");
@@ -317,6 +434,9 @@ class Component extends DCLogic {
       capital: this.state.capital, agree: this.state.agree,
       errName: err.name || "", errPhone: err.phone || "", errEmail: err.email || "", errAgree: err.agree || "",
       submitted: this.state.submitted, notSubmitted: !this.state.submitted,
+      showModal: this.state.showModal,
+      openModal: () => this.setState({ showModal: true }),
+      closeModal: () => this.setState({ showModal: false }),
       firstName: (this.state.name.trim().split(/\s+/)[0] || "trader"),
       submitLabel: this.props.submitLabel ?? "Lock in my entry",
       onName: (ev) => this.setState({ name: ev.target.value }),
