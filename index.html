@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html>
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KBF1CF5CM4"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-KBF1CF5CM4');
+</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="./support.js"></script>
@@ -122,7 +131,7 @@
       <p style="margin: 0; max-width: 34ch; font-size: 18px; line-height: 1.55; color: #9aa5a0;">The top 5 traders by percentage profit get shortlisted then one winner is drawn at random from those five.</p>
       <div style="display: flex; flex-wrap: wrap; gap: 12px;">
         <a href="#enter" style="display: inline-flex; align-items: center; gap: 10px; background: #c6fb3e; color: #0c0e0d; padding: 17px 30px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em;" style-hover="background: #d6ff6b; color: #0c0e0d;">Enter now →</a>
-        <a href="#rules" style="display: inline-flex; align-items: center; gap: 10px; border: 1px solid #3a423d; color: #edf2ee; padding: 16px 30px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em;" style-hover="border-color: #c6fb3e; color: #c6fb3e;">Rules</a>
+        <!-- <a href="#rules" style="display: inline-flex; align-items: center; gap: 10px; border: 1px solid #3a423d; color: #edf2ee; padding: 16px 30px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em;" style-hover="border-color: #c6fb3e; color: #c6fb3e;">Rules</a> -->
       </div>
       <div style="border-top: 1px solid #232925; padding: 24px 28px; margin-top: auto; margin-left: -28px; margin-right: -28px;">
         <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Key competition stats</div>
@@ -344,6 +353,7 @@
           </div>
         </sc-if>
         <sc-if value="{{ notSubmitted }}" hint-placeholder-val="{{ true }}">
+
           <form onSubmit="{{ onSubmit }}" style="display: grid; gap: 24px;">
             <div style="display: grid; gap: 8px;">
               <label for="yg-modal-name" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #9aa5a0;">Name <span style="color: #c6fb3e;">*</span></label>

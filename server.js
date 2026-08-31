@@ -5,6 +5,10 @@ const PORT = process.env.PORT || 3005;
 
 app.use(express.static(path.join(__dirname)));
 
+app.get('/form', (req, res) => {
+  res.sendFile(path.join(__dirname, 'form.html'));
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });

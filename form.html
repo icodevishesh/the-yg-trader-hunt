@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KBF1CF5CM4"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-KBF1CF5CM4');
+</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entry Form — The YG Trader Hunt</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700&display=swap">
+<style>
+  body { margin: 0; background: #0c0e0d; color: #edf2ee; font-family: "Archivo", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  * { box-sizing: border-box; }
+  a { color: #c6fb3e; text-decoration: none; }
+  a:hover { color: #edf2ee; }
+  input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid #c6fb3e; outline-offset: 3px; }
+  ::selection { background: #c6fb3e; color: #0c0e0d; }
+  input::placeholder { color: #6c7a72; }
+</style>
+</helmet>
+
+<div style="max-width: 1280px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; background: #0c0e0d;">
+
+  <!-- <header style="position: sticky; top: 0; z-index: 20; display: flex; align-items: stretch; justify-content: space-between; gap: 16px; background: rgba(12,14,13,0.94); backdrop-filter: blur(8px); border-bottom: 1px solid #232925;">
+    <a href="index.html" style="display: flex; align-items: center; gap: 12px; padding: 18px 28px; color: #edf2ee; text-decoration: none;">
+      <span style="display: inline-block; width: 8px; height: 8px; background: #c6fb3e;"></span>
+      <span style="font-weight: 600; letter-spacing: 0.16em; font-size: 11px; text-transform: uppercase;">The YG Trader Hunt</span>
+    </a>
+    <a href="index.html" style="display: flex; align-items: center; gap: 10px; border-left: 1px solid #232925; color: #edf2ee; padding: 0 28px; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;" style-hover="color: #c6fb3e;">← Back to Home</a>
+  </header> -->
+
+  <main style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 60px 20px;">
+    <div style="width: 100%; max-width: 580px; background: #11150f; border: 1px solid #232925; box-shadow: 0 24px 60px rgba(0,0,0,0.85); padding: 48px 36px;">
+      
+      <div style="margin-bottom: 32px;">
+        <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">Entry form</div>
+        <h1 style="margin: 8px 0 0; font-weight: 600; font-size: clamp(26px, 3.5vw, 38px); line-height: 1.05; letter-spacing: -0.04em;">Put your name in the hunt.</h1>
+        <p style="margin: 10px 0 0; font-size: 14px; line-height: 1.55; color: #9aa5a0;">Under a minute. Use the same name and email as your Elefin account.</p>
+      </div>
+
+      <sc-if value="{{ submitted }}" hint-placeholder-val="{{ false }}">
+        <div style="border: 1px solid #3a423d; padding: 32px 24px;">
+          <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">Entry received</div>
+          <h2 style="margin: 16px 0 12px; font-weight: 600; font-size: clamp(20px, 2.5vw, 28px); letter-spacing: -0.03em;">You're in, {{ firstName }}.</h2>
+          <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.6; color: #9aa5a0;">I'll verify your account and message you with the start time.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+            <a href="https://t.me/YashGuptaTrader" target="_blank" rel="noopener" style="background: #c6fb3e; color: #0c0e0d; padding: 14px 22px; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.14em;" style-hover="background: #d6ff6b; color: #0c0e0d;">Join the Telegram →</a>
+            <button type="button" onClick="{{ reset }}" style="border: 1px solid #3a423d; background: transparent; color: #edf2ee; padding: 13px 22px; font-family: inherit; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.14em; cursor: pointer;" style-hover="border-color: #c6fb3e; color: #c6fb3e;">Another entry</button>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ notSubmitted }}" hint-placeholder-val="{{ true }}">
+        <form onSubmit="{{ onSubmit }}" style="display: grid; gap: 24px;">
+          <div style="display: grid; gap: 8px;">
+            <label for="yg-modal-name" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #9aa5a0;">Name <span style="color: #c6fb3e;">*</span></label>
+            <input id="yg-modal-name" type="text" value="{{ name }}" onChange="{{ onName }}" placeholder="Full name" style="width: 100%; padding: 12px 0; font-family: inherit; font-size: 16px; color: #edf2ee; background: transparent; border: 0; border-bottom: 1px solid #3a423d; border-radius: 0;">
+            <sc-if value="{{ errName }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size: 13px; color: #ff8a6b;">{{ errName }}</div>
+            </sc-if>
+          </div>
+          <div style="display: grid; gap: 8px;">
+            <label for="yg-modal-phone" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #9aa5a0;">WhatsApp number <span style="color: #c6fb3e;">*</span></label>
+            <input id="yg-modal-phone" type="tel" value="{{ phone }}" onChange="{{ onPhone }}" placeholder="+91 98765 43210" style="width: 100%; padding: 12px 0; font-family: inherit; font-size: 16px; color: #edf2ee; background: transparent; border: 0; border-bottom: 1px solid #3a423d; border-radius: 0;">
+            <sc-if value="{{ errPhone }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size: 13px; color: #ff8a6b;">{{ errPhone }}</div>
+            </sc-if>
+          </div>
+          <div style="display: grid; gap: 8px;">
+            <label for="yg-modal-email" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #9aa5a0;">Email <span style="color: #c6fb3e;">*</span></label>
+            <input id="yg-modal-email" type="email" value="{{ email }}" onChange="{{ onEmail }}" placeholder="you@email.com" style="width: 100%; padding: 12px 0; font-family: inherit; font-size: 16px; color: #edf2ee; background: transparent; border: 0; border-bottom: 1px solid #3a423d; border-radius: 0;">
+            <sc-if value="{{ errEmail }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size: 13px; color: #ff8a6b;">{{ errEmail }}</div>
+            </sc-if>
+          </div>
+          <div style="display: grid; gap: 8px;">
+            <label for="yg-modal-capital" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #9aa5a0;">Capital deposited <span style="color: #6c7a72;">(optional)</span></label>
+            <div style="display: flex; border-bottom: 1px solid #3a423d;">
+              <span style="display: flex; align-items: center; padding-right: 10px; font-size: 16px; color: #6c7a72;">$</span>
+              <input id="yg-modal-capital" type="number" min="100" step="10" value="{{ capital }}" onChange="{{ onCapital }}" placeholder="100" style="flex: 1; padding: 12px 0; font-family: inherit; font-size: 16px; color: #edf2ee; background: transparent; border: 0; border-radius: 0;">
+            </div>
+          </div>
+          <label for="yg-modal-agree" style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer; font-size: 13px; line-height: 1.55; color: #9aa5a0;">
+            <input id="yg-modal-agree" type="checkbox" checked="{{ agree }}" onChange="{{ onAgree }}" style="width: 18px; height: 18px; accent-color: #c6fb3e; margin: 2px 0 0; flex: 0 0 auto;">
+            <span>My account is under Yash's referral link and I accept the rules.</span>
+          </label>
+          <sc-if value="{{ errAgree }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size: 13px; color: #ff8a6b; margin-top: -16px;">{{ errAgree }}</div>
+          </sc-if>
+          <button type="submit" style="display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; background: #c6fb3e; color: #0c0e0d; border: 0; padding: 18px 24px; font-family: inherit; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.16em; cursor: pointer;" style-hover="background: #d6ff6b; color: #0c0e0d;">
+            <span>{{ submitLabel }}</span><span style="font-size: 18px; letter-spacing: 0;">→</span>
+          </button>
+        </form>
+      </sc-if>
+    </div>
+  </main>
+
+  <!-- <footer style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); border-top: 1px solid #232925;">
+    <div style="padding: 40px 28px; border-right: 1px solid #232925; display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="display: inline-block; width: 8px; height: 8px; background: #c6fb3e;"></span>
+        <span style="font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em;">The YG Trader Hunt</span>
+      </div>
+      <p style="margin: 0; max-width: 56ch; font-size: 12px; line-height: 1.7; color: #6c7a72;">Trading leveraged products carries high risk and can cost you all of your deposit. You trade your own account and are responsible for your results — nothing here is advice or a promise of profit. Prize awarded on verified statements.</p>
+    </div>
+    <div style="padding: 40px 28px; display: flex; flex-direction: column; gap: 14px;">
+      <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Follow</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+        <a href="https://www.instagram.com/iiamyashgupta" target="_blank" rel="noopener" aria-label="Instagram — @iiamyashgupta" title="Instagram — @iiamyashgupta" style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 1px solid #3a423d; color: #edf2ee;" style-hover="border-color: #c6fb3e; color: #c6fb3e;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+        </a>
+        <a href="https://t.me/YashGuptaTrader" target="_blank" rel="noopener" aria-label="Telegram — YashGuptaTrader" title="Telegram — YashGuptaTrader" style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 1px solid #3a423d; color: #edf2ee;" style-hover="border-color: #c6fb3e; color: #c6fb3e;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg>
+        </a>
+        <a href="https://www.youtube.com/@iamyashgupta" target="_blank" rel="noopener" aria-label="YouTube — @iamyashgupta" title="YouTube — @iamyashgupta" style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 1px solid #3a423d; color: #edf2ee;" style-hover="border-color: #c6fb3e; color: #c6fb3e;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"></path><path d="m10 15 5-3-5-3z"></path></svg>
+        </a>
+      </div>
+      <div style="font-size: 11px; color: #4f5a54; margin-top: 8px;">© 2026 Yash Gupta. Elefin link is a partner referral.</div>
+    </div>
+  </footer> -->
+</div>
+</x-dc>
+
+<script type="text/x-dc" data-dc-script data-props="{&quot;submitLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Lock in my entry&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;},&quot;formEndpoint&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://script.google.com/macros/s/AKfycbwhRZFia2ghXEO3LunEH_0sUlYpmQSfY2hI-p4HP4gI1nIvkPofYjrQVYFZL4HKN4Gi/exec&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;}}">
+class Component extends DCLogic {
+  state = { name: "", phone: "", email: "", capital: "", agree: false, errors: {}, submitted: false };
+
+  validate() {
+    const e = {};
+    if (!this.state.name.trim()) e.name = "Please enter your name.";
+    const digits = this.state.phone.replace(/[^0-9]/g, "");
+    if (!digits) e.phone = "Please enter your WhatsApp number.";
+    else if (digits.length < 8) e.phone = "That number looks too short.";
+    if (!this.state.email.trim()) e.email = "Please enter your email.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(this.state.email.trim())) e.email = "Please enter a valid email address.";
+    if (!this.state.agree) e.agree = "Please confirm your account and the rules.";
+    return e;
+  }
+
+  renderVals() {
+    const err = this.state.errors;
+    return {
+      name: this.state.name, phone: this.state.phone, email: this.state.email,
+      capital: this.state.capital, agree: this.state.agree,
+      errName: err.name || "", errPhone: err.phone || "", errEmail: err.email || "", errAgree: err.agree || "",
+      submitted: this.state.submitted, notSubmitted: !this.state.submitted,
+      firstName: (this.state.name.trim().split(/\s+/)[0] || "trader"),
+      submitLabel: this.props.submitLabel ?? "Lock in my entry",
+      onName: (ev) => this.setState({ name: ev.target.value }),
+      onPhone: (ev) => this.setState({ phone: ev.target.value }),
+      onEmail: (ev) => this.setState({ email: ev.target.value }),
+      onCapital: (ev) => this.setState({ capital: ev.target.value }),
+      onAgree: (ev) => this.setState({ agree: ev.target.checked }),
+      reset: () => this.setState({ name: "", phone: "", email: "", capital: "", agree: false, errors: {}, submitted: false }),
+      onSubmit: (ev) => {
+        ev.preventDefault();
+        const errors = this.validate();
+        if (Object.keys(errors).length) { this.setState({ errors }); return; }
+        const endpoint = this.props.formEndpoint || window.YG_FORM_ENDPOINT || "https://script.google.com/macros/s/AKfycbwhRZFia2ghXEO3LunEH_0sUlYpmQSfY2hI-p4HP4gI1nIvkPofYjrQVYFZL4HKN4Gi/exec";
+        if (endpoint) {
+          const body = new URLSearchParams();
+          body.append("name", this.state.name);
+          body.append("phone", this.state.phone);
+          body.append("email", this.state.email);
+          body.append("capital", this.state.capital || "N/A");
+          body.append("timestamp", new Date().toLocaleString());
+          try {
+            fetch(endpoint, {
+              method: "POST",
+              mode: "no-cors",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: body
+            });
+          } catch (e) {
+            console.error("Form submit error:", e);
+          }
+        } else {
+          console.warn("Form submission skipped: formEndpoint is empty. Please configure your Google Apps Script Web App URL.");
+        }
+        this.setState({ errors: {}, submitted: true });
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>
