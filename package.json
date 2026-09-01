@@ -5,6 +5,10 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "import:participants": "node scripts/import-participants.js",
+    "import:participants:sample": "node scripts/import-participants.js --sample",
+    "refresh": "node scripts/refresh-once.js",
+    "refresh:mock": "MOCK_ELEFIN=1 node scripts/refresh-once.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -20,6 +24,9 @@
   },
   "homepage": "https://github.com/icodevishesh/the-yg-trader-hunt#readme",
   "dependencies": {
-    "express": "^4.22.2"
+    "dotenv": "^16.4.7",
+    "express": "^4.22.2",
+    "mongodb": "^6.12.0",
+    "node-cron": "^3.0.3"
   }
 }

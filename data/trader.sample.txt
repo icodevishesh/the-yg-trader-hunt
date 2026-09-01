@@ -1,0 +1,16 @@
+Timestamp	Name	Phone	Email	Capital	Whatsapp Message	Call Done	Status	amit remarks
+03/09/2026 10:00:00	Aarav Mehta	9800000001	aarav.mehta@example.com	500	yes	yes	Pending
+03/09/2026 10:05:00	Diya Sharma	9800000002	diya.sharma@example.com	250	yes	yes	Pending
+03/09/2026 10:06:00	Diya Sharma	9800000002	diya.sharma@example.com	250			Duplicate Lead
+03/09/2026 10:10:00	Kabir Nair	9800000003	kabir.nair@example.com	1000	yes	yes	Pending	hot lead
+03/09/2026 10:15:00	Ananya Rao	9800000004	ananya.rao@example.com	300	yes	no	Pending
+03/09/2026 10:20:00	Vivaan Gupta	9800000005	vivaan.gupta@example.com	100	yes	yes	Pending
+03/09/2026 10:25:00	Ishaan Verma	9800000006	ishaan.verma@example.com	200	yes	yes	Pending	INR account
+03/09/2026 10:30:00	Saanvi Iyer	9800000007	saanvi.iyer@example.com	400	yes	yes	Pending
+03/09/2026 10:35:00	Reyansh Khan	9800000008	reyansh.khan@example.com	150	yes	yes	Pending
+03/09/2026 10:40:00	Myra Joshi	9800000009	myra.joshi@example.com	600	yes	yes	Pending
+03/09/2026 10:45:00	Aditya Bose	9800000010	aditya.bose@example.com	100	yes	no	Pending	funded, not trading yet
+03/09/2026 10:50:00	Zara Malik	9800000011	zara.malik@example.com	50	yes	no	Pending	small deposit
+03/09/2026 10:55:00	Kian Dutta	9800000012	kian.dutta@example.com	N/A	yes	no	Pending	not opened under referral
+03/09/2026 11:00:00	Anika Reddy	9800000013	anika.reddy@example.com	300	yes	yes	Pending	not matched
+03/09/2026 11:05:00	Bad Row	9800000014	bad@gmail.con	100			Pending	malformed email

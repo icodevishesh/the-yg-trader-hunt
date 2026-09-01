@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-KBF1CF5CM4"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-KBF1CF5CM4');
+</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leaderboard — The YG Trader Hunt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700&display=swap">
+<style>
+  :root {
+    --bg: #0c0e0d; --surface: #11150f; --text: #edf2ee; --lime: #c6fb3e; --lime-hi: #d6ff6b;
+    --divider: #232925; --border: #3a423d; --muted: #9aa5a0; --dim: #6c7a72; --dimmer: #4f5a54;
+    --neg: #ff8a6b; --amber: #f0c14b;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: "Archivo", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: var(--lime); text-decoration: none; }
+  a:hover { color: var(--text); }
+  ::selection { background: var(--lime); color: var(--bg); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
+
+  .wrap { max-width: 1280px; margin: 0 auto; background: var(--bg); border-left: 1px solid var(--divider); border-right: 1px solid var(--divider); min-height: 100vh; }
+
+  .hdr { position: sticky; top: 0; z-index: 20; display: flex; align-items: stretch; justify-content: space-between; gap: 8px; background: rgba(12,14,13,0.94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--divider); }
+  .hdr-brand { display: flex; align-items: center; gap: 12px; padding: 18px 28px; color: var(--text); }
+  .hdr-brand span.dot { width: 8px; height: 8px; background: var(--lime); display: inline-block; }
+  .hdr-brand span.name { font-weight: 600; letter-spacing: 0.16em; font-size: 11px; text-transform: uppercase; }
+  .hdr-nav { display: flex; align-items: stretch; margin-left: auto; }
+  .hdr-nav a { display: flex; align-items: center; padding: 0 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); border-left: 1px solid var(--divider); }
+  .hdr-nav a:hover { color: var(--text); }
+  .hdr-nav a.active { color: var(--lime); }
+  .hdr-cta { display: flex; align-items: center; gap: 10px; background: var(--lime); color: var(--bg); padding: 0 24px; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; }
+  .hdr-cta:hover { background: var(--lime-hi); color: var(--bg); }
+
+  .strip { padding: 64px 28px 40px; border-bottom: 1px solid var(--divider); }
+  .kicker { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: var(--lime); }
+  h1.title { margin: 20px 0 0; font-weight: 600; font-size: clamp(40px, 5vw, 68px); line-height: 1.0; letter-spacing: -0.04em; }
+  .sub { margin: 20px 0 0; max-width: 52ch; font-size: 17px; line-height: 1.55; color: var(--muted); }
+
+  .status { margin-top: 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .status .item { display: flex; align-items: center; gap: 8px; }
+  .status .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); opacity: 0.35; }
+  .status .live-dot.on { animation: pulse 1s ease-in-out infinite; opacity: 1; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
+  .status b { color: var(--text); font-weight: 600; }
+  .status .refresh { background: transparent; border: 1px solid var(--border); color: var(--text); font-family: inherit; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; padding: 7px 14px; cursor: pointer; }
+  .status .refresh:hover { border-color: var(--lime); color: var(--lime); }
+  .status .refresh[disabled] { opacity: 0.5; cursor: default; }
+  .tag-mock { border: 1px solid var(--amber); color: var(--amber); font-size: 9px; font-weight: 700; letter-spacing: 0.16em; padding: 3px 8px; text-transform: uppercase; }
+
+  .notice { margin: 0; padding: 14px 28px; border-bottom: 1px solid var(--divider); font-size: 13px; display: flex; gap: 10px; align-items: center; }
+  .notice.stale { background: rgba(240,193,75,0.08); color: var(--amber); }
+
+  /* Podium */
+  .podium { display: grid; grid-template-columns: 1fr; border-bottom: 1px solid var(--divider); }
+  .pcell { padding: 36px 28px; border-bottom: 1px solid var(--divider); display: flex; flex-direction: column; gap: 10px; }
+  .pcell:last-child { border-bottom: none; }
+  .pcell .medal { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: var(--dim); }
+  .pcell .rank-num { font-weight: 400; font-size: clamp(44px, 6vw, 72px); line-height: 0.9; letter-spacing: -0.04em; }
+  .pcell .pname { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+  .pcell .pret { font-size: clamp(24px, 3vw, 34px); font-weight: 500; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  .pcell .pmeta { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .pos { color: var(--lime); }
+  .neg { color: var(--neg); }
+  @media (min-width: 768px) {
+    .podium { grid-template-columns: repeat(3, 1fr); }
+    .pcell { border-bottom: none; border-right: 1px solid var(--divider); }
+    .pcell:last-child { border-right: none; }
+    .pcell:nth-child(1) { order: 2; border-top: 3px solid var(--lime); background: rgba(198,251,62,0.06); }
+    .pcell:nth-child(2) { order: 1; }
+    .pcell:nth-child(3) { order: 3; }
+  }
+
+  /* Table */
+  .tbl-head { padding: 20px 28px; border-bottom: 1px solid var(--divider); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: var(--dim); display: flex; justify-content: space-between; }
+  .tbl-scroll { overflow-x: auto; }
+  table.board { width: 100%; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
+  table.board thead th { background: var(--bg); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--dim); text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--divider); white-space: nowrap; }
+  table.board tbody td { padding: 16px 16px; border-bottom: 1px solid var(--divider); font-size: 14px; }
+  table.board tbody tr:hover { background: rgba(198,251,62,0.05); }
+  table.board .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.board td.rk { color: var(--dim); width: 48px; }
+  .trader { display: flex; align-items: center; gap: 10px; }
+  .trader .tname { font-weight: 500; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tid { display: block; margin-top: 3px; font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .sl-tag { font-size: 8px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lime); border: 1px solid rgba(198,251,62,0.4); padding: 2px 6px; }
+  .flag { font-size: 15px; }
+  .cty { color: var(--muted); }
+  tr.divider td { background: var(--surface); color: var(--dim); font-size: 9px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; padding: 10px 16px; }
+  .empty { padding: 72px 28px; text-align: center; color: var(--muted); font-size: 15px; line-height: 1.6; }
+
+  .skel { display: inline-block; background: linear-gradient(90deg, #1a1f1b 25%, #232925 37%, #1a1f1b 63%); background-size: 400% 100%; animation: sh 1.3s ease-in-out infinite; height: 1em; border-radius: 2px; }
+  @keyframes sh { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+
+  footer.ft { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); border-top: 1px solid var(--divider); }
+  footer.ft .col { padding: 40px 28px; display: flex; flex-direction: column; gap: 14px; }
+  footer.ft .col.a { border-right: 1px solid var(--divider); }
+  footer.ft p { margin: 0; max-width: 56ch; font-size: 12px; line-height: 1.7; color: var(--dim); }
+  footer.ft .lbl { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: var(--dim); }
+  footer.ft .socials { display: flex; flex-wrap: wrap; gap: 12px; }
+  footer.ft .socials a { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--border); color: var(--text); }
+  footer.ft .socials a:hover { border-color: var(--lime); color: var(--lime); }
+  footer.ft .copy { font-size: 11px; color: var(--dimmer); margin-top: 6px; }
+
+  @media (max-width: 640px) { .col-trades { display: none; } }
+  @media (max-width: 560px) { .col-country { display: none; } }
+  @media (max-width: 767px) {
+    .hdr-cta { display: none; }
+    .hdr-nav a { padding: 0 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hdr">
+    <a class="hdr-brand" href="/">
+      <span class="dot"></span>
+      <span class="name">The YG Trader Hunt</span>
+    </a>
+    <nav class="hdr-nav">
+      <a href="/">Home</a>
+      <a href="/leaderboard" class="active" aria-current="page">Leaderboard</a>
+    </nav>
+    <a class="hdr-cta" href="https://partners.elefin.com/go/YASH" target="_blank" rel="noopener">Open Elefin account →</a>
+  </header>
+
+  <section class="strip">
+    <div class="kicker">Live leaderboard</div>
+    <h1 class="title">The standings.</h1>
+    <p class="sub">Ranked by percentage return. The top&nbsp;5 get shortlisted — then one winner is drawn at random from those five.</p>
+    <div class="status" id="status">
+      <span class="item"><span class="live-dot" id="liveDot"></span> <span id="updatedTxt">Loading…</span></span>
+      <span class="item" id="nextItem" hidden><span>Next update</span> <b id="nextTxt">—</b></span>
+      <span class="item" id="endsItem" hidden><span>Ends</span> <b id="endsTxt">—</b></span>
+      <span class="item" id="countItem" hidden><b id="countTxt">0</b> <span>traders in the hunt</span></span>
+      <span class="item" id="mockItem" hidden><span class="tag-mock">Mock data</span></span>
+      <button class="refresh" id="refreshBtn" type="button">Refresh</button>
+    </div>
+  </section>
+
+  <div id="noticeSlot"></div>
+  <main id="board"></main>
+
+  <footer class="ft">
+    <div class="col a">
+      <div class="hdr-brand" style="padding:0;">
+        <span class="dot" style="width:8px;height:8px;background:var(--lime);display:inline-block;"></span>
+        <span class="name" style="font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.16em;">The YG Trader Hunt</span>
+      </div>
+      <p>Trading leveraged products carries high risk and can cost you all of your deposit. You trade your own account and are responsible for your results — nothing here is advice or a promise of profit. Standings are computed from Elefin account data and may lag; the prize is awarded on verified statements.</p>
+    </div>
+    <div class="col">
+      <div class="lbl">Follow</div>
+      <div class="socials">
+        <a href="https://www.instagram.com/iiamyashgupta" target="_blank" rel="noopener" aria-label="Instagram">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+        </a>
+        <a href="https://t.me/YashGuptaTrader" target="_blank" rel="noopener" aria-label="Telegram">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg>
+        </a>
+        <a href="https://www.youtube.com/@iamyashgupta" target="_blank" rel="noopener" aria-label="YouTube">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"></path><path d="m10 15 5-3-5-3z"></path></svg>
+        </a>
+      </div>
+      <div class="copy">© 2026 Yash Gupta. Elefin link is a partner referral.</div>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var API = "/api/leaderboard";
+  var state = { data: null, loading: true, fetching: false, pollMs: 60 * 60 * 1000 };
+
+  var nf = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+  var nf0 = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+
+  var el = {
+    board: document.getElementById("board"),
+    noticeSlot: document.getElementById("noticeSlot"),
+    liveDot: document.getElementById("liveDot"),
+    updatedTxt: document.getElementById("updatedTxt"),
+    nextItem: document.getElementById("nextItem"),
+    nextTxt: document.getElementById("nextTxt"),
+    endsItem: document.getElementById("endsItem"),
+    endsTxt: document.getElementById("endsTxt"),
+    countItem: document.getElementById("countItem"),
+    countTxt: document.getElementById("countTxt"),
+    mockItem: document.getElementById("mockItem"),
+    refreshBtn: document.getElementById("refreshBtn")
+  };
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function pct(v) {
+    if (v == null || isNaN(v)) return "—";
+    return (v >= 0 ? "+" : "") + nf.format(v) + "%";
+  }
+  function signClass(v) { return v > 0 ? "pos" : v < 0 ? "neg" : ""; }
+
+  function relFromNow(iso) {
+    if (!iso) return null;
+    var diff = Date.now() - new Date(iso).getTime();
+    var past = diff >= 0;
+    var s = Math.abs(diff) / 1000;
+    var out;
+    if (s < 60) out = Math.round(s) + " sec";
+    else if (s < 3600) out = Math.round(s / 60) + " min";
+    else if (s < 86400) {
+      var h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60);
+      if (m === 60) { h += 1; m = 0; }
+      out = h + "h" + (m ? " " + String(m).padStart(2, "0") + "m" : "");
+    } else {
+      var d = Math.floor(s / 86400), hh = Math.floor((s % 86400) / 3600);
+      out = d + "d" + (hh ? " " + String(hh).padStart(2, "0") + "h" : "");
+    }
+    return { text: out, past: past };
+  }
+
+  function renderStatus() {
+    var d = state.data;
+    el.liveDot.classList.toggle("on", state.fetching);
+
+    if (!d) { el.updatedTxt.textContent = state.loading ? "Loading…" : "Unavailable"; return; }
+
+    if (d.status === "pending") {
+      el.updatedTxt.textContent = "Waiting for the first results";
+    } else if (d.generated_at) {
+      var r = relFromNow(d.generated_at);
+      el.updatedTxt.innerHTML = "Updated <b>" + esc(r ? r.text : "—") + (r && r.past ? " ago" : "") + "</b>";
+    }
+
+    var nr = d.next_refresh_at ? relFromNow(d.next_refresh_at) : null;
+    if (nr && !nr.past) { el.nextItem.hidden = false; el.nextTxt.textContent = "in " + nr.text; }
+    else el.nextItem.hidden = true;
+
+    var end = d.competition && d.competition.end ? d.competition.end : null;
+    if (end) {
+      var er = relFromNow(end);
+      el.endsItem.hidden = false;
+      el.endsTxt.textContent = er.past ? "ended" : "in " + er.text;
+    }
+
+    var count = d.stats && (d.stats.participants != null ? d.stats.participants : null);
+    if (count != null) { el.countItem.hidden = false; el.countTxt.textContent = nf0.format(count); }
+
+    el.mockItem.hidden = d.source !== "mock";
+  }
+
+  function renderNotice() {
+    var d = state.data;
+    el.noticeSlot.innerHTML = "";
+    if (d && d.is_stale) {
+      var when = d.generated_at ? new Date(d.generated_at).toLocaleString() : "earlier";
+      var div = document.createElement("div");
+      div.className = "notice stale";
+      div.innerHTML = "⚠ Live feed hiccuped — showing the last good update from " + esc(when) + ".";
+      el.noticeSlot.appendChild(div);
+    }
+  }
+
+  function skeletonBoard() {
+    var cells = "";
+    for (var i = 0; i < 3; i++) {
+      cells += '<div class="pcell">' +
+        '<span class="skel" style="width:60px"></span>' +
+        '<span class="skel" style="width:90px;height:44px"></span>' +
+        '<span class="skel" style="width:140px"></span>' +
+        '<span class="skel" style="width:100px;height:28px"></span></div>';
+    }
+    var rows = "";
+    for (var j = 0; j < 6; j++) {
+      rows += '<tr><td class="rk"><span class="skel" style="width:20px"></span></td>' +
+        '<td><span class="skel" style="width:160px"></span></td>' +
+        '<td class="col-country"><span class="skel" style="width:80px"></span></td>' +
+        '<td class="num"><span class="skel" style="width:60px"></span></td>' +
+        '<td class="num col-trades"><span class="skel" style="width:40px"></span></td></tr>';
+    }
+    return '<div class="podium">' + cells + '</div>' +
+      '<div class="tbl-head"><span>Full standings</span></div>' +
+      '<div class="tbl-scroll"><table class="board"><tbody>' + rows + '</tbody></table></div>';
+  }
+
+  function podiumCell(e) {
+    if (!e) return '<div class="pcell"><span class="medal">—</span><div class="rank-num">·</div><div class="pname" style="color:var(--dim)">Open</div></div>';
+    var medals = { 1: "Gold", 2: "Silver", 3: "Bronze" };
+    return '<div class="pcell">' +
+      '<span class="medal">' + esc(medals[e.rank] || ("#" + e.rank)) + '</span>' +
+      '<div class="rank-num ' + (e.rank === 1 ? "pos" : "") + '">' + e.rank + '</div>' +
+      '<div class="pname">' + esc(e.name) + '</div>' +
+      '<div class="pret ' + signClass(e.return_pct) + '">' + pct(e.return_pct) + '</div>' +
+      '<div class="pmeta">' + nf0.format(e.trades || 0) + ' trades</div>' +
+      '</div>';
+  }
+
+  function row(e) {
+    var flag = e.flag ? '<span class="flag">' + e.flag + '</span> ' : "";
+    var ctyName = e.country_name || "";
+    var ctyCell = ctyName ? (flag + esc(ctyName)) : '<span style="color:var(--dimmer)">—</span>';
+    var slTag = e.shortlisted ? ' <span class="sl-tag">Shortlist</span>' : "";
+    var idLine = e.client_id != null ? '<span class="tid">ID ' + esc(e.client_id) + '</span>' : "";
+    return '<tr>' +
+      '<td class="rk">' + e.rank + '</td>' +
+      '<td><span class="trader"><span class="tname">' + esc(e.name) + '</span>' + slTag + '</span>' + idLine + '</td>' +
+      '<td class="col-country cty">' + ctyCell + '</td>' +
+      '<td class="num ' + signClass(e.return_pct) + '">' + pct(e.return_pct) + '</td>' +
+      '<td class="num col-trades">' + nf0.format(e.trades || 0) + '</td>' +
+      '</tr>';
+  }
+
+  function renderBoard() {
+    var d = state.data;
+
+    if (state.loading && !d) { el.board.innerHTML = skeletonBoard(); return; }
+
+    if (!d || d.status === "error") {
+      el.board.innerHTML = '<div class="empty">The leaderboard is temporarily unavailable. It will reappear on the next update.</div>';
+      return;
+    }
+    if (d.status === "pending") {
+      el.board.innerHTML = '<div class="empty">Standings open when the first results land.<br>Check back soon.</div>';
+      return;
+    }
+
+    var entries = d.entries || [];
+    if (entries.length === 0) {
+      el.board.innerHTML = '<div class="empty">No qualifying accounts yet.<br>Deposit $100+ under the referral link and place a trade to appear here.</div>';
+      return;
+    }
+
+    var top = d.top3 && d.top3.length ? d.top3 : entries.slice(0, 3);
+    var podium = '<div class="podium">' +
+      podiumCell(top[0]) + podiumCell(top[1]) + podiumCell(top[2]) +
+    '</div>';
+
+    var lastShortlisted = -1;
+    entries.forEach(function (e, i) { if (e.shortlisted) lastShortlisted = i; });
+
+    var body = "";
+    entries.forEach(function (e, i) {
+      body += row(e);
+      if (i === lastShortlisted && i < entries.length - 1) {
+        body += '<tr class="divider"><td colspan="5">Shortlist — top ' + (lastShortlisted + 1) + '</td></tr>';
+      }
+    });
+
+    var table =
+      '<div class="tbl-head"><span>Full standings</span><span>' + esc(entries.length) + ' shown</span></div>' +
+      '<div class="tbl-scroll"><table class="board">' +
+        '<thead><tr>' +
+          '<th>#</th><th>Trader</th><th class="col-country">Country</th>' +
+          '<th class="num">Return %</th><th class="num col-trades">Trades</th>' +
+        '</tr></thead>' +
+        '<tbody>' + body + '</tbody>' +
+      '</table></div>';
+
+    el.board.innerHTML = podium + table;
+  }
+
+  function renderAll() { renderStatus(); renderNotice(); renderBoard(); }
+
+  function load() {
+    if (state.fetching) return;
+    state.fetching = true;
+    renderStatus();
+    fetch(API, { headers: { "Accept": "application/json" } })
+      .then(function (r) { return r.json().catch(function () { return { status: "error" }; }); })
+      .then(function (json) {
+        state.data = json;
+        state.loading = false;
+        if (json && json.ui_poll_minutes) state.pollMs = Math.max(1, json.ui_poll_minutes) * 60 * 1000;
+      })
+      .catch(function () { state.data = { status: "error" }; state.loading = false; })
+      .then(function () { state.fetching = false; renderAll(); });
+  }
+
+  el.refreshBtn.addEventListener("click", function () {
+    el.refreshBtn.disabled = true;
+    load();
+    setTimeout(function () { el.refreshBtn.disabled = false; }, 4000);
+  });
+
+  renderAll();
+  load();
+  setInterval(load, Math.max(state.pollMs, 60000));
+  setInterval(renderStatus, 30000);
+})();
+</script>
+</body>
+</html>

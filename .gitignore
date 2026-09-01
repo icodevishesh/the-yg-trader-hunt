@@ -1,0 +1,7 @@
+node_modules/
+.env
+data/trader.txt
+uploads/*
+!uploads/.gitkeep
+*.log
+.DS_Store
