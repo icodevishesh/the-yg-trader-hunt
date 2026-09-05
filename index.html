@@ -164,7 +164,15 @@
         </div>
       </div>
       <div style="border-top: 1px solid #232925; padding: 24px 28px;">
-        <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Registration closes in</div>
+        <sc-if value="{{ isLive }}" hint-placeholder-val="{{ false }}">
+          <div class="section-label" style="display: flex; align-items: center; gap: 8px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">
+            <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #c6fb3e; box-shadow: 0 0 8px #c6fb3e;"></span>
+            <span>Live</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ notLive }}" hint-placeholder-val="{{ true }}">
+          <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">{{ timerLabel }}</div>
+        </sc-if>
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px;">
           <div>
             <div style="font-size: clamp(24px, 2.4vw, 32px); font-weight: 400; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums;">{{ cdDays }}</div>
@@ -183,6 +191,7 @@
             <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #6c7a72; margin-top: 8px;">Sec</div>
           </div>
         </div>
+        <!-- <div style="font-size: 11px; color: #9aa5a0; margin-top: 14px; letter-spacing: 0.02em;">Monday Market Open and Friday Market Closing</div> -->
       </div>
     </div>
   </section>
@@ -428,7 +437,7 @@
   </footer>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;deadline&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;2026-09-02T23:59:00&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Competition&quot;},&quot;submitLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Lock in my entry&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;},&quot;formEndpoint&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://script.google.com/macros/s/AKfycbwhRZFia2ghXEO3LunEH_0sUlYpmQSfY2hI-p4HP4gI1nIvkPofYjrQVYFZL4HKN4Gi/exec&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;startTime&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;2026-09-07T00:00:00+05:30&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Competition&quot;},&quot;deadline&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;2026-09-11T23:59:59+05:30&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Competition&quot;},&quot;submitLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Lock in my entry&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;},&quot;formEndpoint&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://script.google.com/macros/s/AKfycbwhRZFia2ghXEO3LunEH_0sUlYpmQSfY2hI-p4HP4gI1nIvkPofYjrQVYFZL4HKN4Gi/exec&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;}}">
 class Component extends DCLogic {
   state = { name: "", phone: "", email: "", capital: "", agree: false, errors: {}, submitted: false, showModal: false, now: Date.now() };
 
@@ -446,9 +455,14 @@ class Component extends DCLogic {
     window.removeEventListener("keydown", this.handleKeyDown);
   }
 
+  startTime() {
+    const d = new Date(this.props.startTime ?? "2026-09-07T00:00:00+05:30");
+    return isNaN(d) ? new Date("2026-09-07T00:00:00+05:30") : d;
+  }
+
   deadline() {
-    const d = new Date(this.props.deadline ?? "2026-09-02T23:59:00");
-    return isNaN(d) ? new Date("2026-09-02T23:59:00") : d;
+    const d = new Date(this.props.deadline ?? "2026-09-11T23:59:59+05:30");
+    return isNaN(d) ? new Date("2026-09-11T23:59:59+05:30") : d;
   }
 
   validate() {
@@ -464,10 +478,34 @@ class Component extends DCLogic {
   }
 
   renderVals() {
-    const ms = Math.max(0, this.deadline().getTime() - this.state.now);
+    const now = this.state.now;
+    const startMs = this.startTime().getTime();
+    const endMs = this.deadline().getTime();
+
+    let ms = 0;
+    let timerLabel = "Competition starting in";
+    let isLive = false;
+
+    if (now < startMs) {
+      ms = Math.max(0, startMs - now);
+      timerLabel = "Competition starting in";
+      isLive = false;
+    } else if (now < endMs) {
+      ms = Math.max(0, endMs - now);
+      timerLabel = "Live";
+      isLive = true;
+    } else {
+      ms = 0;
+      timerLabel = "Competition ended";
+      isLive = false;
+    }
+
     const pad = (n) => String(n).padStart(2, "0");
     const err = this.state.errors;
     return {
+      isLive,
+      notLive: !isLive,
+      timerLabel,
       cdDays: pad(Math.floor(ms / 86400000)),
       cdHours: pad(Math.floor(ms / 3600000) % 24),
       cdMins: pad(Math.floor(ms / 60000) % 60),

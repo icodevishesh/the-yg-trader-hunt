@@ -45,8 +45,8 @@ const config = {
   },
 
   competition: {
-    start: str(process.env.COMPETITION_START, '2026-09-03T00:00:00+05:30'),
-    end: str(process.env.COMPETITION_END, '2026-09-10T23:59:59+05:30'),
+    start: str(process.env.COMPETITION_START, '2026-09-07T00:00:00+05:30'),
+    end: str(process.env.COMPETITION_END, '2026-09-11T23:59:59+05:30'),
     windowFilter: bool(process.env.WINDOW_FILTER, false),
   },
 
