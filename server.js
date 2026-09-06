@@ -16,7 +16,8 @@ const BLOCKED = [
   /^\/config\.js$/i,
   /^\/server\.js$/i,
   /^\/package(-lock)?\.json$/i,
-  /^\/leaderboard-plan\.md$/i,
+  /^\/(leaderboard-)?plan\.md$/i,
+  /^\/exploration\.md$/i,
   /^\/(data|db|jobs|routes|services|scripts|fixtures|node_modules)(\/|$)/i,
 ];
 app.use((req, res, next) => {

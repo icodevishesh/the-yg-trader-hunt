@@ -47,6 +47,14 @@
   h1.title { margin: 20px 0 0; font-weight: 600; font-size: clamp(40px, 5vw, 68px); line-height: 1.0; letter-spacing: -0.04em; }
   .sub { margin: 20px 0 0; max-width: 52ch; font-size: 17px; line-height: 1.55; color: var(--muted); }
 
+  .windowline { margin-top: 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .wl-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; padding: 5px 10px; border: 1px solid var(--lime); color: var(--lime); display: inline-flex; align-items: center; gap: 7px; }
+  .wl-badge.pre { border-color: var(--border); color: var(--muted); }
+  .wl-badge.over { border-color: var(--amber); color: var(--amber); }
+  .wl-badge .d { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .wl-badge.live .d { animation: pulse 1s ease-in-out infinite; }
+  .wl-dates { font-size: 14px; font-weight: 600; color: var(--text); letter-spacing: 0.01em; font-variant-numeric: tabular-nums; }
+
   .status { margin-top: 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .status .item { display: flex; align-items: center; gap: 8px; }
   .status .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); opacity: 0.35; }
@@ -60,6 +68,7 @@
 
   .notice { margin: 0; padding: 14px 28px; border-bottom: 1px solid var(--divider); font-size: 13px; display: flex; gap: 10px; align-items: center; }
   .notice.stale { background: rgba(240,193,75,0.08); color: var(--amber); }
+  .notice.final { background: rgba(198,251,62,0.08); color: var(--lime); }
 
   /* Podium */
   .podium { display: grid; grid-template-columns: 1fr; border-bottom: 1px solid var(--divider); }
@@ -94,6 +103,9 @@
   .trader .tname { font-weight: 500; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tid { display: block; margin-top: 3px; font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
   .sl-tag { font-size: 8px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lime); border: 1px solid rgba(198,251,62,0.4); padding: 2px 6px; }
+  .af-tag { font-size: 8px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--neg); border: 1px solid rgba(255,138,107,0.45); padding: 2px 6px; white-space: nowrap; }
+  tr.af-row td:not(.rk) .tname { color: var(--muted); }
+  .pcell .af-tag { align-self: flex-start; }
   .flag { font-size: 15px; }
   .cty { color: var(--muted); }
   tr.divider td { background: var(--surface); color: var(--dim); font-size: 9px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; padding: 10px 16px; }
@@ -138,12 +150,17 @@
   <section class="strip">
     <div class="kicker">Live leaderboard</div>
     <h1 class="title">The standings.</h1>
-    <p class="sub">Ranked by percentage return. The top&nbsp;5 get shortlisted — then one winner is drawn at random from those five.</p>
+    <p class="sub">Ranked by percentage return on starting capital, 7&ndash;11&nbsp;Sep. Highest&nbsp;% wins. Add funds mid-competition and you keep your place on the board but forfeit the prize.</p>
+    <div class="windowline" id="windowLine" hidden>
+      <span class="wl-badge" id="wlBadge"><span class="d"></span> <span id="wlBadgeTxt">Live</span></span>
+      <span class="wl-dates" id="wlDates">—</span>
+    </div>
     <div class="status" id="status">
       <span class="item"><span class="live-dot" id="liveDot"></span> <span id="updatedTxt">Loading…</span></span>
       <span class="item" id="nextItem" hidden><span>Next update</span> <b id="nextTxt">—</b></span>
       <span class="item" id="endsItem" hidden><span>Ends</span> <b id="endsTxt">—</b></span>
       <span class="item" id="countItem" hidden><b id="countTxt">0</b> <span>traders in the hunt</span></span>
+      <span class="item" id="leaderItem" hidden><span>Leading</span> <b id="leaderTxt">—</b></span>
       <span class="item" id="mockItem" hidden><span class="tag-mock">Mock data</span></span>
       <button class="refresh" id="refreshBtn" type="button">Refresh</button>
     </div>
@@ -199,9 +216,49 @@
     endsTxt: document.getElementById("endsTxt"),
     countItem: document.getElementById("countItem"),
     countTxt: document.getElementById("countTxt"),
+    leaderItem: document.getElementById("leaderItem"),
+    leaderTxt: document.getElementById("leaderTxt"),
     mockItem: document.getElementById("mockItem"),
-    refreshBtn: document.getElementById("refreshBtn")
+    refreshBtn: document.getElementById("refreshBtn"),
+    windowLine: document.getElementById("windowLine"),
+    wlBadge: document.getElementById("wlBadge"),
+    wlBadgeTxt: document.getElementById("wlBadgeTxt"),
+    wlDates: document.getElementById("wlDates")
   };
+
+  var DFMT = { day: "numeric", month: "short", timeZone: "Asia/Kolkata" };
+  function fmtDay(iso) {
+    var d = new Date(iso);
+    return isNaN(d) ? null : d.toLocaleDateString("en-GB", DFMT);
+  }
+
+  function renderWindow() {
+    var d = state.data;
+    var w = d && (d.window || d.competition);
+    if (!w || !w.start || !w.end) { el.windowLine.hidden = true; return; }
+    var a = fmtDay(w.start), b = fmtDay(w.end);
+    if (!a || !b) { el.windowLine.hidden = true; return; }
+    var yr = new Date(w.end).getFullYear();
+
+    var now = Date.now();
+    var started = now >= new Date(w.start).getTime();
+    var ended = d.competition_over || now > new Date(w.end).getTime();
+    var announced = d.winner_announced || (d.announce_at && now >= new Date(d.announce_at).getTime());
+    var annTxt = d.announce_at ? fmtDay(d.announce_at) : null;
+
+    var cls, txt, dates = a + " – " + b + " " + yr;
+    if (!started) { cls = "pre"; txt = "Starts soon"; }
+    else if (!ended) { cls = "live"; txt = "Live"; }
+    else if (announced) { cls = "live"; txt = "Final"; }
+    else {
+      cls = "over"; txt = "Trading closed";
+      if (annTxt) dates += " · winner " + annTxt;
+    }
+    el.wlBadge.className = "wl-badge " + cls;
+    el.wlBadgeTxt.textContent = txt;
+    el.wlDates.textContent = dates;
+    el.windowLine.hidden = false;
+  }
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -251,15 +308,27 @@
     if (nr && !nr.past) { el.nextItem.hidden = false; el.nextTxt.textContent = "in " + nr.text; }
     else el.nextItem.hidden = true;
 
+    var announced = d.winner_announced || (d.announce_at && Date.now() >= new Date(d.announce_at).getTime());
+    var annTxt = d.announce_at ? fmtDay(d.announce_at) : null;
     var end = d.competition && d.competition.end ? d.competition.end : null;
     if (end) {
       var er = relFromNow(end);
       el.endsItem.hidden = false;
-      el.endsTxt.textContent = er.past ? "ended" : "in " + er.text;
+      if (d.competition_over) el.endsTxt.textContent = announced ? "final result" : (annTxt ? "winner " + annTxt : "trading closed");
+      else el.endsTxt.textContent = er.past ? "ended" : "in " + er.text;
     }
 
     var count = d.stats && (d.stats.participants != null ? d.stats.participants : null);
     if (count != null) { el.countItem.hidden = false; el.countTxt.textContent = nf0.format(count); }
+
+    var wp = d.winner_provisional;
+    if (wp && wp.name) {
+      el.leaderItem.hidden = false;
+      el.leaderItem.querySelector("span").textContent = announced ? "Winner" : "Leading";
+      el.leaderTxt.textContent = wp.name + " " + pct(wp.return_pct);
+    } else {
+      el.leaderItem.hidden = true;
+    }
 
     el.mockItem.hidden = d.source !== "mock";
   }
@@ -267,11 +336,25 @@
   function renderNotice() {
     var d = state.data;
     el.noticeSlot.innerHTML = "";
-    if (d && d.is_stale) {
-      var when = d.generated_at ? new Date(d.generated_at).toLocaleString() : "earlier";
+    if (!d) return;
+    if (d.competition_over) {
+      var announced = d.winner_announced || (d.announce_at && Date.now() >= new Date(d.announce_at).getTime());
+      var annTxt = d.announce_at ? fmtDay(d.announce_at) : null;
+      var fin = document.createElement("div");
+      fin.className = "notice final";
+      if (announced) {
+        fin.innerHTML = "✦ Final standings — trading is closed. The winner is the highest&nbsp;% return that did not add funds.";
+      } else {
+        fin.innerHTML = "✦ Trading closed. Accounts are being verified — the winner is announced" +
+          (annTxt ? " on <b>" + esc(annTxt) + "</b>" : " shortly") + ". Standings are frozen.";
+      }
+      el.noticeSlot.appendChild(fin);
+    }
+    if (d.is_stale) {
+      var w = d.generated_at ? new Date(d.generated_at).toLocaleString() : "earlier";
       var div = document.createElement("div");
       div.className = "notice stale";
-      div.innerHTML = "⚠ Live feed hiccuped — showing the last good update from " + esc(when) + ".";
+      div.innerHTML = "⚠ Live feed hiccuped — showing the last good update from " + esc(w) + ".";
       el.noticeSlot.appendChild(div);
     }
   }
@@ -301,12 +384,14 @@
   function podiumCell(e) {
     if (!e) return '<div class="pcell"><span class="medal">—</span><div class="rank-num">·</div><div class="pname" style="color:var(--dim)">Open</div></div>';
     var medals = { 1: "Gold", 2: "Silver", 3: "Bronze" };
+    var afTag = e.added_funds ? '<span class="af-tag">Added funds · no prize</span>' : "";
     return '<div class="pcell">' +
       '<span class="medal">' + esc(medals[e.rank] || ("#" + e.rank)) + '</span>' +
-      '<div class="rank-num ' + (e.rank === 1 ? "pos" : "") + '">' + e.rank + '</div>' +
+      '<div class="rank-num ' + (e.rank === 1 && !e.added_funds ? "pos" : "") + '">' + e.rank + '</div>' +
       '<div class="pname">' + esc(e.name) + '</div>' +
       '<div class="pret ' + signClass(e.return_pct) + '">' + pct(e.return_pct) + '</div>' +
       '<div class="pmeta">' + nf0.format(e.trades || 0) + ' trades</div>' +
+      afTag +
       '</div>';
   }
 
@@ -314,11 +399,12 @@
     var flag = e.flag ? '<span class="flag">' + e.flag + '</span> ' : "";
     var ctyName = e.country_name || "";
     var ctyCell = ctyName ? (flag + esc(ctyName)) : '<span style="color:var(--dimmer)">—</span>';
-    var slTag = e.shortlisted ? ' <span class="sl-tag">Shortlist</span>' : "";
+    var slTag = e.shortlisted && !e.added_funds ? ' <span class="sl-tag">Shortlist</span>' : "";
+    var afTag = e.added_funds ? ' <span class="af-tag">Added funds · no prize</span>' : "";
     var idLine = e.client_id != null ? '<span class="tid">ID ' + esc(e.client_id) + '</span>' : "";
-    return '<tr>' +
+    return '<tr' + (e.added_funds ? ' class="af-row"' : '') + '>' +
       '<td class="rk">' + e.rank + '</td>' +
-      '<td><span class="trader"><span class="tname">' + esc(e.name) + '</span>' + slTag + '</span>' + idLine + '</td>' +
+      '<td><span class="trader"><span class="tname">' + esc(e.name) + '</span>' + slTag + afTag + '</span>' + idLine + '</td>' +
       '<td class="col-country cty">' + ctyCell + '</td>' +
       '<td class="num ' + signClass(e.return_pct) + '">' + pct(e.return_pct) + '</td>' +
       '<td class="num col-trades">' + nf0.format(e.trades || 0) + '</td>' +
@@ -335,13 +421,13 @@
       return;
     }
     if (d.status === "pending") {
-      el.board.innerHTML = '<div class="empty">Standings open when the first results land.<br>Check back soon.</div>';
+      el.board.innerHTML = '<div class="empty">Standings open when the first results land.<br>The window runs 7&ndash;11&nbsp;Sep.</div>';
       return;
     }
 
     var entries = d.entries || [];
     if (entries.length === 0) {
-      el.board.innerHTML = '<div class="empty">No qualifying accounts yet.<br>Deposit $100+ under the referral link and place a trade to appear here.</div>';
+      el.board.innerHTML = '<div class="empty">No qualifying accounts yet.<br>Place at least one trade during 7&ndash;11&nbsp;Sep on a $100+ account to appear here.</div>';
       return;
     }
 
@@ -374,7 +460,7 @@
     el.board.innerHTML = podium + table;
   }
 
-  function renderAll() { renderStatus(); renderNotice(); renderBoard(); }
+  function renderAll() { renderWindow(); renderStatus(); renderNotice(); renderBoard(); }
 
   function load() {
     if (state.fetching) return;
@@ -400,7 +486,7 @@
   renderAll();
   load();
   setInterval(load, Math.max(state.pollMs, 60000));
-  setInterval(renderStatus, 30000);
+  setInterval(function () { renderWindow(); renderStatus(); }, 30000);
 })();
 </script>
 </body>

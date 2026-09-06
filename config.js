@@ -32,7 +32,7 @@ const config = {
     timeoutMs: 30000,
   },
 
-  refreshCron: str(process.env.REFRESH_CRON, '0 */4 * * *'),
+  refreshCron: str(process.env.REFRESH_CRON, '0 * * * *'),
   uiPollMinutes: num(process.env.UI_POLL_MINUTES, 60),
 
   scoring: {
@@ -40,14 +40,24 @@ const config = {
     minDepositUsd: num(process.env.MIN_DEPOSIT_USD, 100),
     requireTrade: bool(process.env.REQUIRE_TRADE, true),
     usdtToInr: num(process.env.USDT_TO_INR_RATE, 102),
-    leaderboardSize: num(process.env.LEADERBOARD_SIZE, 15),
+    leaderboardSize: num(process.env.LEADERBOARD_SIZE, 33),
     shortlistSize: num(process.env.SHORTLIST_SIZE, 5),
+    // Any in-window deposit above this (FX-normalised USD) flags `added_funds`
+    // and bars the participant from the prize. See plan.md §5.
+    depositToleranceUsd: num(process.env.DEPOSIT_TOLERANCE_USD, 1),
   },
 
   competition: {
+    cohort: str(process.env.COHORT, 'sep-2026'),
+    // Trading window: 7 Sep 00:00 -> 11 Sep 23:59 IST.
     start: str(process.env.COMPETITION_START, '2026-09-07T00:00:00+05:30'),
     end: str(process.env.COMPETITION_END, '2026-09-11T23:59:59+05:30'),
-    windowFilter: bool(process.env.WINDOW_FILTER, false),
+    // The winner is announced the day after trading closes. finalizeResult() still
+    // runs at `end` (organisers get the audit); the public winner reveal + the
+    // /api/leaderboard/result endpoint are gated until this moment.
+    announceAt: str(process.env.WINNER_ANNOUNCE, '2026-09-12T12:00:00+05:30'),
+    // How long after the start the baseline may still be re-captured. plan.md §3b.
+    baselineGraceHours: num(process.env.BASELINE_GRACE_HOURS, 2),
   },
 
   refreshToken: str(process.env.REFRESH_TOKEN, ''),

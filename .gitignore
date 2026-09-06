@@ -1,7 +1,13 @@
 node_modules/
 .env
 data/trader.txt
+data/participants.*.txt
+data/participants.pruned-*.json
+!data/participants.sample.txt
 uploads/*
 !uploads/.gitkeep
 *.log
 .DS_Store
+
+*.md 
+

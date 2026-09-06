@@ -122,7 +122,7 @@
       <span style="font-weight: 600; letter-spacing: 0.16em; font-size: 11px; text-transform: uppercase;">The YG Trader Hunt</span>
     </div>
     <div style="display: flex; align-items: stretch; margin-left: auto;">
-      <a href="/" style="display: flex; align-items: center; padding: 0 22px; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: #9aa5a0; border-left: 1px solid #232925;" style-hover="color: #edf2ee;">Leaderboard</a>
+      <a href="/leaderboard" style="display: flex; align-items: center; padding: 0 22px; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: #9aa5a0; border-left: 1px solid #232925;" style-hover="color: #edf2ee;">Leaderboard</a>
       <a href="https://partners.elefin.com/go/YASH" target="_blank" rel="noopener" style="display: flex; align-items: center; gap: 10px; background: #c6fb3e; color: #0c0e0d; padding: 0 28px; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;" style-hover="background: #d6ff6b; color: #0c0e0d;">Open Elefin account →</a>
     </div>
   </header>
@@ -144,7 +144,7 @@
             <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #6c7a72; margin-top: 8px;">Min deposit</div>
           </div>
           <div style="border-left: 1px solid #232925; padding-left: 12px;">
-            <div style="font-size: clamp(24px, 2.4vw, 32px); font-weight: 400; line-height: 1; letter-spacing: -0.03em;">7 days</div>
+            <div style="font-size: clamp(24px, 2.4vw, 32px); font-weight: 400; line-height: 1; letter-spacing: -0.03em;">5 days</div>
             <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #6c7a72; margin-top: 8px;">Window</div>
           </div>
           <div style="border-left: 1px solid #232925; padding-left: 12px;">
@@ -167,7 +167,7 @@
         <sc-if value="{{ isLive }}" hint-placeholder-val="{{ false }}">
           <div class="section-label" style="display: flex; align-items: center; gap: 8px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">
             <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #c6fb3e; box-shadow: 0 0 8px #c6fb3e;"></span>
-            <span>Live</span>
+            <span>Live · {{ windowLabel }}</span>
           </div>
         </sc-if>
         <sc-if value="{{ notLive }}" hint-placeholder-val="{{ true }}">
@@ -191,7 +191,7 @@
             <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #6c7a72; margin-top: 8px;">Sec</div>
           </div>
         </div>
-        <!-- <div style="font-size: 11px; color: #9aa5a0; margin-top: 14px; letter-spacing: 0.02em;">Monday Market Open and Friday Market Closing</div> -->
+        <div style="font-size: 11px; color: #9aa5a0; margin-top: 14px; letter-spacing: 0.02em;">{{ countLabel }}</div>
       </div>
     </div>
   </section>
@@ -234,7 +234,7 @@
       </div>
       <div class="how-item" style="padding: 38px 28px; border-right: 1px solid #232925;">
         <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">STEP 4</div>
-        <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25; color: #edf2ee;">Trade for 7 days</h3>
+        <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25; color: #edf2ee;">Trade 7–11 Sep</h3>
         <p style="margin: 12px 0 0; font-size: 14px; line-height: 1.55; color: #9aa5a0;">Grow your account as much as<br>you can, in %.</p>
       </div>
       <div class="how-item" style="padding: 38px 28px; border-right: 1px solid #232925;">
@@ -248,9 +248,9 @@
         <p style="margin: 12px 0 0; font-size: 14px; line-height: 1.55; color: #9aa5a0;">A random pick from those 5 wins<br>$2,000 and the week with me.</p>
       </div>
       <div class="how-item-final" style="grid-column: 1 / -1; padding: 48px 28px; border-top: 1px solid #232925; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #11150f;">
-        <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em; text-transform: uppercase;">Final Step</div>
+        <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em; text-transform: uppercase;">Final Step · 12 Sep</div>
         <h3 style="margin: 14px 0 0; font-weight: 600; font-size: clamp(22px, 2.5vw, 30px); letter-spacing: -0.02em; line-height: 1.25; color: #edf2ee;">The Winner Is Announced</h3>
-        <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6; color: #9aa5a0; max-width: 48ch;">The winner will get a chance to trade with me for 7 days — travel and stay sponsored.</p>
+        <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6; color: #9aa5a0; max-width: 48ch;">Trading runs 7–11 Sep. Accounts are verified and the winner is announced on 12 Sep — a chance to trade with me for 7 days, travel and stay sponsored.</p>
       </div>
     </div>
   </section>
@@ -437,7 +437,7 @@
   </footer>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;startTime&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;2026-09-07T00:00:00+05:30&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Competition&quot;},&quot;deadline&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;2026-09-11T23:59:59+05:30&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Competition&quot;},&quot;submitLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Lock in my entry&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;},&quot;formEndpoint&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://script.google.com/macros/s/AKfycbwhRZFia2ghXEO3LunEH_0sUlYpmQSfY2hI-p4HP4gI1nIvkPofYjrQVYFZL4HKN4Gi/exec&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;startTime&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;2026-09-07T00:00:00+05:30&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Competition&quot;},&quot;deadline&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;2026-09-11T23:59:59+05:30&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Competition&quot;},&quot;winnerAnnounce&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;2026-09-12T12:00:00+05:30&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Competition&quot;},&quot;submitLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Lock in my entry&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;},&quot;formEndpoint&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://script.google.com/macros/s/AKfycbwhRZFia2ghXEO3LunEH_0sUlYpmQSfY2hI-p4HP4gI1nIvkPofYjrQVYFZL4HKN4Gi/exec&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;}}">
 class Component extends DCLogic {
   state = { name: "", phone: "", email: "", capital: "", agree: false, errors: {}, submitted: false, showModal: false, now: Date.now() };
 
@@ -465,6 +465,11 @@ class Component extends DCLogic {
     return isNaN(d) ? new Date("2026-09-11T23:59:59+05:30") : d;
   }
 
+  announceTime() {
+    const d = new Date(this.props.winnerAnnounce ?? "2026-09-12T12:00:00+05:30");
+    return isNaN(d) ? new Date("2026-09-12T12:00:00+05:30") : d;
+  }
+
   validate() {
     const e = {};
     if (!this.state.name.trim()) e.name = "Please enter your name.";
@@ -482,21 +487,29 @@ class Component extends DCLogic {
     const startMs = this.startTime().getTime();
     const endMs = this.deadline().getTime();
 
+    const fmt = (d) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
+    const windowLabel = fmt(this.startTime()) + " – " + fmt(this.deadline()) + " " + this.deadline().getFullYear();
+    const announceLabel = fmt(this.announceTime());
+
     let ms = 0;
-    let timerLabel = "Competition starting in";
+    let timerLabel = "Live · " + windowLabel;
+    let countLabel = "Countdown to start · winner announced " + announceLabel;
     let isLive = false;
 
     if (now < startMs) {
       ms = Math.max(0, startMs - now);
-      timerLabel = "Competition starting in";
+      timerLabel = "Live · " + windowLabel;
+      countLabel = "Countdown to start · winner announced " + announceLabel;
       isLive = false;
     } else if (now < endMs) {
       ms = Math.max(0, endMs - now);
-      timerLabel = "Live";
+      timerLabel = "Live · " + windowLabel;
+      countLabel = "Time remaining · winner announced " + announceLabel;
       isLive = true;
     } else {
       ms = 0;
-      timerLabel = "Competition ended";
+      timerLabel = "Trading closed · winner announced " + announceLabel;
+      countLabel = "Trading closed " + fmt(this.deadline()) + " · winner announced " + announceLabel;
       isLive = false;
     }
 
@@ -506,6 +519,8 @@ class Component extends DCLogic {
       isLive,
       notLive: !isLive,
       timerLabel,
+      windowLabel,
+      countLabel,
       cdDays: pad(Math.floor(ms / 86400000)),
       cdHours: pad(Math.floor(ms / 3600000) % 24),
       cdMins: pad(Math.floor(ms / 60000) % 60),

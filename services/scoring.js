@@ -50,6 +50,8 @@ function num(v) {
   return Number.isFinite(n) ? n : 0;
 }
 
+const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+
 // INR balances -> USD for the *displayed* dollar column only. Ranking uses the
 // currency-agnostic ratio, so this never affects return_pct.
 function toUsd(amount, currency) {
@@ -130,12 +132,121 @@ function rankEntries(rows, { shortlistSize = config.scoring.shortlistSize } = {}
   return sorted.map((row, i) => ({ ...row, rank: i + 1, shortlisted: i < shortlistSize }));
 }
 
+/* ----------------------------------------------------------------------------
+ * Competition window scoring (plan.md §3–§6). The baseline is a frozen copy of
+ * a normalized client row taken at the start line; every later run subtracts it
+ * to get window-only figures. This is what makes the score window-bounded AND
+ * deposit-proof: `base_start` never moves, and `net_profit` only moves on trades.
+ * ------------------------------------------------------------------------- */
+
+// Build the frozen "start line" record from a normalized Elefin client row.
+// `base_start` is the account value at the start line and the fixed denominator
+// for every later % — it is captured once here and never recomputed.
+function baselineFromClient(c) {
+  const equityStart = num(c.equity);
+  return {
+    client_id: c.client_id,
+    matched: true,
+    currency: c.currency,
+    status: c.status,
+    equity_start: round2(equityStart),
+    balance_start: round2(num(c.balance)),
+    net_deposit_start: round2(num(c.net_deposit)),
+    deposits_start: round2(num(c.deposits)),
+    withdrawals_start: round2(num(c.withdrawals)),
+    net_profit_start: round2(num(c.net_profit)),
+    trades_start: num(c.trades),
+    lots_start: num(c.lots),
+    base_start: equityStart > 0 ? round2(equityStart) : null,
+  };
+}
+
+// current (normalized client) - baseline  ->  window-only metrics + flags.
+function computeWindow(baseline, c, cfg = config.scoring) {
+  const b = baseline || {};
+  const baseStart = num(b.base_start) > 0 ? num(b.base_start) : null;
+
+  const netProfitWindow = num(c.net_profit) - num(b.net_profit_start);
+  const tradesWindow = num(c.trades) - num(b.trades_start);
+  const depositsWindow = num(c.deposits) - num(b.deposits_start);
+  const withdrawalsWindow = num(c.withdrawals) - num(b.withdrawals_start);
+  const equityDelta = num(c.equity) - num(b.equity_start);
+
+  // Elefin rewrote history / a reset happened — cumulative counters went backwards.
+  const dataAnomaly = tradesWindow < 0 || depositsWindow < -1 || withdrawalsWindow < -1;
+
+  const returnPct = baseStart == null ? null : (netProfitWindow / baseStart) * 100;
+  const returnPctAlt =
+    baseStart == null
+      ? null
+      : ((equityDelta - (depositsWindow - withdrawalsWindow)) / baseStart) * 100;
+
+  const addedFunds = toUsd(depositsWindow, c.currency) > cfg.depositToleranceUsd;
+
+  return {
+    base_start: baseStart,
+    net_profit_window: netProfitWindow,
+    trades_window: tradesWindow,
+    deposits_window: depositsWindow,
+    withdrawals_window: withdrawalsWindow,
+    equity_delta: equityDelta,
+    return_pct: returnPct,
+    return_pct_alt: returnPctAlt,
+    added_funds: addedFunds,
+    data_anomaly: dataAnomaly,
+  };
+}
+
+// Board eligibility + winner eligibility for one participant.
+function isEligibleWindow(c, win, baseline, cfg = config.scoring) {
+  const reasons = [];
+  const hasBaseline = !!baseline && baseline.matched !== false;
+  const lateEntry = !!(baseline && baseline.late_entry);
+
+  if (!hasBaseline) reasons.push('no_baseline');
+  if (c.status && c.status !== 'active') reasons.push('inactive');
+  if (!(win.base_start > 0)) reasons.push('no_start_capital');
+  else if (toUsd(win.base_start, c.currency) < cfg.minDepositUsd) reasons.push('below_min_deposit');
+  if (cfg.requireTrade && !(win.trades_window > 0)) reasons.push('no_window_trades');
+  if (win.data_anomaly) reasons.push('data_anomaly');
+
+  const eligible = reasons.length === 0;
+  return {
+    eligible,
+    // A mid-window deposit or a late start keeps you on the board but off the prize.
+    winner_eligible: eligible && !win.added_funds && !lateEntry,
+    late_entry: lateEntry,
+    ineligible_reasons: reasons,
+  };
+}
+
+// Rank desc by window return_pct; ties -> window net_profit -> window trades ->
+// earlier referral -> earlier baseline capture.
+function rankCompetitionEntries(rows, { shortlistSize = config.scoring.shortlistSize } = {}) {
+  const val = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : -Infinity);
+  const t = (d) => (d ? Date.parse(d) : Infinity);
+  const sorted = [...rows].sort(
+    (a, b) =>
+      val(b.return_pct) - val(a.return_pct) ||
+      val(b.net_profit_window) - val(a.net_profit_window) ||
+      val(b.trades_window) - val(a.trades_window) ||
+      t(a.referred_at) - t(b.referred_at) ||
+      t(a.baseline_captured_at) - t(b.baseline_captured_at)
+  );
+  return sorted.map((row, i) => ({ ...row, rank: i + 1, shortlisted: i < shortlistSize }));
+}
+
 module.exports = {
   toUsd,
+  round2,
   normalizeClient,
   computeReturnPct,
   isEligible,
   maskName,
   rankEntries,
   countryLabel,
+  baselineFromClient,
+  computeWindow,
+  isEligibleWindow,
+  rankCompetitionEntries,
 };
