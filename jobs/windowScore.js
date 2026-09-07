@@ -33,6 +33,26 @@ const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const r2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
+// One request per ~1.3s keeps us under Elefin's ~60/min. A run is ~75 calls.
+const SLEEP_MS = Number(process.env.SCORING_SLEEP_MS || 1300);
+
+// Call an Elefin fn; on a rate-limit response wait it out and retry, on any
+// other failure retry once quickly. Returns the last response either way.
+async function apiRetry(fn, onProgress = () => {}) {
+  let r = await fn();
+  if (r && r.ok) return r;
+  if (r && /rate limit/i.test(r.error || '')) {
+    onProgress('rate limited — waiting 62s');
+    await sleep(62000);
+    r = await fn();
+    if (r && r.ok) return r;
+  } else {
+    await sleep(1500);
+    r = await fn();
+  }
+  return r;
+}
+
 function pnlOf(row) {
   for (const k of ['profit', 'profit_usd', 'net_profit', 'pnl', 'result']) {
     if (row && row[k] != null && Number.isFinite(Number(row[k]))) return Number(row[k]);
@@ -138,12 +158,23 @@ async function computeStandings({
   onProgress(`elefin /clients ok · ${cRes.clients.length} referred`);
 
   // --- deposit / withdrawal ledger (padded fetch, exact client-side filter) ---
-  const depRes = await elefin.getTransactions({ type: 'deposit', from: FETCH_FROM, to: FETCH_TO });
-  const wdrRes = await elefin.getTransactions({ type: 'withdrawal', from: FETCH_FROM, to: FETCH_TO });
+  // If the deposits call can't be trusted the whole board's bases are wrong, so
+  // fail hard — the caller keeps the last good lb_current.
+  const depRes = await apiRetry(() => elefin.getTransactions({ type: 'deposit', from: FETCH_FROM, to: FETCH_TO }), onProgress);
+  if (!depRes || !depRes.ok) throw new Error('deposit ledger unavailable: ' + ((depRes && depRes.error) || 'unknown'));
+  await sleep(SLEEP_MS);
+  const wdrRes = await apiRetry(() => elefin.getTransactions({ type: 'withdrawal', from: FETCH_FROM, to: FETCH_TO }), onProgress);
+  await sleep(SLEEP_MS);
   const keep = (t) => txnOk(t) && inWindow(txnWhen(t));
-  const depRows = (depRes.ok ? depRes.rows : []).filter(keep);
-  const wdrRows = (wdrRes.ok ? wdrRes.rows : []).filter(keep);
+  const depRows = depRes.rows.filter(keep);
+  const wdrRows = (wdrRes && wdrRes.ok ? wdrRes.rows : []).filter(keep);
   onProgress(`deposits in window: ${depRows.length} · withdrawals: ${wdrRows.length}`);
+
+  // Previous board — to carry a participant forward if their trades call fails
+  // this run rather than dropping them off the leaderboard.
+  const prevCur = await db.collection(COLLECTIONS.current).findOne({ _id: 'current' }).catch(() => null);
+  const prevByClient = new Map();
+  for (const e of (prevCur && prevCur.entries) || []) if (e.client_id != null) prevByClient.set(Number(e.client_id), e);
 
   const byLoginDep = new Map();
   const byClientDep = new Map();
@@ -194,6 +225,9 @@ async function computeStandings({
       withdrawal_items: [],
       late_add: false,
       reloaded: false,
+      data_error: false,
+      open_error: false,
+      carried_forward: false,
       base: null,
       base_usd: null,
       return_pct: null,
@@ -211,8 +245,8 @@ async function computeStandings({
     }
 
     for (const login of c.logins) {
-      const tr = await elefin.getAccountTrades(login, { from: FETCH_FROM, to: FETCH_TO });
-      if (tr.ok) {
+      const tr = await apiRetry(() => elefin.getAccountTrades(login, { from: FETCH_FROM, to: FETCH_TO }), onProgress);
+      if (tr && tr.ok) {
         const inWin = tr.rows.filter((t) => inWindow(t.close_time || t.closed_at || t.close_at));
         let pnl = 0;
         for (const t of inWin) pnl += pnlOf(t);
@@ -220,13 +254,14 @@ async function computeStandings({
         d.closed_trades += inWin.length;
         d.per_login.push({ login, closed_trades: inWin.length, closed_pnl: r2(pnl), open_positions: 0, open_pnl: 0 });
       } else {
-        d.errors.push('trades ' + login + ': ' + tr.error);
+        d.data_error = true;
+        d.errors.push('trades ' + login + ': ' + ((tr && tr.error) || 'failed'));
       }
-      await sleep(200);
+      await sleep(SLEEP_MS);
 
       if (withPositions) {
-        const po = await elefin.getAccountPositions(login);
-        if (po.ok) {
+        const po = await apiRetry(() => elefin.getAccountPositions(login), onProgress);
+        if (po && po.ok) {
           let opnl = 0;
           for (const x of po.rows) opnl += pnlOf(x);
           d.open_pnl += opnl;
@@ -238,9 +273,10 @@ async function computeStandings({
             pl.open_pnl = r2(opnl);
           }
         } else {
-          d.errors.push('positions ' + login + ': ' + po.error);
+          d.open_error = true;
+          d.errors.push('positions ' + login + ': ' + ((po && po.error) || 'failed'));
         }
-        await sleep(200);
+        await sleep(SLEEP_MS);
       }
     }
     d.closed_pnl = r2(d.closed_pnl);
@@ -283,10 +319,35 @@ async function computeStandings({
     if (!(d.closed_trades + d.open_positions > 0)) d.reasons.push('no_window_activity');
     if (d.return_pct === null) d.reasons.push('no_return');
 
+    // A failed trades call this run must NOT drop the trader off the board.
+    // Reuse their last-known figures from the previous lb_current.
+    if (d.data_error) {
+      const prev = prevByClient.get(Number(d.client_id));
+      if (prev) {
+        d.carried_forward = true;
+        d.closed_pnl = num(prev.closed_pnl != null ? prev.closed_pnl : prev.net_profit);
+        d.open_pnl = num(prev.open_pnl);
+        d.score_pnl = num(prev.net_profit != null ? prev.net_profit : d.closed_pnl + d.open_pnl);
+        d.closed_trades = num(prev.trades);
+        d.open_positions = num(prev.open_positions);
+        d.return_pct = num(prev.return_pct);
+        d.return_pct_closed = prev.return_pct_closed != null ? num(prev.return_pct_closed) : null;
+        d.reasons = d.reasons.filter((x) => x !== 'no_window_activity' && x !== 'no_return');
+      }
+    }
+
     d.eligible = d.reasons.length === 0;
     d.winner_eligible = d.eligible; // deposits no longer bar anyone
     detail.push(d);
     onProgress(`scored ${++done}/${participants.length}`);
+  }
+
+  const dataErrors = detail.filter((d) => d.data_error).length;
+  const carriedForward = detail.filter((d) => d.carried_forward).length;
+  // If we lost live data for many traders and can't backfill, don't publish a
+  // half-board — let the caller keep the last good one.
+  if (dataErrors - carriedForward > 3) {
+    throw new Error(`${dataErrors} trades calls failed, only ${carriedForward} carried forward — refusing to publish a partial board`);
   }
 
   const ranked = detail
@@ -312,9 +373,12 @@ async function computeStandings({
       ? '(closed_pnl_window + open_position_pnl) / cumulative_capital * 100'
       : 'closed_pnl_window / cumulative_capital * 100',
     min_deposit_usd: MIN_USD,
+    deposit_tolerance_usd: DEP_TOL,
     positions_as_of: positionsAsOf,
     rate_limit_remaining: me.rateLimitRemaining ?? null,
     participants_total: participants.length,
+    data_errors: dataErrors,
+    carried_forward: carriedForward,
     deposits: depRows,
     withdrawals: wdrRows,
     detail,
@@ -346,6 +410,7 @@ function buildSnapshot(result) {
       trades: d.closed_trades,
       open_positions: d.open_positions,
       reloaded: d.reloaded,
+      carried_forward: !!d.carried_forward,
       window_deposits: r2(toUsd(d.window_deposits, d.currency)),
       winner_eligible: d.winner_eligible,
       shortlisted: d.rank <= config.scoring.shortlistSize,
@@ -374,6 +439,8 @@ function buildSnapshot(result) {
       reloaded: detail.filter((d) => d.reloaded).length,
       unmatched: detail.filter((d) => !d.matched).length,
       open_positions: detail.filter((d) => d.open_positions > 0).length,
+      data_errors: result.data_errors || 0,
+      carried_forward: result.carried_forward || 0,
     },
     stats: {
       cohort_size: result.participants_total,
@@ -382,6 +449,8 @@ function buildSnapshot(result) {
       winner_eligible: ranked.filter((d) => d.winner_eligible).length,
       in_profit: ranked.filter((d) => d.return_pct > 0).length,
       total_trades: ranked.reduce((s, d) => s + d.closed_trades, 0),
+      data_errors: result.data_errors || 0,
+      carried_forward: result.carried_forward || 0,
     },
     top3: entries.slice(0, 3),
     entries,

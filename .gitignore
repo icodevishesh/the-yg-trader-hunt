@@ -16,3 +16,4 @@ uploads/*
 *.md 
 
 data/trades-report-*.csv
+data/elefin-dump/

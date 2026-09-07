@@ -43,13 +43,14 @@ async function runSafely(trigger) {
   running = true;
   const started = Date.now();
   try {
-    const result = await computeStandings({ markToMarket: true });
+    const result = await computeStandings({ markToMarket: true, onProgress: () => {} });
     await writeCurrent(result, { nextRefreshAt: nextRefreshFrom(new Date()) });
     const w = result.winner;
     console.log(
       `[score:${trigger}] ok in ${Math.round((Date.now() - started) / 1000)}s — ` +
         `${result.ranked.length} ranked / ${result.detail.filter((d) => d.matched).length} matched / ${result.participants_total} in cohort` +
         (w ? ` · leader ${w.name || w.email} ${w.return_pct}%` : ' · no leader') +
+        (result.data_errors ? ` · ⚠ ${result.data_errors} trades-call errors (${result.carried_forward} carried fwd)` : '') +
         (result.positions_as_of ? ` · positions as_of ${result.positions_as_of}` : '')
     );
     return { ok: true, result };

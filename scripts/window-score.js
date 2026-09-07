@@ -66,6 +66,7 @@ const line = () => console.log('  ' + '-'.repeat(112));
   console.log('   formula  ' + R.formula);
   console.log('   min base $' + R.min_deposit_usd + '   deposit tolerance $' + R.deposit_tolerance_usd);
   console.log('   rate limit remaining ' + R.rate_limit_remaining + '   ·   positions as_of ' + (R.positions_as_of || 'n/a'));
+  if (R.data_errors) console.log('   ⚠ trades calls failed: ' + R.data_errors + '  ·  carried forward from last board: ' + R.carried_forward);
 
   const nameOf = (d) => maskName(d.name || d.name_form, d.client_id);
   const whoIs = (t) => {
@@ -105,7 +106,10 @@ const line = () => console.log('  ' + '-'.repeat(112));
     if (d.late_add) flags.push('LATE-ADD');
     if (d.reloaded) flags.push('reloaded $' + d.window_deposits + ' (in base)');
     if (d.window_withdrawals) flags.push('WDR $' + d.window_withdrawals);
-    if (!d.eligible && d.matched) flags.push('OUT:' + d.reasons.join(','));
+    if (d.carried_forward) flags.push('CARRIED-FORWARD (trades call failed)');
+    else if (d.data_error) flags.push('DATA-ERROR (dropped)');
+    if (d.open_error) flags.push('positions call failed');
+    if (!d.eligible && d.matched && !d.carried_forward) flags.push('OUT:' + d.reasons.join(','));
     if (d.errors.length) flags.push('ERR:' + d.errors.length);
     console.log(
       '     ' + pad(d.email, 34) + pad(d.logins[0] || '—', 13) +

@@ -240,4 +240,10 @@ async function getAllClients({ perPage = config.elefin.perPage } = {}) {
   return { ok: true, clients: all, total: total === null ? all.length : total };
 }
 
-module.exports = { me, getAllClients, getAccountTrades, getTransactions, getAccountPositions };
+// Raw GET against any endpoint (1 retry on 429/5xx). Returns the full envelope:
+// { success, status, data, error?, rateLimitRemaining }.
+async function request(endpoint, params) {
+  return get(endpoint, params);
+}
+
+module.exports = { me, getAllClients, getAccountTrades, getTransactions, getAccountPositions, request };
