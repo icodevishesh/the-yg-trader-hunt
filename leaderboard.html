@@ -202,6 +202,19 @@
   var API = "/api/leaderboard";
   var state = { data: null, loading: true, fetching: false, pollMs: 60 * 60 * 1000 };
 
+  // Competition window — authoritative on this page so a stale API snapshot
+  // can't show the wrong dates. Keep in sync with .env / config.js and index.html.
+  var WINDOW = {
+    start: "2026-09-07T00:00:00+05:30",
+    end: "2026-09-11T23:59:59+05:30",
+    announce: "2026-09-12T12:00:00+05:30"
+  };
+
+  // Total registered participants — the "N traders in the hunt" counter shows
+  // this (everyone in the cohort), NOT just those with >=1 trade. The standings
+  // table below stays limited to traders who have taken at least one trade.
+  var COHORT_SIZE = 35;
+
   var nf = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
   var nf0 = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 
@@ -233,18 +246,16 @@
   }
 
   function renderWindow() {
-    var d = state.data;
-    var w = d && (d.window || d.competition);
-    if (!w || !w.start || !w.end) { el.windowLine.hidden = true; return; }
-    var a = fmtDay(w.start), b = fmtDay(w.end);
+    var d = state.data || {};
+    var a = fmtDay(WINDOW.start), b = fmtDay(WINDOW.end);
     if (!a || !b) { el.windowLine.hidden = true; return; }
-    var yr = new Date(w.end).getFullYear();
+    var yr = new Date(WINDOW.end).getFullYear();
 
     var now = Date.now();
-    var started = now >= new Date(w.start).getTime();
-    var ended = d.competition_over || now > new Date(w.end).getTime();
-    var announced = d.winner_announced || (d.announce_at && now >= new Date(d.announce_at).getTime());
-    var annTxt = d.announce_at ? fmtDay(d.announce_at) : null;
+    var started = now >= new Date(WINDOW.start).getTime();
+    var ended = d.competition_over || now > new Date(WINDOW.end).getTime();
+    var announced = d.winner_announced || now >= new Date(WINDOW.announce).getTime();
+    var annTxt = fmtDay(WINDOW.announce);
 
     var cls, txt, dates = a + " – " + b + " " + yr;
     if (!started) { cls = "pre"; txt = "Starts soon"; }
@@ -308,18 +319,18 @@
     if (nr && !nr.past) { el.nextItem.hidden = false; el.nextTxt.textContent = "in " + nr.text; }
     else el.nextItem.hidden = true;
 
-    var announced = d.winner_announced || (d.announce_at && Date.now() >= new Date(d.announce_at).getTime());
-    var annTxt = d.announce_at ? fmtDay(d.announce_at) : null;
-    var end = d.competition && d.competition.end ? d.competition.end : null;
-    if (end) {
-      var er = relFromNow(end);
-      el.endsItem.hidden = false;
-      if (d.competition_over) el.endsTxt.textContent = announced ? "final result" : (annTxt ? "winner " + annTxt : "trading closed");
-      else el.endsTxt.textContent = er.past ? "ended" : "in " + er.text;
-    }
+    var nowMs = Date.now();
+    var ended = d.competition_over || nowMs > new Date(WINDOW.end).getTime();
+    var announced = d.winner_announced || nowMs >= new Date(WINDOW.announce).getTime();
+    var annTxt = fmtDay(WINDOW.announce);
+    var er = relFromNow(WINDOW.end);
+    el.endsItem.hidden = false;
+    if (ended) el.endsTxt.textContent = announced ? "final result" : (annTxt ? "winner " + annTxt : "trading closed");
+    else el.endsTxt.textContent = "in " + er.text;
 
-    var count = d.stats && (d.stats.participants != null ? d.stats.participants : null);
-    if (count != null) { el.countItem.hidden = false; el.countTxt.textContent = nf0.format(count); }
+    // Total in the hunt — the whole cohort, not just those already trading.
+    el.countItem.hidden = false;
+    el.countTxt.textContent = nf0.format(COHORT_SIZE);
 
     var wp = d.winner_provisional;
     if (wp && wp.name) {
@@ -337,9 +348,10 @@
     var d = state.data;
     el.noticeSlot.innerHTML = "";
     if (!d) return;
-    if (d.competition_over) {
-      var announced = d.winner_announced || (d.announce_at && Date.now() >= new Date(d.announce_at).getTime());
-      var annTxt = d.announce_at ? fmtDay(d.announce_at) : null;
+    var over = d.competition_over || Date.now() > new Date(WINDOW.end).getTime();
+    if (over) {
+      var announced = d.winner_announced || Date.now() >= new Date(WINDOW.announce).getTime();
+      var annTxt = fmtDay(WINDOW.announce);
       var fin = document.createElement("div");
       fin.className = "notice final";
       if (announced) {
@@ -425,13 +437,14 @@
       return;
     }
 
-    var entries = d.entries || [];
+    // Standings table: only traders who have taken at least one trade.
+    var entries = (d.entries || []).filter(function (e) { return (e.trades || 0) > 0; });
     if (entries.length === 0) {
       el.board.innerHTML = '<div class="empty">No qualifying accounts yet.<br>Place at least one trade during 7&ndash;11&nbsp;Sep on a $100+ account to appear here.</div>';
       return;
     }
 
-    var top = d.top3 && d.top3.length ? d.top3 : entries.slice(0, 3);
+    var top = (d.top3 && d.top3.length ? d.top3 : entries.slice(0, 3)).filter(function (e) { return e && (e.trades || 0) > 0; });
     var podium = '<div class="podium">' +
       podiumCell(top[0]) + podiumCell(top[1]) + podiumCell(top[2]) +
     '</div>';
