@@ -197,7 +197,10 @@
   "use strict";
 
   var API = "/api/leaderboard";
-  var state = { data: null, loading: true, fetching: false, pollMs: 60 * 60 * 1000 };
+  // Backend re-scores every REFRESH_MINUTES (.env REFRESH_CRON=*/15). The browser
+  // re-fetches every UI poll (.env UI_POLL_MINUTES=5, sent by the API).
+  var REFRESH_MINUTES = 15;
+  var state = { data: null, loading: true, fetching: false, pollMs: 5 * 60 * 1000 };
 
   // Competition window — authoritative on this page so a stale API snapshot
   // can't show the wrong dates. Keep in sync with .env / config.js and index.html.
@@ -317,9 +320,16 @@
       el.updatedTxt.innerHTML = "Updated <b>" + esc(r ? r.text : "—") + (r && r.past ? " ago" : "") + "</b>";
     }
 
-    var nr = d.next_refresh_at ? relFromNow(d.next_refresh_at) : null;
-    if (nr && !nr.past) { el.nextItem.hidden = false; el.nextTxt.textContent = "in " + nr.text; }
-    else el.nextItem.hidden = true;
+    // Next update = last score + REFRESH_MINUTES. Don't trust the API's
+    // next_refresh_at (a stale backend can put it an hour out).
+    var nextAt = d.generated_at ? new Date(new Date(d.generated_at).getTime() + REFRESH_MINUTES * 60000) : null;
+    if (nextAt) {
+      var nr = relFromNow(nextAt.toISOString());
+      el.nextItem.hidden = false;
+      el.nextTxt.textContent = nr.past ? "any moment" : "in " + nr.text;
+    } else {
+      el.nextItem.hidden = true;
+    }
 
     var nowMs = Date.now();
     var ended = !WINDOW.live && (d.competition_over || nowMs > new Date(WINDOW.end).getTime());
@@ -368,11 +378,12 @@
       }
       el.noticeSlot.appendChild(fin);
     }
-    if (d.is_stale) {
+    var ageMin = d.generated_at ? (Date.now() - new Date(d.generated_at).getTime()) / 60000 : 0;
+    if (d.is_stale || ageMin > 2.5 * REFRESH_MINUTES) {
       var w = d.generated_at ? new Date(d.generated_at).toLocaleString() : "earlier";
       var div = document.createElement("div");
       div.className = "notice stale";
-      div.innerHTML = "⚠ Live feed hiccuped — showing the last good update from " + esc(w) + ".";
+      div.innerHTML = "⚠ Standings last updated " + esc(w) + " — the feed may be catching up.";
       el.noticeSlot.appendChild(div);
     }
   }
