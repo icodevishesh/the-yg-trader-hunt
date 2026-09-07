@@ -3,18 +3,26 @@
 const cron = require('node-cron');
 const config = require('../config');
 const { connect, COLLECTIONS } = require('../db/mongo');
-const { refreshLeaderboard } = require('./refreshLeaderboard');
-const { captureBaseline } = require('./captureBaseline');
+const { computeStandings, writeCurrent, markStale } = require('./windowScore');
 const { finalizeResult } = require('./finalizeResult');
 
 let task = null;
+let running = false;
 
-function intervalHours() {
+// Minutes between refreshes, from the cron expr. Handles "*/N * * * *" (minutes),
+// "M */N * * *" (hours) and "M * * * *" (hourly).
+function intervalMinutes() {
   const expr = config.refreshCron || '';
-  const every = /^\s*\S+\s+\*\/(\d+)\s/.exec(expr);
-  if (every) return Number(every[1]);
-  if (/^\s*\d+\s+\*\s/.test(expr)) return 1; // "M * * * *" = hourly
-  return 4;
+  let m = /^\s*\*\/(\d+)\s/.exec(expr);
+  if (m) return Number(m[1]);
+  m = /^\s*\S+\s+\*\/(\d+)\s/.exec(expr);
+  if (m) return Number(m[1]) * 60;
+  if (/^\s*\d+\s+\*\s/.test(expr)) return 60;
+  return 240;
+}
+
+function nextRefreshFrom(from) {
+  return new Date(from.getTime() + intervalMinutes() * 60 * 1000);
 }
 
 async function snapshotIsStale() {
@@ -23,25 +31,41 @@ async function snapshotIsStale() {
     .collection(COLLECTIONS.current)
     .findOne({ _id: 'current' }, { projection: { generated_at: 1 } });
   if (!cur || !cur.generated_at) return true;
-  return Date.now() - new Date(cur.generated_at).getTime() > intervalHours() * 3600 * 1000;
+  return Date.now() - new Date(cur.generated_at).getTime() > 1.5 * intervalMinutes() * 60 * 1000;
 }
 
-// Safety net: if we're at/after the start line and no baseline exists for the
-// cohort, freeze one now. The intended path is a manual `npm run baseline`.
-async function maybeAutoBaseline() {
-  if (Date.now() < Date.parse(config.competition.start)) return;
-  const db = await connect();
-  const have = await db
-    .collection(COLLECTIONS.baseline)
-    .countDocuments({ cohort: config.competition.cohort });
-  if (have > 0) return;
-  console.log('[scheduler] no baseline for the cohort — auto-capturing at the start line');
-  const res = await captureBaseline({ force: false }).catch((err) => ({ ok: false, error: String(err) }));
-  if (res.ok) console.log(`[scheduler] baseline captured — created ${res.created}, unmatched ${res.unmatched}`);
-  else console.error(`[scheduler] auto-baseline failed — ${res.error}`);
+// Score the window from live Elefin and write lb_current. One run at a time.
+async function runSafely(trigger) {
+  if (running) {
+    console.log(`[score:${trigger}] skipped — a run is already in progress`);
+    return { ok: false, skipped: true };
+  }
+  running = true;
+  const started = Date.now();
+  try {
+    const result = await computeStandings({ markToMarket: true });
+    await writeCurrent(result, { nextRefreshAt: nextRefreshFrom(new Date()) });
+    const w = result.winner;
+    console.log(
+      `[score:${trigger}] ok in ${Math.round((Date.now() - started) / 1000)}s — ` +
+        `${result.ranked.length} ranked / ${result.detail.filter((d) => d.matched).length} matched / ${result.participants_total} in cohort` +
+        (w ? ` · leader ${w.name || w.email} ${w.return_pct}%` : ' · no leader') +
+        (result.positions_as_of ? ` · positions as_of ${result.positions_as_of}` : '')
+    );
+    return { ok: true, result };
+  } catch (err) {
+    const msg = err && err.message ? err.message : String(err);
+    console.error(`[score:${trigger}] failed — ${msg}`);
+    await markStale(msg);
+    return { ok: false, error: msg };
+  } finally {
+    running = false;
+  }
 }
 
-// After the window closes: one final refresh, then write lb_result, then stop.
+// After COMPETITION_END: one final score, then write lb_result, then stop the cron.
+// COMPETITION_END is a far-future placeholder while the board runs live, so this
+// is dormant until a real end is set.
 async function maybeFinalize() {
   if (Date.now() <= Date.parse(config.competition.end)) return false;
   const db = await connect();
@@ -50,7 +74,7 @@ async function maybeFinalize() {
     stop();
     return true;
   }
-  console.log('[scheduler] competition window closed — final refresh + finalize');
+  console.log('[scheduler] competition window closed — final score + finalize');
   await runSafely('final');
   const res = await finalizeResult({ trigger: 'auto' }).catch((err) => ({ ok: false, error: String(err) }));
   if (res.ok) {
@@ -63,29 +87,9 @@ async function maybeFinalize() {
   return true;
 }
 
-function runSafely(trigger) {
-  return refreshLeaderboard({ trigger })
-    .then((res) => {
-      if (res.skipped) console.log(`[refresh:${trigger}] skipped (${res.reason})`);
-      else if (res.ok) {
-        const s = res.snapshot;
-        console.log(
-          `[refresh:${trigger}] ok — ${s.eligible} ranked / ${s.matched} matched / ${s.participants_total} in cohort` +
-            (s.winner_provisional ? ` · leader ${s.winner_provisional.name} ${s.winner_provisional.return_pct}%` : '')
-        );
-      } else console.error(`[refresh:${trigger}] failed — ${res.error}`);
-      return res;
-    })
-    .catch((err) => {
-      console.error(`[refresh:${trigger}] threw —`, err);
-      return { ok: false, error: String(err) };
-    });
-}
-
 async function tick(trigger) {
   try {
     if (await maybeFinalize()) return;
-    await maybeAutoBaseline();
     await runSafely(trigger);
   } catch (err) {
     console.error(`[scheduler] tick(${trigger}) error:`, err.message);
@@ -99,14 +103,14 @@ function start() {
     return;
   }
   task = cron.schedule(config.refreshCron, () => tick('cron'));
-  console.log(`[scheduler] cron "${config.refreshCron}" active (every ~${intervalHours()}h)`);
+  console.log(`[scheduler] cron "${config.refreshCron}" active (every ${intervalMinutes()} min) — engine: window-score (mark-to-market)`);
 
   maybeFinalize()
     .then((finalized) => {
       if (finalized) return;
       return snapshotIsStale().then((stale) => {
         if (stale) {
-          console.log('[scheduler] no fresh snapshot — running an initial refresh');
+          console.log('[scheduler] snapshot stale — scoring now');
           return tick('boot');
         }
       });

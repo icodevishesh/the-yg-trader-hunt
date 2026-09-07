@@ -6,6 +6,7 @@ data/participants.pruned-*.json
 data/baseline-seed.*.json
 data/baseline-backup-*.json
 data/lb_result-undo-*.json
+data/window-score-*.json
 !data/participants.sample.txt
 uploads/*
 !uploads/.gitkeep

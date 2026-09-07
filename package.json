@@ -18,6 +18,9 @@
     "finalize": "node scripts/finalize-once.js",
     "finalize:mock": "MOCK_ELEFIN=1 node scripts/finalize-once.js",
     "finalize:undo": "node scripts/undo-finalize.js",
+    "score": "node scripts/window-score.js",
+    "score:write": "node scripts/window-score.js --write",
+    "score:closed": "node scripts/window-score.js --closed-only",
     "test": "node --test test/*.test.js"
   },
   "repository": {

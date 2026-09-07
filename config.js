@@ -32,8 +32,8 @@ const config = {
     timeoutMs: 30000,
   },
 
-  refreshCron: str(process.env.REFRESH_CRON, '0 * * * *'),
-  uiPollMinutes: num(process.env.UI_POLL_MINUTES, 60),
+  refreshCron: str(process.env.REFRESH_CRON, '*/15 * * * *'),
+  uiPollMinutes: num(process.env.UI_POLL_MINUTES, 5),
 
   scoring: {
     formula: str(process.env.SCORE_FORMULA, 'net_profit'), // 'net_profit' | 'equity'
