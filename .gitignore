@@ -3,6 +3,9 @@ node_modules/
 data/trader.txt
 data/participants.*.txt
 data/participants.pruned-*.json
+data/baseline-seed.*.json
+data/baseline-backup-*.json
+data/lb_result-undo-*.json
 !data/participants.sample.txt
 uploads/*
 !uploads/.gitkeep

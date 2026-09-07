@@ -11,10 +11,13 @@
     "import:participants:competition:sample": "node scripts/import-participants.js --competition --sample",
     "baseline": "node scripts/capture-baseline.js",
     "baseline:mock": "MOCK_ELEFIN=1 node scripts/capture-baseline.js",
+    "baseline:restore": "node scripts/restore-baseline.js",
+    "baseline:restore:dry": "node scripts/restore-baseline.js --dry",
     "refresh": "node scripts/refresh-once.js",
     "refresh:mock": "MOCK_ELEFIN=1 node scripts/refresh-once.js",
     "finalize": "node scripts/finalize-once.js",
     "finalize:mock": "MOCK_ELEFIN=1 node scripts/finalize-once.js",
+    "finalize:undo": "node scripts/undo-finalize.js",
     "test": "node --test test/*.test.js"
   },
   "repository": {

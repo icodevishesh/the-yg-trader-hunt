@@ -150,7 +150,7 @@
   <section class="strip">
     <div class="kicker">Live leaderboard</div>
     <h1 class="title">The standings.</h1>
-    <p class="sub">Ranked by percentage return on starting capital, 7&ndash;11&nbsp;Sep. Highest&nbsp;% wins. Add funds mid-competition and you keep your place on the board but forfeit the prize.</p>
+    <p class="sub">Ranked by percentage return on starting capital since 7&nbsp;Sep. Highest&nbsp;% wins. Add funds mid-competition and you keep your place on the board but forfeit the prize.</p>
     <div class="windowline" id="windowLine" hidden>
       <span class="wl-badge" id="wlBadge"><span class="d"></span> <span id="wlBadgeTxt">Live</span></span>
       <span class="wl-dates" id="wlDates">—</span>
@@ -207,13 +207,17 @@
   var WINDOW = {
     start: "2026-09-07T00:00:00+05:30",
     end: "2026-09-11T23:59:59+05:30",
-    announce: "2026-09-12T12:00:00+05:30"
+    announce: "2026-09-12T12:00:00+05:30",
+    // Force the board to stay LIVE regardless of the clock or the API's
+    // competition_over flag. Set to false (and update `end` above) when the
+    // competition actually closes.
+    live: true
   };
 
   // Total registered participants — the "N traders in the hunt" counter shows
   // this (everyone in the cohort), NOT just those with >=1 trade. The standings
   // table below stays limited to traders who have taken at least one trade.
-  var COHORT_SIZE = 1535;
+  var COHORT_SIZE = 1538;
 
   var nf = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
   var nf0 = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
@@ -248,22 +252,23 @@
   function renderWindow() {
     var d = state.data || {};
     var a = fmtDay(WINDOW.start), b = fmtDay(WINDOW.end);
-    if (!a || !b) { el.windowLine.hidden = true; return; }
-    var yr = new Date(WINDOW.end).getFullYear();
+    if (!a) { el.windowLine.hidden = true; return; }
+    var startYr = new Date(WINDOW.start).getFullYear();
 
     var now = Date.now();
-    var started = now >= new Date(WINDOW.start).getTime();
-    var ended = d.competition_over || now > new Date(WINDOW.end).getTime();
-    var announced = d.winner_announced || now >= new Date(WINDOW.announce).getTime();
+    var started = WINDOW.live || now >= new Date(WINDOW.start).getTime();
+    var ended = !WINDOW.live && (d.competition_over || now > new Date(WINDOW.end).getTime());
+    var announced = !WINDOW.live && (d.winner_announced || now >= new Date(WINDOW.announce).getTime());
     var annTxt = fmtDay(WINDOW.announce);
 
-    var cls, txt, dates = a + " – " + b + " " + yr;
-    if (!started) { cls = "pre"; txt = "Starts soon"; }
-    else if (!ended) { cls = "live"; txt = "Live"; }
-    else if (announced) { cls = "live"; txt = "Final"; }
+    var cls, txt, dates;
+    if (WINDOW.live) { cls = "live"; txt = "Live"; dates = "since " + a + " " + startYr; }
+    else if (!started) { cls = "pre"; txt = "Starts soon"; dates = a + " – " + b + " " + startYr; }
+    else if (!ended) { cls = "live"; txt = "Live"; dates = a + " – " + b + " " + startYr; }
+    else if (announced) { cls = "live"; txt = "Final"; dates = a + " – " + b + " " + startYr; }
     else {
       cls = "over"; txt = "Trading closed";
-      if (annTxt) dates += " · winner " + annTxt;
+      dates = a + " – " + b + " " + startYr + (annTxt ? " · winner " + annTxt : "");
     }
     el.wlBadge.className = "wl-badge " + cls;
     el.wlBadgeTxt.textContent = txt;
@@ -320,13 +325,17 @@
     else el.nextItem.hidden = true;
 
     var nowMs = Date.now();
-    var ended = d.competition_over || nowMs > new Date(WINDOW.end).getTime();
-    var announced = d.winner_announced || nowMs >= new Date(WINDOW.announce).getTime();
+    var ended = !WINDOW.live && (d.competition_over || nowMs > new Date(WINDOW.end).getTime());
+    var announced = !WINDOW.live && (d.winner_announced || nowMs >= new Date(WINDOW.announce).getTime());
     var annTxt = fmtDay(WINDOW.announce);
-    var er = relFromNow(WINDOW.end);
-    el.endsItem.hidden = false;
-    if (ended) el.endsTxt.textContent = announced ? "final result" : (annTxt ? "winner " + annTxt : "trading closed");
-    else el.endsTxt.textContent = "in " + er.text;
+    if (WINDOW.live) {
+      el.endsItem.hidden = true;
+    } else {
+      var er = relFromNow(WINDOW.end);
+      el.endsItem.hidden = false;
+      if (ended) el.endsTxt.textContent = announced ? "final result" : (annTxt ? "winner " + annTxt : "trading closed");
+      else el.endsTxt.textContent = "in " + er.text;
+    }
 
     // Total in the hunt — the whole cohort, not just those already trading.
     el.countItem.hidden = false;
@@ -348,7 +357,7 @@
     var d = state.data;
     el.noticeSlot.innerHTML = "";
     if (!d) return;
-    var over = d.competition_over || Date.now() > new Date(WINDOW.end).getTime();
+    var over = !WINDOW.live && (d.competition_over || Date.now() > new Date(WINDOW.end).getTime());
     if (over) {
       var announced = d.winner_announced || Date.now() >= new Date(WINDOW.announce).getTime();
       var annTxt = fmtDay(WINDOW.announce);
@@ -396,7 +405,7 @@
   function podiumCell(e) {
     if (!e) return '<div class="pcell"><span class="medal">—</span><div class="rank-num">·</div><div class="pname" style="color:var(--dim)">Open</div></div>';
     var medals = { 1: "Gold", 2: "Silver", 3: "Bronze" };
-    var afTag = e.added_funds ? '<span class="af-tag">Added funds · no prize</span>' : "";
+    var afTag = e.added_funds ? '<span class="af-tag">Added funds</span>' : "";
     return '<div class="pcell">' +
       '<span class="medal">' + esc(medals[e.rank] || ("#" + e.rank)) + '</span>' +
       '<div class="rank-num ' + (e.rank === 1 && !e.added_funds ? "pos" : "") + '">' + e.rank + '</div>' +
@@ -412,7 +421,7 @@
     var ctyName = e.country_name || "";
     var ctyCell = ctyName ? (flag + esc(ctyName)) : '<span style="color:var(--dimmer)">—</span>';
     var slTag = e.shortlisted && !e.added_funds ? ' <span class="sl-tag">Shortlist</span>' : "";
-    var afTag = e.added_funds ? ' <span class="af-tag">Added funds · no prize</span>' : "";
+    var afTag = e.added_funds ? ' <span class="af-tag">Added funds</span>' : "";
     var idLine = e.client_id != null ? '<span class="tid">ID ' + esc(e.client_id) + '</span>' : "";
     return '<tr' + (e.added_funds ? ' class="af-row"' : '') + '>' +
       '<td class="rk">' + e.rank + '</td>' +
@@ -433,14 +442,14 @@
       return;
     }
     if (d.status === "pending") {
-      el.board.innerHTML = '<div class="empty">Standings open when the first results land.<br>The window runs 7&ndash;11&nbsp;Sep.</div>';
+      el.board.innerHTML = '<div class="empty">Standings open when the first results land.<br>Check back soon.</div>';
       return;
     }
 
     // Standings table: only traders who have taken at least one trade.
     var entries = (d.entries || []).filter(function (e) { return (e.trades || 0) > 0; });
     if (entries.length === 0) {
-      el.board.innerHTML = '<div class="empty">No qualifying accounts yet.<br>Place at least one trade during 7&ndash;11&nbsp;Sep on a $100+ account to appear here.</div>';
+      el.board.innerHTML = '<div class="empty">No qualifying accounts yet.<br>Place at least one trade on a $100+ account to appear here.</div>';
       return;
     }
 

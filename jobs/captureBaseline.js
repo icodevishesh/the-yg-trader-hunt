@@ -55,7 +55,10 @@ async function captureBaseline({ force = false } = {}) {
     const prev = existing.get(email);
     const c = byEmail.get(email);
 
-    if (prev && prev.frozen && afterGrace && !force) {
+    // Past the grace window, an existing baseline is never silently overwritten
+    // — frozen OR a not-yet-frozen seed. Only --force gets through. (A seed that
+    // outlives the grace window is a mistake to preserve, not to clobber.)
+    if (prev && afterGrace && !force) {
       summary.kept += 1;
       rows.push({ email, matched: !!prev.matched, equity_start: prev.equity_start, net_profit_start: prev.net_profit_start, trades_start: prev.trades_start, action: 'kept' });
       continue;
