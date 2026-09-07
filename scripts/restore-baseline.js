@@ -200,9 +200,11 @@ async function main() {
     console.log(`  ${pad('#' + (i + 1), 4)}${pad(e.email, 32)}${pad((e.ret >= 0 ? '+' : '') + e.ret + '%', 10)}${pad('np ' + e.npWin, 12)}${pad('base ' + e.eqStart, 12)}${pad(e.trWin + ' tr', 7)}${e.added ? 'ADDED FUNDS — no prize' : 'prize-eligible'}`);
   });
 
-  console.log('\n  VERIFY before declaring a winner:');
+  console.log('\n  In-window deposits (deposits_start = deposits_now − this):');
   Object.keys(flows).filter((k) => k[0] !== '_').forEach((k) => {
-    console.log(`   - ${k}: assumed +$${flows[k].deposit} deposited 7–11 Sep — confirm on Elefin's deposit ledger`);
+    const f = flows[k];
+    const tag = f.verified ? `verified — ${f.verified}` : `INFERRED $${f.deposit} — confirm on Elefin's deposit ledger`;
+    console.log(`   - ${k}: $${f.deposit}  (${tag})`);
   });
   if (SEED.late_add) {
     Object.keys(SEED.late_add).forEach((k) => {
