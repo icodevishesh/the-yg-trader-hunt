@@ -190,15 +190,14 @@ async function computeStandings({
       per_login: [],
       window_deposits: 0,
       window_withdrawals: 0,
-      deposit_beyond_entry: 0,
       deposit_items: [],
       withdrawal_items: [],
       late_add: false,
+      reloaded: false,
       base: null,
       base_usd: null,
       return_pct: null,
       return_pct_closed: null,
-      added_funds: false,
       eligible: false,
       winner_eligible: false,
       reasons: [],
@@ -260,36 +259,32 @@ async function computeStandings({
     d.withdrawal_items = collect(byLoginWdr, byClientWdr);
     d.window_withdrawals = r2(d.withdrawal_items.reduce((s, x) => s + x.amount, 0));
 
-    // base (denominator)
+    // base = CUMULATIVE capital: every deposit into the account (initial + every
+    // reload). Per the organiser's rule, reloading after a wipeout is allowed and
+    // PNL is measured against the combined total. Withdrawals do NOT shrink it
+    // (can't pull money out to inflate your %). Gross `funding.deposits`, with a
+    // floor of the declared entry capital for a late entrant.
     const lateCap = LATE_ADD[email];
     d.late_add = lateCap != null;
-    const netDepAtStart = r2(c.net_deposit - d.window_deposits + d.window_withdrawals);
-    if (d.late_add) {
-      d.base = lateCap;
-      d.deposit_beyond_entry = r2(Math.max(0, d.window_deposits - lateCap));
-    } else if (baseMode === 'stated' && p.capital_stated != null) {
+    const grossDeposits = num(c.deposits);
+    if (baseMode === 'stated' && p.capital_stated != null) {
       d.base = num(p.capital_stated);
-      d.deposit_beyond_entry = d.window_deposits;
-    } else if (baseMode === 'balance') {
-      d.base = r2(netDepAtStart + (c.lifetime_net_profit - d.closed_pnl));
-      d.deposit_beyond_entry = d.window_deposits;
     } else {
-      d.base = netDepAtStart;
-      d.deposit_beyond_entry = d.window_deposits;
+      d.base = Math.max(grossDeposits, lateCap != null ? lateCap : 0);
     }
+    d.reloaded = d.window_deposits > DEP_TOL; // informational only — not a penalty
     d.base_usd = r2(toUsd(d.base, c.currency));
     d.return_pct = d.base > 0 ? r2((d.score_pnl / d.base) * 100) : null;
     d.return_pct_closed = d.base > 0 ? r2((d.closed_pnl / d.base) * 100) : null;
-    d.added_funds = toUsd(d.deposit_beyond_entry, c.currency) > DEP_TOL;
 
     if (c.status && c.status !== 'active') d.reasons.push('inactive');
-    if (!(d.base > 0)) d.reasons.push('no_base_capital');
+    if (!(d.base > 0)) d.reasons.push('no_capital');
     else if (d.base_usd < MIN_USD) d.reasons.push('below_min_deposit');
     if (!(d.closed_trades + d.open_positions > 0)) d.reasons.push('no_window_activity');
     if (d.return_pct === null) d.reasons.push('no_return');
 
     d.eligible = d.reasons.length === 0;
-    d.winner_eligible = d.eligible && !d.added_funds;
+    d.winner_eligible = d.eligible; // deposits no longer bar anyone
     detail.push(d);
     onProgress(`scored ${++done}/${participants.length}`);
   }
@@ -314,10 +309,9 @@ async function computeStandings({
     base_mode: baseMode,
     mark_to_market: markToMarket,
     formula: markToMarket
-      ? '(closed_pnl_window + open_position_pnl) / base * 100'
-      : 'closed_pnl_window / base * 100',
+      ? '(closed_pnl_window + open_position_pnl) / cumulative_capital * 100'
+      : 'closed_pnl_window / cumulative_capital * 100',
     min_deposit_usd: MIN_USD,
-    deposit_tolerance_usd: DEP_TOL,
     positions_as_of: positionsAsOf,
     rate_limit_remaining: me.rateLimitRemaining ?? null,
     participants_total: participants.length,
@@ -347,10 +341,12 @@ function buildSnapshot(result) {
       closed_pnl: r2(toUsd(d.closed_pnl, d.currency)),
       open_pnl: r2(toUsd(d.open_pnl, d.currency)),
       base_start: d.base_usd,
+      cumulative_capital: d.base_usd,
       currency: d.currency,
       trades: d.closed_trades,
       open_positions: d.open_positions,
-      added_funds: d.added_funds,
+      reloaded: d.reloaded,
+      window_deposits: r2(toUsd(d.window_deposits, d.currency)),
       winner_eligible: d.winner_eligible,
       shortlisted: d.rank <= config.scoring.shortlistSize,
     };
@@ -375,7 +371,7 @@ function buildSnapshot(result) {
       ? { client_id: winner.client_id, name: maskName(winner.name || winner.name_form, winner.client_id), return_pct: winner.return_pct }
       : null,
     flags: {
-      added_funds: detail.filter((d) => d.added_funds).length,
+      reloaded: detail.filter((d) => d.reloaded).length,
       unmatched: detail.filter((d) => !d.matched).length,
       open_positions: detail.filter((d) => d.open_positions > 0).length,
     },

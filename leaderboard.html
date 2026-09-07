@@ -103,9 +103,6 @@
   .trader .tname { font-weight: 500; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tid { display: block; margin-top: 3px; font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
   .sl-tag { font-size: 8px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lime); border: 1px solid rgba(198,251,62,0.4); padding: 2px 6px; }
-  .af-tag { font-size: 8px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--neg); border: 1px solid rgba(255,138,107,0.45); padding: 2px 6px; white-space: nowrap; }
-  tr.af-row td:not(.rk) .tname { color: var(--muted); }
-  .pcell .af-tag { align-self: flex-start; }
   .flag { font-size: 15px; }
   .cty { color: var(--muted); }
   tr.divider td { background: var(--surface); color: var(--dim); font-size: 9px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; padding: 10px 16px; }
@@ -150,7 +147,7 @@
   <section class="strip">
     <div class="kicker">Live leaderboard</div>
     <h1 class="title">The standings.</h1>
-    <p class="sub">Ranked by percentage return on starting capital since 7&nbsp;Sep. Highest&nbsp;% wins. Add funds mid-competition and you keep your place on the board but forfeit the prize.</p>
+    <p class="sub">Ranked by percentage return on your cumulative capital (Day&nbsp;1 deposit + any reloads) since 7&nbsp;Sep. Highest&nbsp;% wins. Lost your capital? Reload and keep competing.</p>
     <div class="windowline" id="windowLine" hidden>
       <span class="wl-badge" id="wlBadge"><span class="d"></span> <span id="wlBadgeTxt">Live</span></span>
       <span class="wl-dates" id="wlDates">—</span>
@@ -217,7 +214,7 @@
   // Total registered participants — the "N traders in the hunt" counter shows
   // this (everyone in the cohort), NOT just those with >=1 trade. The standings
   // table below stays limited to traders who have taken at least one trade.
-  var COHORT_SIZE = 39;
+  var COHORT_SIZE = 1539;
 
   var nf = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
   var nf0 = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
@@ -405,14 +402,12 @@
   function podiumCell(e) {
     if (!e) return '<div class="pcell"><span class="medal">—</span><div class="rank-num">·</div><div class="pname" style="color:var(--dim)">Open</div></div>';
     var medals = { 1: "Gold", 2: "Silver", 3: "Bronze" };
-    var afTag = e.added_funds ? '<span class="af-tag">Added funds</span>' : "";
     return '<div class="pcell">' +
       '<span class="medal">' + esc(medals[e.rank] || ("#" + e.rank)) + '</span>' +
-      '<div class="rank-num ' + (e.rank === 1 && !e.added_funds ? "pos" : "") + '">' + e.rank + '</div>' +
+      '<div class="rank-num ' + (e.rank === 1 ? "pos" : "") + '">' + e.rank + '</div>' +
       '<div class="pname">' + esc(e.name) + '</div>' +
       '<div class="pret ' + signClass(e.return_pct) + '">' + pct(e.return_pct) + '</div>' +
       '<div class="pmeta">' + nf0.format(e.trades || 0) + ' trades</div>' +
-      afTag +
       '</div>';
   }
 
@@ -420,12 +415,11 @@
     var flag = e.flag ? '<span class="flag">' + e.flag + '</span> ' : "";
     var ctyName = e.country_name || "";
     var ctyCell = ctyName ? (flag + esc(ctyName)) : '<span style="color:var(--dimmer)">—</span>';
-    var slTag = e.shortlisted && !e.added_funds ? ' <span class="sl-tag">Shortlist</span>' : "";
-    var afTag = e.added_funds ? ' <span class="af-tag">Added funds</span>' : "";
+    var slTag = e.shortlisted ? ' <span class="sl-tag">Shortlist</span>' : "";
     var idLine = e.client_id != null ? '<span class="tid">ID ' + esc(e.client_id) + '</span>' : "";
-    return '<tr' + (e.added_funds ? ' class="af-row"' : '') + '>' +
+    return '<tr>' +
       '<td class="rk">' + e.rank + '</td>' +
-      '<td><span class="trader"><span class="tname">' + esc(e.name) + '</span>' + slTag + afTag + '</span>' + idLine + '</td>' +
+      '<td><span class="trader"><span class="tname">' + esc(e.name) + '</span>' + slTag + '</span>' + idLine + '</td>' +
       '<td class="col-country cty">' + ctyCell + '</td>' +
       '<td class="num ' + signClass(e.return_pct) + '">' + pct(e.return_pct) + '</td>' +
       '<td class="num col-trades">' + nf0.format(e.trades || 0) + '</td>' +

@@ -77,7 +77,7 @@ const line = () => console.log('  ' + '-'.repeat(112));
   const txnLine = (t) =>
     '     ' + pad(String(t.login || 'client ' + t.client_id), 16) + padL('$' + amtOf(t), 11) + '   ' + pad(t.created_at || '?', 22) + '  ' + whoIs(t);
 
-  console.log('\n\n  A. IN-WINDOW DEPOSITS  (GET /transactions?type=deposit · status=success · created_at inside window)  ·  ' + R.deposits.length);
+  console.log('\n\n  A. RELOADS IN WINDOW  (deposits after Day 1 — allowed; added to cumulative capital)  ·  ' + R.deposits.length);
   line();
   if (!R.deposits.length) console.log('     (none)');
   R.deposits.forEach((t) => console.log(txnLine(t)));
@@ -102,8 +102,8 @@ const line = () => console.log('  ' + '-'.repeat(112));
   for (const d of R.detail) {
     const flags = [];
     if (!d.matched) flags.push('UNMATCHED');
-    if (d.late_add) flags.push('LATE-ADD ($' + d.base + ' entry' + (d.window_deposits ? ', $' + d.window_deposits + ' in-window' : '') + ')');
-    if (d.added_funds) flags.push('ADDED $' + (d.deposit_beyond_entry || d.window_deposits));
+    if (d.late_add) flags.push('LATE-ADD');
+    if (d.reloaded) flags.push('reloaded $' + d.window_deposits + ' (in base)');
     if (d.window_withdrawals) flags.push('WDR $' + d.window_withdrawals);
     if (!d.eligible && d.matched) flags.push('OUT:' + d.reasons.join(','));
     if (d.errors.length) flags.push('ERR:' + d.errors.length);
@@ -119,35 +119,30 @@ const line = () => console.log('  ' + '-'.repeat(112));
     d.errors.forEach((e) => console.log('        ! ' + e));
   }
 
-  console.log('\n  E. STANDINGS  (eligible = matched · active · base >= $' + R.min_deposit_usd + ' · traded in window)');
+  console.log('\n  E. STANDINGS  (eligible = matched · active · cumulative capital >= $' + R.min_deposit_usd + ' · traded in window)');
   line();
-  console.log('     ' + pad('#', 4) + pad('trader', 20) + padL('return%', 10) + padL('score $', 10) + padL('(closed', 10) + padL('open)', 9) + padL('base $', 9) + padL('trades', 7) + '  prize');
+  console.log('     ' + pad('#', 4) + pad('trader', 20) + padL('return%', 10) + padL('score $', 10) + padL('(closed', 10) + padL('open)', 9) + padL('capital $', 10) + padL('trades', 7) + '  reload');
   line();
   for (const d of R.ranked) {
     console.log(
       '     ' + pad('#' + d.rank, 4) + pad(nameOf(d), 20) +
         padL(money(d.return_pct) + '%', 10) + padL(money(d.score_pnl), 10) +
         padL(money(d.closed_pnl), 10) + padL(money(d.open_pnl), 9) +
-        padL(r2(d.base), 9) + padL(d.closed_trades + (d.open_positions ? '+' + d.open_positions : ''), 7) +
-        '  ' + (d.winner_eligible ? 'eligible' : 'NO — added funds')
+        padL(r2(d.base), 10) + padL(d.closed_trades + (d.open_positions ? '+' + d.open_positions : ''), 7) +
+        '  ' + (d.reloaded ? '+$' + d.window_deposits : '')
     );
   }
   if (!R.ranked.length) console.log('     (nobody eligible)');
 
-  console.log('\n  F. WINNER');
+  console.log('\n  F. WINNER  (highest % return on cumulative capital)');
   line();
   if (R.winner) {
     const w = R.winner;
     console.log('     ' + nameOf(w) + '   ' + money(w.return_pct) + '%');
-    console.log('        score ' + money(w.score_pnl) + '  (closed ' + money(w.closed_pnl) + ' + open ' + money(w.open_pnl) + ')  on base ' + r2(w.base) + '   ·   ' + w.closed_trades + ' closed / ' + w.open_positions + ' open');
-    console.log('        ' + w.email + '   login ' + (w.logins[0] || '—') + '   client_id ' + w.client_id + '   ·   deposits in window $' + w.window_deposits);
+    console.log('        score ' + money(w.score_pnl) + '  (closed ' + money(w.closed_pnl) + ' + open ' + money(w.open_pnl) + ')  on cumulative capital ' + r2(w.base) + '   ·   ' + w.closed_trades + ' closed / ' + w.open_positions + ' open');
+    console.log('        ' + w.email + '   login ' + (w.logins[0] || '—') + '   client_id ' + w.client_id + (w.reloaded ? '   ·   reloaded $' + w.window_deposits + ' in the window' : ''));
   } else {
-    console.log('     none winner-eligible');
-  }
-  const excluded = R.ranked.filter((d) => !d.winner_eligible);
-  if (excluded.length) {
-    console.log('\n     ranked but excluded from the prize (added funds in the window):');
-    excluded.forEach((d) => console.log('      #' + d.rank + '  ' + d.email + '  ' + money(d.return_pct) + '%  · deposited $' + d.window_deposits));
+    console.log('     none eligible');
   }
   console.log('');
 

@@ -42,8 +42,8 @@ const config = {
     usdtToInr: num(process.env.USDT_TO_INR_RATE, 102),
     leaderboardSize: num(process.env.LEADERBOARD_SIZE, 33),
     shortlistSize: num(process.env.SHORTLIST_SIZE, 5),
-    // Any in-window deposit above this (FX-normalised USD) flags `added_funds`
-    // and bars the participant from the prize. See plan.md §5.
+    // A reload (deposit after Day 1) above this (FX-normalised USD) is flagged
+    // for info only — it is allowed and added to the cumulative-capital base.
     depositToleranceUsd: num(process.env.DEPOSIT_TOLERANCE_USD, 1),
   },
 
