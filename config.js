@@ -37,7 +37,9 @@ const config = {
 
   scoring: {
     formula: str(process.env.SCORE_FORMULA, 'net_profit'), // 'net_profit' | 'equity'
-    minDepositUsd: num(process.env.MIN_DEPOSIT_USD, 100),
+    // $95, not $100 — a $100 deposit lands as ~$98-99.5 after the payment-rail
+    // fee. This keeps genuine sub-$100 entries out without punishing that fee.
+    minDepositUsd: num(process.env.MIN_DEPOSIT_USD, 95),
     requireTrade: bool(process.env.REQUIRE_TRADE, true),
     usdtToInr: num(process.env.USDT_TO_INR_RATE, 102),
     leaderboardSize: num(process.env.LEADERBOARD_SIZE, 33),
