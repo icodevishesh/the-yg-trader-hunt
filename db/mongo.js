@@ -13,7 +13,7 @@ async function connect() {
 
   connecting = (async () => {
     client = new MongoClient(config.mongo.uri, {
-      serverSelectionTimeoutMS: 8000,
+      serverSelectionTimeoutMS: 20000,
       retryWrites: true,
     });
     await client.connect();
@@ -42,6 +42,7 @@ const COLLECTIONS = {
   result: 'lb_result',
   jobRuns: 'lb_job_runs',
   locks: 'lb_locks',
+  manualScores: 'lb_manual_scores',
 };
 
 async function ensureIndexes() {
@@ -53,6 +54,8 @@ async function ensureIndexes() {
     d.collection(COLLECTIONS.participants).createIndex({ 'elefin.winner_eligible': 1 }),
     d.collection(COLLECTIONS.participants).createIndex({ in_competition: 1, cohort: 1 }),
     d.collection(COLLECTIONS.baseline).createIndex({ cohort: 1 }),
+    d.collection(COLLECTIONS.manualScores).createIndex({ cohort: 1, enabled: 1 }),
+    d.collection(COLLECTIONS.manualScores).createIndex({ email: 1 }),
     d.collection(COLLECTIONS.snapshots).createIndex({ generated_at: -1 }),
     d.collection(COLLECTIONS.jobRuns).createIndex({ started_at: -1 }),
     // TTL lock: a stale lock auto-expires ~10 min after it was acquired.

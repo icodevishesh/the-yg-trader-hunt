@@ -102,7 +102,8 @@ const line = () => console.log('  ' + '-'.repeat(112));
   line();
   for (const d of R.detail) {
     const flags = [];
-    if (!d.matched) flags.push('UNMATCHED');
+    if (d.manual) flags.push('MANUAL (hardcoded, not from Elefin)');
+    if (!d.matched && !d.manual) flags.push('UNMATCHED');
     if (d.late_add) flags.push('LATE-ADD');
     if (d.reloaded) flags.push('reloaded $' + d.window_deposits + ' (in base)');
     if (d.window_withdrawals) flags.push('WDR $' + d.window_withdrawals);

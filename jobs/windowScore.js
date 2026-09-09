@@ -92,6 +92,45 @@ function loadLateAdd(cohort) {
   }
 }
 
+// Manual score overrides. Any trader listed here — by client_id or by email — is
+// scored ENTIRELY from the override; the scorer makes no Elefin calls for them.
+// Primary source: the `lb_manual_scores` Mongo collection ({ cohort, enabled }).
+// Fallback: data/manual-scores.<cohort>.json (used if the collection read fails
+// or returns nothing). Returns { byId: {clientId: rec}, byEmail: {email: rec} }.
+function loadManualFile(cohort) {
+  try {
+    const j = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../data/manual-scores.${cohort}.json`), 'utf8'));
+    const byId = {};
+    const byEmail = {};
+    for (const [k, v] of Object.entries(j.by_client_id || {})) if (v && typeof v === 'object') byId[String(k)] = v;
+    for (const [k, v] of Object.entries(j.by_email || {})) if (v && typeof v === 'object') byEmail[String(k).toLowerCase()] = v;
+    return { byId, byEmail };
+  } catch {
+    return { byId: {}, byEmail: {} };
+  }
+}
+
+async function loadManual(db, cohort) {
+  try {
+    const docs = await db
+      .collection(COLLECTIONS.manualScores)
+      .find({ cohort, enabled: { $ne: false } })
+      .toArray();
+    if (docs.length) {
+      const byId = {};
+      const byEmail = {};
+      for (const doc of docs) {
+        if (doc.client_id != null) byId[String(doc.client_id)] = doc;
+        if (doc.email) byEmail[String(doc.email).toLowerCase()] = doc;
+      }
+      return { byId, byEmail, source: 'collection' };
+    }
+  } catch {
+    /* fall through to the file */
+  }
+  return { ...loadManualFile(cohort), source: 'file' };
+}
+
 async function computeStandings({
   from = DEFAULT_FROM,
   to = DEFAULT_TO,
@@ -117,11 +156,14 @@ async function computeStandings({
   };
 
   const db = await connect();
+  const MANUAL = await loadManual(db, COHORT);
   const participants = await db
     .collection(COLLECTIONS.participants)
     .find({ in_competition: true, cohort: COHORT })
     .toArray();
-  onProgress(`cohort ${participants.length} participants`);
+  onProgress(
+    `cohort ${participants.length} participants · manual overrides: ${Object.keys(MANUAL.byId).length} (from ${MANUAL.source})`
+  );
 
   const me = await elefin.me();
   if (!me.ok) throw new Error('Elefin /me failed: ' + me.error);
@@ -212,6 +254,7 @@ async function computeStandings({
       client_id: c ? c.client_id : null,
       currency: c ? c.currency : 'USD',
       status: c ? c.status : null,
+      country: c ? c.country : '',
       logins: c ? c.logins : [],
       closed_pnl: 0,
       closed_trades: 0,
@@ -225,6 +268,7 @@ async function computeStandings({
       withdrawal_items: [],
       late_add: false,
       reloaded: false,
+      manual: false,
       data_error: false,
       open_error: false,
       carried_forward: false,
@@ -237,6 +281,55 @@ async function computeStandings({
       reasons: [],
       errors: [],
     };
+
+    // --- MANUAL OVERRIDE: score entirely from data/manual-scores.<cohort>.json,
+    // no Elefin calls for this trader ---
+    const ov =
+      MANUAL.byEmail[email] ||
+      (c && MANUAL.byId[String(c.client_id)]) ||
+      (d.client_id != null && MANUAL.byId[String(d.client_id)]) ||
+      Object.values(MANUAL.byId).find((r) => String(r.email || '').toLowerCase() === email);
+    if (ov) {
+      d.manual = true;
+      d.matched = true;
+      d.client_id = ov.client_id != null ? ov.client_id : c ? c.client_id : d.client_id;
+      d.name = ov.name || d.name;
+      d.currency = (ov.currency || d.currency || 'USD').toUpperCase();
+      d.status = (ov.status || 'active').toLowerCase();
+      d.country = ov.country || d.country || '';
+      d.logins = Array.isArray(ov.logins) ? ov.logins.map(String) : d.logins;
+      d.closed_pnl = r2(num(ov.closed_pnl));
+      d.closed_trades = num(ov.closed_trades);
+      d.open_pnl = r2(num(ov.open_pnl));
+      d.open_positions = num(ov.open_positions);
+      d.window_deposits = r2(num(ov.window_deposits));
+      d.window_withdrawals = r2(num(ov.window_withdrawals));
+      d.score_pnl = markToMarket ? r2(d.closed_pnl + d.open_pnl) : d.closed_pnl;
+
+      const lateCap = LATE_ADD[email];
+      d.late_add = lateCap != null;
+      const grossDeposits = num(ov.gross_deposits != null ? ov.gross_deposits : ov.base != null ? ov.base : ov.deposits);
+      d.base =
+        baseMode === 'stated' && p.capital_stated != null
+          ? num(p.capital_stated)
+          : Math.max(grossDeposits, lateCap != null ? lateCap : 0);
+      d.reloaded = d.window_deposits > DEP_TOL;
+      d.base_usd = r2(toUsd(d.base, d.currency));
+      d.return_pct = d.base > 0 ? r2((d.score_pnl / d.base) * 100) : null;
+      d.return_pct_closed = d.base > 0 ? r2((d.closed_pnl / d.base) * 100) : null;
+
+      if (d.status !== 'active') d.reasons.push('inactive');
+      if (!(d.base > 0)) d.reasons.push('no_capital');
+      else if (d.base_usd < MIN_USD) d.reasons.push('below_min_deposit');
+      if (!(d.closed_trades + d.open_positions > 0)) d.reasons.push('no_window_activity');
+      if (d.return_pct === null) d.reasons.push('no_return');
+
+      d.eligible = d.reasons.length === 0;
+      d.winner_eligible = d.eligible;
+      detail.push(d);
+      onProgress(`scored ${++done}/${participants.length} (manual)`);
+      continue;
+    }
 
     if (!c) {
       d.reasons.push('not_matched_in_elefin');
@@ -391,11 +484,12 @@ async function computeStandings({
 function buildSnapshot(result) {
   const { detail, ranked, winner } = result;
   const entries = ranked.map((d) => {
-    const cl = countryLabel((result._byEmail.get(d.email) || {}).country || '');
+    const cl = countryLabel(d.country || (result._byEmail.get(d.email) || {}).country || '');
     return {
       rank: d.rank,
       client_id: d.client_id,
       name: maskName(d.name || d.name_form, d.client_id),
+      manual: !!d.manual,
       country: cl.code,
       flag: cl.flag,
       country_name: cl.name,
@@ -438,6 +532,7 @@ function buildSnapshot(result) {
     flags: {
       reloaded: detail.filter((d) => d.reloaded).length,
       unmatched: detail.filter((d) => !d.matched).length,
+      manual: detail.filter((d) => d.manual).length,
       open_positions: detail.filter((d) => d.open_positions > 0).length,
       data_errors: result.data_errors || 0,
       carried_forward: result.carried_forward || 0,

@@ -4,6 +4,7 @@ data/trader.txt
 data/participants.*.txt
 data/participants.pruned-*.json
 data/baseline-seed.*.json
+data/manual-scores.*.json
 data/baseline-backup-*.json
 data/lb_result-undo-*.json
 data/window-score-*.json
