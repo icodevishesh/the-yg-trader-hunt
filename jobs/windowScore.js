@@ -26,8 +26,12 @@ const { connect, COLLECTIONS } = require('../db/mongo');
 const elefin = require('../services/elefin');
 const { maskName, countryLabel, toUsd } = require('../services/scoring');
 
-const DEFAULT_FROM = process.env.SCORING_FROM || '2026-09-07T00:00:00+05:30';
-const DEFAULT_TO = process.env.SCORING_TO || '2026-09-11T23:59:59+05:30';
+const DEFAULT_FROM = process.env.SCORING_FROM || config.competition.start;
+// End of the window = now (capped at the configured competition end), computed
+// per run so it never freezes on a hardcoded date. Override with SCORING_TO.
+const DEFAULT_TO =
+  process.env.SCORING_TO ||
+  new Date(Math.min(Date.now(), Date.parse(config.competition.end))).toISOString();
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const r2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -133,12 +137,15 @@ async function loadManual(db, cohort) {
 
 async function computeStandings({
   from = DEFAULT_FROM,
-  to = DEFAULT_TO,
+  to = null,
   baseMode = 'net_deposit',
   withPositions = true,
   markToMarket = true,
   onProgress = () => {},
 } = {}) {
+  // Resolve the window end per run (not at module load) so a long-running
+  // scheduler always scores up to "now", capped at the competition end.
+  if (!to) to = new Date(Math.min(Date.now(), Date.parse(config.competition.end))).toISOString();
   const COHORT = config.competition.cohort;
   const MIN_USD = config.scoring.minDepositUsd;
   const DEP_TOL = config.scoring.depositToleranceUsd;
@@ -161,6 +168,12 @@ async function computeStandings({
     .collection(COLLECTIONS.participants)
     .find({ in_competition: true, cohort: COHORT })
     .toArray();
+  // Frozen start-line baselines — used to window-bound the account-level P/L now
+  // that Elefin no longer ships per-trade profit (see per-participant block).
+  const baselines = new Map(
+    (await db.collection(COLLECTIONS.baseline).find({ cohort: COHORT }).toArray()).map((b) => [b._id, b])
+  );
+  const START_TS = Date.parse(config.competition.start);
   onProgress(
     `cohort ${participants.length} participants · manual overrides: ${Object.keys(MANUAL.byId).length} (from ${MANUAL.source})`
   );
@@ -337,17 +350,19 @@ async function computeStandings({
       continue;
     }
 
+    // Per-login: trade + open-position COUNTS only. Elefin removed the per-trade
+    // `profit` field from BOTH /accounts/{login}/trades and /positions on
+    // 2026-09-11, so row-level P/L is no longer available — the realised/floating
+    // figures below come from the account aggregate instead. A failed COUNT call
+    // is cosmetic (it can't zero P/L), so it no longer flags data_error.
     for (const login of c.logins) {
       const tr = await apiRetry(() => elefin.getAccountTrades(login, { from: FETCH_FROM, to: FETCH_TO }), onProgress);
+      let closedTrades = 0;
+      let openPositions = 0;
       if (tr && tr.ok) {
-        const inWin = tr.rows.filter((t) => inWindow(t.close_time || t.closed_at || t.close_at));
-        let pnl = 0;
-        for (const t of inWin) pnl += pnlOf(t);
-        d.closed_pnl += pnl;
-        d.closed_trades += inWin.length;
-        d.per_login.push({ login, closed_trades: inWin.length, closed_pnl: r2(pnl), open_positions: 0, open_pnl: 0 });
+        closedTrades = tr.rows.filter((t) => inWindow(t.close_time || t.closed_at || t.close_at)).length;
+        d.closed_trades += closedTrades;
       } else {
-        d.data_error = true;
         d.errors.push('trades ' + login + ': ' + ((tr && tr.error) || 'failed'));
       }
       await sleep(SLEEP_MS);
@@ -355,25 +370,38 @@ async function computeStandings({
       if (withPositions) {
         const po = await apiRetry(() => elefin.getAccountPositions(login), onProgress);
         if (po && po.ok) {
-          let opnl = 0;
-          for (const x of po.rows) opnl += pnlOf(x);
-          d.open_pnl += opnl;
-          d.open_positions += po.rows.length;
+          openPositions = po.rows.length;
+          d.open_positions += openPositions;
           if (po.as_of) positionsAsOf = po.as_of;
-          const pl = d.per_login.find((x) => x.login === login);
-          if (pl) {
-            pl.open_positions = po.rows.length;
-            pl.open_pnl = r2(opnl);
-          }
         } else {
           d.open_error = true;
           d.errors.push('positions ' + login + ': ' + ((po && po.error) || 'failed'));
         }
         await sleep(SLEEP_MS);
       }
+      d.per_login.push({ login, closed_trades: closedTrades, open_positions: openPositions });
     }
-    d.closed_pnl = r2(d.closed_pnl);
-    d.open_pnl = r2(d.open_pnl);
+
+    // Account-level P/L — the only reliable source now that per-trade profit is
+    // gone. realised = balance - net_deposit (verified against broker MT5
+    // statements); floating = equity - balance. Window-bound the realised leg by
+    // subtracting the same quantity frozen at the start line, but only when the
+    // baseline is trustworthy (matched, has the fields, captured at/near the
+    // start). Otherwise score cumulative-since-open — for competition accounts
+    // opened around the start these are effectively the same.
+    const bl = baselines.get(email);
+    const startReliable =
+      !!bl &&
+      bl.matched !== false &&
+      bl.balance_start != null &&
+      bl.net_deposit_start != null &&
+      Number.isFinite(Date.parse(bl.captured_at)) &&
+      Date.parse(bl.captured_at) <= START_TS + 3600 * 1000;
+    const realizedNow = num(c.balance) - num(c.net_deposit);
+    const realizedStart = startReliable ? num(bl.balance_start) - num(bl.net_deposit_start) : 0;
+    d.baseline_windowed = startReliable;
+    d.closed_pnl = r2(realizedNow - realizedStart);
+    d.open_pnl = r2(num(c.equity) - num(c.balance));
     d.score_pnl = markToMarket ? r2(d.closed_pnl + d.open_pnl) : d.closed_pnl;
 
     // in-window deposits / withdrawals — match by client_id and by login

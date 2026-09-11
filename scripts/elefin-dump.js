@@ -30,7 +30,7 @@ const argVal = (n, d) => {
   return i >= 0 && ARGV[i + 1] ? ARGV[i + 1] : d;
 };
 
-const EMAIL = argVal('--email', 'subhashbetal@gmail.com').toLowerCase();
+const EMAIL = argVal('--email', 'cgbbbbnknnnk@gmail.com').toLowerCase();
 const ONLY_LOGIN = argVal('--login', null);
 const FROM = argVal('--from', '2026-08-01T00:00:00Z');
 const TO = argVal('--to', '2026-10-01T00:00:00Z');

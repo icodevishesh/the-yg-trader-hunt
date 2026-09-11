@@ -30,14 +30,15 @@ const HAS = (n) => ARGV.includes(n);
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const r2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
-// Realised P/L net of costs, to match the account-level `trading.net_profit`
-// the leaderboard scores on. The trades feed's own `net_profit`/`profit` fields
-// are GROSS — they report `commission`/`swap`/`broker_commission` separately but
-// never deduct them — so summing them overstates P/L. Subtract the costs here.
+// Realised P/L for one closed trade. The trades feed's `profit`/`net_profit`
+// already equal the broker's official per-position Profit (MT5 report: Commission
+// and Swap columns are 0 for these accounts). The feed's separate `commission`
+// field is IB/affiliate commission, NOT a trader cost, so it must NOT be deducted.
 const pnlOf = (row) => {
-  if (!row) return 0;
-  const gross = row.profit != null ? num(row.profit) : num(row.net_profit);
-  return gross - num(row.commission) - num(row.swap) - num(row.broker_commission);
+  for (const k of ['profit', 'profit_usd', 'net_profit', 'pnl', 'result']) {
+    if (row && row[k] != null && Number.isFinite(Number(row[k]))) return Number(row[k]);
+  }
+  return 0;
 };
 
 const TZ = argVal('--tz', '+05:30');
