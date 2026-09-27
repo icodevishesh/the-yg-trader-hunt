@@ -206,12 +206,11 @@
   // can't show the wrong dates. Keep in sync with .env / config.js and index.html.
   var WINDOW = {
     start: "2026-09-07T00:00:00+05:30",
-    end: "2026-09-11T23:59:59+05:30",
-    announce: "2026-09-12T12:00:00+05:30",
-    // Force the board to stay LIVE regardless of the clock or the API's
-    // competition_over flag. Set to false (and update `end` above) when the
-    // competition actually closes.
-    live: true
+    end: "2026-09-12T23:59:59+05:30",
+    announce: "2026-09-13T00:00:00+05:30",
+    // Competition finished 2026-09-12 — final result published (lb_result +
+    // lb_current.competition_over). This lets the API's flags drive Ended/Announced.
+    live: false
   };
 
   // Total registered participants — the "N traders in the hunt" counter shows

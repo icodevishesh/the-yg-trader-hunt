@@ -135,12 +135,45 @@ async function loadManual(db, cohort) {
   return { ...loadManualFile(cohort), source: 'file' };
 }
 
+// For a final/audited run, the base must reflect deposits made ONLY up to a
+// cutoff (e.g. the event's real end) — a trader who reloads weeks after the
+// event shouldn't have that counted as their competition capital. Sums every
+// successful deposit up to `cutoff` per client_id and per login. Wide fetch
+// (anchored well before the cohort existed), paginated, client-side filtered
+// on the real timestamp (the API's from/to only truncates to a date).
+async function fetchDepositsAsOf(cutoff, onProgress = () => {}) {
+  const cutoffMs = new Date(cutoff).getTime();
+  const ANCHOR = '2026-01-01T00:00:00Z';
+  const res = await apiRetry(
+    () => elefin.getTransactions({ type: 'deposit', from: ANCHOR, to: new Date(cutoffMs + 3 * 24 * 3600 * 1000).toISOString() }),
+    onProgress
+  );
+  if (!res || !res.ok) throw new Error('deposits-as-of ledger unavailable: ' + ((res && res.error) || 'unknown'));
+  const byClient = new Map();
+  const byLogin = new Map();
+  let kept = 0;
+  for (const t of res.rows) {
+    if (!txnOk(t)) continue;
+    const ts = new Date(txnWhen(t)).getTime();
+    if (!Number.isFinite(ts) || ts > cutoffMs) continue;
+    kept += 1;
+    const amt = txnAmount(t);
+    const cid = txnClientId(t);
+    const login = txnLogin(t);
+    if (cid != null) byClient.set(cid, (byClient.get(cid) || 0) + amt);
+    if (login != null) byLogin.set(login, (byLogin.get(login) || 0) + amt);
+  }
+  onProgress(`deposits-as-of ${cutoff}: ${kept}/${res.rows.length} rows kept`);
+  return { byClient, byLogin };
+}
+
 async function computeStandings({
   from = DEFAULT_FROM,
   to = null,
   baseMode = 'net_deposit',
   withPositions = true,
   markToMarket = true,
+  depositsAsOf = null,
   onProgress = () => {},
 } = {}) {
   // Resolve the window end per run (not at module load) so a long-running
@@ -150,6 +183,7 @@ async function computeStandings({
   const MIN_USD = config.scoring.minDepositUsd;
   const DEP_TOL = config.scoring.depositToleranceUsd;
   const LATE_ADD = loadLateAdd(COHORT);
+  const DEP_AS_OF = depositsAsOf ? await fetchDepositsAsOf(depositsAsOf, onProgress) : null;
 
   const WIN_START = new Date(from).getTime();
   const WIN_END = new Date(to).getTime();
@@ -423,7 +457,18 @@ async function computeStandings({
     // floor of the declared entry capital for a late entrant.
     const lateCap = LATE_ADD[email];
     d.late_add = lateCap != null;
-    const grossDeposits = num(c.deposits);
+    let grossDeposits;
+    if (DEP_AS_OF) {
+      // Reconstructed as-of-cutoff deposits: by client_id, else summed across logins.
+      grossDeposits = DEP_AS_OF.byClient.get(Number(c.client_id));
+      if (grossDeposits == null) {
+        grossDeposits = c.logins.reduce((s, lg) => s + (DEP_AS_OF.byLogin.get(String(lg)) || 0), 0);
+      }
+      d.gross_deposits_asof = r2(grossDeposits);
+      d.gross_deposits_live = num(c.deposits);
+    } else {
+      grossDeposits = num(c.deposits);
+    }
     if (baseMode === 'stated' && p.capital_stated != null) {
       d.base = num(p.capital_stated);
     } else {
@@ -495,6 +540,7 @@ async function computeStandings({
       : 'closed_pnl_window / cumulative_capital * 100',
     min_deposit_usd: MIN_USD,
     deposit_tolerance_usd: DEP_TOL,
+    deposits_as_of: depositsAsOf || null,
     positions_as_of: positionsAsOf,
     rate_limit_remaining: me.rateLimitRemaining ?? null,
     participants_total: participants.length,
@@ -549,6 +595,7 @@ function buildSnapshot(result) {
     formula: result.formula,
     mark_to_market: result.mark_to_market,
     positions_as_of: result.positions_as_of,
+    deposits_as_of: result.deposits_as_of || null,
     window: { start: result.window.from, end: result.window.to },
     competition: { start: result.window.from, end: result.window.to },
     competition_over: false,

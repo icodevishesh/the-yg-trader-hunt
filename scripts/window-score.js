@@ -37,6 +37,7 @@ const OPTS = {
   baseMode: argVal('--base', 'net_deposit'),
   withPositions: !HAS('--no-positions'),
   markToMarket: !HAS('--closed-only') && !HAS('--no-positions'),
+  depositsAsOf: argVal('--deposits-asof', null),
   onProgress: (m) => process.stderr.write('   … ' + m + '\r'),
 };
 
@@ -59,6 +60,7 @@ const line = () => console.log('  ' + '-'.repeat(112));
   console.log('   window   ' + OPTS.from + '  ->  ' + OPTS.to);
   console.log('   base     ' + OPTS.baseMode);
   console.log('   scoring  ' + (OPTS.markToMarket ? 'mark-to-market  (closed realised + open unrealised)' : 'closed realised only'));
+  if (OPTS.depositsAsOf) console.log('   deposits capped as of  ' + OPTS.depositsAsOf + '  (post-cutoff deposits excluded from cumulative capital)');
 
   const R = await computeStandings(OPTS);
   process.stderr.write('\n');
@@ -110,6 +112,9 @@ const line = () => console.log('  ' + '-'.repeat(112));
     if (d.carried_forward) flags.push('CARRIED-FORWARD (trades call failed)');
     else if (d.data_error) flags.push('DATA-ERROR (dropped)');
     if (d.open_error) flags.push('positions call failed');
+    if (d.gross_deposits_asof != null && d.gross_deposits_live != null && d.gross_deposits_asof !== d.gross_deposits_live) {
+      flags.push('DEPOSITS-CAPPED (live $' + d.gross_deposits_live + ' -> as-of $' + d.gross_deposits_asof + ')');
+    }
     if (!d.eligible && d.matched && !d.carried_forward) flags.push('OUT:' + d.reasons.join(','));
     if (d.errors.length) flags.push('ERR:' + d.errors.length);
     console.log(

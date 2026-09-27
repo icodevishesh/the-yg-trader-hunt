@@ -1,21 +1,38 @@
 'use strict';
 
 /*
- * Build the final competition result now, then exit. plan.md §8.
- * Runs a fresh refresh first so the result is built from current numbers.
+ * Build the FINAL competition result, bounded to the real event window, and
+ * freeze it. Runs a closed-only window-score (no live mark-to-market against
+ * today) capped at COMPETITION_END, with deposits reconstructed as of that
+ * same cutoff so post-event reloads don't inflate anyone's cumulative
+ * capital, then writes lb_current + lb_result. plan.md §8.
+ *
  *   node scripts/finalize-once.js
  *   MOCK_ELEFIN=1 node scripts/finalize-once.js
  */
 
-const { refreshLeaderboard } = require('../jobs/refreshLeaderboard');
+const config = require('../config');
+const { computeStandings, writeCurrent } = require('../jobs/windowScore');
 const { finalizeResult } = require('../jobs/finalizeResult');
 const { ensureIndexes, close } = require('../db/mongo');
+
+const CUTOFF = config.competition.end;
 
 (async () => {
   await ensureIndexes();
 
-  const r = await refreshLeaderboard({ trigger: 'final' });
-  if (!r.ok && !r.skipped) console.error(`  (refresh warning: ${r.error})`);
+  console.log(`\n  Finalizing cohort ${config.competition.cohort} — bounded to ${CUTOFF}\n`);
+
+  const R = await computeStandings({
+    to: CUTOFF,
+    markToMarket: false,
+    depositsAsOf: CUTOFF,
+    onProgress: (m) => process.stderr.write('   … ' + m + '\r'),
+  });
+  process.stderr.write('\n');
+
+  await writeCurrent(R);
+  console.log('  lb_current written (closed-only, capped at ' + CUTOFF + ').');
 
   const res = await finalizeResult({ trigger: 'cli' });
   if (!res.ok) {
@@ -25,24 +42,17 @@ const { ensureIndexes, close } = require('../db/mongo');
     return;
   }
 
-  const { winner, runners_up, excluded_from_winner, standings } = res.result;
+  const { winner, runners_up, standings } = res.result;
   console.log('\n  Competition finalized');
   console.log('  ---------------------');
-  console.log(`  standings: ${standings.length} · excluded from prize: ${excluded_from_winner.length}`);
+  console.log(`  standings: ${standings.length}`);
   if (winner) {
     console.log(`\n  WINNER  ${winner.name}  ${winner.return_pct >= 0 ? '+' : ''}${winner.return_pct}%`);
-    console.log(`          net_profit_window $${winner.net_profit_window} on base $${winner.base_start} · ${winner.trades_window} trades`);
-    console.log(`          deposits_window $${winner.deposits_window} · withdrawals_window $${winner.withdrawals_window}`);
+    console.log(`          score_pnl $${winner.score_pnl} (closed $${winner.closed_pnl} + open $${winner.open_pnl}) on cumulative_capital $${winner.cumulative_capital} · ${winner.trades} trades`);
   } else {
     console.log('\n  WINNER  none winner-eligible');
   }
-  runners_up.forEach((e) => console.log(`  #${e.rank}      ${e.name}  ${e.return_pct >= 0 ? '+' : ''}${e.return_pct}%`));
-  if (excluded_from_winner.length) {
-    console.log('\n  excluded from prize:');
-    excluded_from_winner.forEach((e) =>
-      console.log(`   #${e.rank} ${e.name} — ${e.reason} (deposits_window $${e.deposits_window})`)
-    );
-  }
+  runners_up.forEach((e) => console.log(`  #${e.rank}      ${e.name}  ${e.return_pct >= 0 ? '+' : ''}${e.return_pct}%  score_pnl $${e.score_pnl} on $${e.cumulative_capital}`));
   console.log('');
 
   await close();

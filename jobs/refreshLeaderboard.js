@@ -67,6 +67,11 @@ async function refreshLeaderboard({ trigger = 'manual' } = {}) {
   const runId = startedAt.toISOString();
   const holder = `${os.hostname()}/${process.pid}`;
 
+  // Once the competition is finalized, nothing may overwrite lb_current with a
+  // fresh (live, unbounded) recompute — the published result is authoritative.
+  const cur = await db.collection(COLLECTIONS.current).findOne({ _id: 'current' }, { projection: { competition_over: 1 } });
+  if (cur && cur.competition_over) return { ok: false, skipped: true, reason: 'competition_finalized' };
+
   const gotLock = await tryAcquireLock(db, runId);
   if (!gotLock) return { ok: false, skipped: true, reason: 'locked' };
 

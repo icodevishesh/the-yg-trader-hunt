@@ -40,6 +40,12 @@ async function runSafely(trigger) {
     console.log(`[score:${trigger}] skipped — a run is already in progress`);
     return { ok: false, skipped: true };
   }
+  const db0 = await connect();
+  const cur0 = await db0.collection(COLLECTIONS.current).findOne({ _id: 'current' }, { projection: { competition_over: 1 } });
+  if (cur0 && cur0.competition_over) {
+    console.log(`[score:${trigger}] skipped — competition already finalized`);
+    return { ok: false, skipped: true, reason: 'competition_finalized' };
+  }
   running = true;
   const started = Date.now();
   try {
