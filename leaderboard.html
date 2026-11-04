@@ -11,14 +11,14 @@
 </script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Leaderboard — The YG Trader Hunt</title>
+<title>Leaderboard — Traders Hunt · Season Two</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap">
 <style>
   :root {
-    --bg: #0c0e0d; --surface: #11150f; --text: #edf2ee; --lime: #c6fb3e; --lime-hi: #d6ff6b;
-    --divider: #232925; --border: #3a423d; --muted: #9aa5a0; --dim: #6c7a72; --dimmer: #4f5a54;
+    --bg: #070908; --surface: #11150f; --panel: #0c0e0d; --text: #edf2ee; --lime: #c6fb3e; --lime-hi: #d6ff6b;
+    --divider: #232925; --border: #3a423d; --muted: #8a968f; --dim: #6c7a72; --dimmer: #4f5a54;
     --neg: #ff8a6b; --amber: #f0c14b;
   }
   * { box-sizing: border-box; }
@@ -29,103 +29,108 @@
   ::selection { background: var(--lime); color: var(--bg); }
   a:focus-visible, button:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
 
-  .wrap { max-width: 1280px; margin: 0 auto; background: var(--bg); border-left: 1px solid var(--divider); border-right: 1px solid var(--divider); min-height: 100vh; }
+  .wrap { max-width: 1320px; margin: 0 auto; background: var(--panel); border-left: 2px solid var(--divider); border-right: 2px solid var(--divider); min-height: 100vh; }
 
-  .hdr { position: sticky; top: 0; z-index: 20; display: flex; align-items: stretch; justify-content: space-between; gap: 8px; background: rgba(12,14,13,0.94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--divider); }
-  .hdr-brand { display: flex; align-items: center; gap: 12px; padding: 18px 28px; color: var(--text); }
-  .hdr-brand span.dot { width: 8px; height: 8px; background: var(--lime); display: inline-block; }
-  .hdr-brand span.name { font-weight: 600; letter-spacing: 0.16em; font-size: 11px; text-transform: uppercase; }
-  .hdr-nav { display: flex; align-items: stretch; margin-left: auto; }
-  .hdr-nav a { display: flex; align-items: center; padding: 0 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); border-left: 1px solid var(--divider); }
+  .hdr { position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; align-items: stretch; background: var(--panel); border-bottom: 2px solid var(--border); }
+  .hdr-brand { display: flex; align-items: center; gap: 12px; padding: 16px 28px; color: var(--text); }
+  .hdr-brand span.dot { width: 10px; height: 10px; background: var(--lime); display: inline-block; }
+  .hdr-brand span.name { font-weight: 700; letter-spacing: 0.14em; font-size: 12px; text-transform: uppercase; }
+  .hdr-nav { display: flex; align-items: center; gap: 28px; padding: 0 28px; margin-left: auto; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; }
+  .hdr-nav a { color: var(--muted); }
   .hdr-nav a:hover { color: var(--text); }
-  .hdr-nav a.active { color: var(--lime); }
-  .hdr-cta { display: flex; align-items: center; gap: 10px; background: var(--lime); color: var(--bg); padding: 0 24px; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; }
+  .hdr-nav a.active { color: var(--text); box-shadow: inset 0 -4px 0 var(--lime); padding-bottom: 2px; }
+  .hdr-cta { display: flex; align-items: center; background: var(--lime); color: var(--bg); padding: 16px 28px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; border-left: 2px solid var(--border); }
   .hdr-cta:hover { background: var(--lime-hi); color: var(--bg); }
 
-  .strip { padding: 64px 28px 40px; border-bottom: 1px solid var(--divider); }
-  .kicker { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: var(--lime); }
-  h1.title { margin: 20px 0 0; font-weight: 600; font-size: clamp(40px, 5vw, 68px); line-height: 1.0; letter-spacing: -0.04em; }
-  .sub { margin: 20px 0 0; max-width: 52ch; font-size: 17px; line-height: 1.55; color: var(--muted); }
+  .strip { padding: 56px 28px 28px; border-bottom: 2px solid var(--border); }
+  .kicker { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--lime); }
+  h1.title { margin: 16px 0 0; font-weight: 700; font-size: clamp(38px, 5vw, 68px); line-height: 1.0; letter-spacing: -0.045em; }
+  .sub { margin: 16px 0 0; max-width: 52ch; font-size: 16px; line-height: 1.55; color: var(--muted); }
 
   .windowline { margin-top: 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .wl-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.18em; padding: 5px 10px; border: 1px solid var(--lime); color: var(--lime); display: inline-flex; align-items: center; gap: 7px; }
+  .wl-badge { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; padding: 5px 10px; border: 2px solid var(--lime); color: var(--lime); display: inline-flex; align-items: center; gap: 8px; }
   .wl-badge.pre { border-color: var(--border); color: var(--muted); }
   .wl-badge.over { border-color: var(--amber); color: var(--amber); }
-  .wl-badge .d { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-  .wl-badge.live .d { animation: pulse 1s ease-in-out infinite; }
+  .wl-badge .d { width: 7px; height: 7px; background: currentColor; }
+  .wl-badge.live .d { animation: pulse 1.6s ease-in-out infinite; }
   .wl-dates { font-size: 14px; font-weight: 600; color: var(--text); letter-spacing: 0.01em; font-variant-numeric: tabular-nums; }
 
   .status { margin-top: 28px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .status .item { display: flex; align-items: center; gap: 8px; }
-  .status .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); opacity: 0.35; }
-  .status .live-dot.on { animation: pulse 1s ease-in-out infinite; opacity: 1; }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
+  .status .live-dot { width: 8px; height: 8px; background: var(--lime); opacity: 0.35; }
+  .status .live-dot.on { animation: pulse 1.6s ease-in-out infinite; opacity: 1; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
   .status b { color: var(--text); font-weight: 600; }
-  .status .refresh { background: transparent; border: 1px solid var(--border); color: var(--text); font-family: inherit; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; padding: 7px 14px; cursor: pointer; }
+  .status .refresh { background: transparent; border: 2px solid var(--border); color: var(--text); font-family: inherit; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; padding: 8px 16px; cursor: pointer; }
   .status .refresh:hover { border-color: var(--lime); color: var(--lime); }
   .status .refresh[disabled] { opacity: 0.5; cursor: default; }
-  .tag-mock { border: 1px solid var(--amber); color: var(--amber); font-size: 9px; font-weight: 700; letter-spacing: 0.16em; padding: 3px 8px; text-transform: uppercase; }
+  .tag-mock { border: 2px solid var(--amber); color: var(--amber); font-size: 9px; font-weight: 700; letter-spacing: 0.16em; padding: 3px 8px; text-transform: uppercase; }
 
-  .notice { margin: 0; padding: 14px 28px; border-bottom: 1px solid var(--divider); font-size: 13px; display: flex; gap: 10px; align-items: center; }
+  .notice { margin: 0; padding: 14px 28px; border-bottom: 2px solid var(--divider); font-size: 13px; display: flex; gap: 10px; align-items: center; }
   .notice.stale { background: rgba(240,193,75,0.08); color: var(--amber); }
   .notice.final { background: rgba(198,251,62,0.08); color: var(--lime); }
+  .notice.demo { background: rgba(240,193,75,0.08); color: var(--amber); }
 
-  /* Podium */
-  .podium { display: grid; grid-template-columns: 1fr; border-bottom: 1px solid var(--divider); }
-  .pcell { padding: 36px 28px; border-bottom: 1px solid var(--divider); display: flex; flex-direction: column; gap: 10px; }
-  .pcell:last-child { border-bottom: none; }
-  .pcell .medal { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: var(--dim); }
-  .pcell .rank-num { font-weight: 400; font-size: clamp(44px, 6vw, 72px); line-height: 0.9; letter-spacing: -0.04em; }
-  .pcell .pname { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
-  .pcell .pret { font-size: clamp(24px, 3vw, 34px); font-weight: 500; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
-  .pcell .pmeta { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--dim); font-variant-numeric: tabular-nums; }
   .pos { color: var(--lime); }
   .neg { color: var(--neg); }
-  @media (min-width: 768px) {
-    .podium { grid-template-columns: repeat(3, 1fr); }
-    .pcell { border-bottom: none; border-right: 1px solid var(--divider); }
-    .pcell:last-child { border-right: none; }
-    .pcell:nth-child(1) { order: 2; border-top: 3px solid var(--lime); background: rgba(198,251,62,0.06); }
-    .pcell:nth-child(2) { order: 1; }
-    .pcell:nth-child(3) { order: 3; }
-  }
+
+  /* Category leader cards */
+  .cat-leaders { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); border-bottom: 2px solid var(--border); }
+  .lcard { text-align: left; padding: 28px; border: 0; border-right: 2px solid var(--divider); background: transparent; color: var(--text); font-family: inherit; cursor: pointer; display: flex; flex-direction: column; gap: 10px; }
+  .lcard:last-child { border-right: none; }
+  .lcard.on { background: var(--surface); }
+  .lcard:hover { background: var(--surface); }
+  .lcard .ltop { display: flex; justify-content: space-between; gap: 12px; width: 100%; }
+  .lcard .lname-cat { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--lime); }
+  .lcard .lcount { font-size: 12px; color: var(--muted); }
+  .lcard .lleader { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-top: 8px; }
+  .lcard .lret { font-size: 40px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+  .lcard .lprize { font-size: 13px; color: var(--muted); }
+
+  /* Category tabs */
+  .cat-tabs { display: flex; flex-wrap: wrap; border-bottom: 2px solid var(--divider); }
+  .cat-tab { padding: 18px 28px; border: 0; border-right: 2px solid var(--divider); background: transparent; color: var(--text); font-family: inherit; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; cursor: pointer; text-align: left; }
+  .cat-tab.on { background: var(--lime); color: var(--bg); }
+  .cat-tab .trange { display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.04em; text-transform: none; margin-top: 3px; opacity: 0.75; }
 
   /* Table */
-  .tbl-head { padding: 20px 28px; border-bottom: 1px solid var(--divider); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: var(--dim); display: flex; justify-content: space-between; }
+  .tbl-head { padding: 20px 28px; border-bottom: 2px solid var(--divider); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: var(--dim); display: flex; justify-content: space-between; }
   .tbl-scroll { overflow-x: auto; }
   table.board { width: 100%; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
-  table.board thead th { background: var(--bg); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--dim); text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--divider); white-space: nowrap; }
+  table.board thead th { background: var(--panel); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--dim); text-align: left; padding: 14px 16px; border-bottom: 2px solid var(--border); white-space: nowrap; }
   table.board tbody td { padding: 16px 16px; border-bottom: 1px solid var(--divider); font-size: 14px; }
   table.board tbody tr:hover { background: rgba(198,251,62,0.05); }
   table.board .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  table.board td.rk { color: var(--dim); width: 48px; }
+  table.board td.rk { color: var(--dim); width: 48px; font-weight: 700; }
   .trader { display: flex; align-items: center; gap: 10px; }
-  .trader .tname { font-weight: 500; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .trader .tname { font-weight: 600; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tid { display: block; margin-top: 3px; font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
-  .sl-tag { font-size: 8px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--lime); border: 1px solid rgba(198,251,62,0.4); padding: 2px 6px; }
-  .flag { font-size: 15px; }
-  .cty { color: var(--muted); }
-  tr.divider td { background: var(--surface); color: var(--dim); font-size: 9px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; padding: 10px 16px; }
   .empty { padding: 72px 28px; text-align: center; color: var(--muted); font-size: 15px; line-height: 1.6; }
+
+  tr.trow { cursor: pointer; }
+  tr.drow td { padding: 0; border-bottom: 1px solid var(--divider); background: var(--surface); }
+  .detail { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1px; background: var(--divider); }
+  .dcell { display: flex; flex-direction: column; gap: 6px; padding: 16px 20px; background: var(--surface); }
+  .dlbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--dim); }
+  .dval { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
 
   .skel { display: inline-block; background: linear-gradient(90deg, #1a1f1b 25%, #232925 37%, #1a1f1b 63%); background-size: 400% 100%; animation: sh 1.3s ease-in-out infinite; height: 1em; border-radius: 2px; }
   @keyframes sh { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
 
-  footer.ft { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); border-top: 1px solid var(--divider); }
+  footer.ft { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); border-top: 2px solid var(--border); }
   footer.ft .col { padding: 40px 28px; display: flex; flex-direction: column; gap: 14px; }
-  footer.ft .col.a { border-right: 1px solid var(--divider); }
+  footer.ft .col.a { border-right: 2px solid var(--divider); }
   footer.ft p { margin: 0; max-width: 56ch; font-size: 12px; line-height: 1.7; color: var(--dim); }
-  footer.ft .lbl { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: var(--dim); }
+  footer.ft .lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: var(--dim); }
   footer.ft .socials { display: flex; flex-wrap: wrap; gap: 12px; }
-  footer.ft .socials a { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 1px solid var(--border); color: var(--text); }
+  footer.ft .socials a { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 2px solid var(--border); color: var(--text); }
   footer.ft .socials a:hover { border-color: var(--lime); color: var(--lime); }
   footer.ft .copy { font-size: 11px; color: var(--dimmer); margin-top: 6px; }
 
   @media (max-width: 640px) { .col-trades { display: none; } }
-  @media (max-width: 560px) { .col-country { display: none; } }
   @media (max-width: 767px) {
     .hdr-cta { display: none; }
-    .hdr-nav a { padding: 0 14px; }
+    .hdr-nav { gap: 18px; padding: 0 20px; }
   }
 </style>
 </head>
@@ -135,10 +140,10 @@
   <header class="hdr">
     <a class="hdr-brand" href="/">
       <span class="dot"></span>
-      <span class="name">The YG Trader Hunt</span>
+      <span class="name">Traders Hunt · Season Two</span>
     </a>
     <nav class="hdr-nav">
-      <a href="/">Home</a>
+      <a href="/#join">How to join</a>
       <a href="/leaderboard" class="active" aria-current="page">Leaderboard</a>
     </nav>
     <a class="hdr-cta" href="https://partners.elefin.com/go/YASH" target="_blank" rel="noopener">Open Elefin account →</a>
@@ -147,7 +152,7 @@
   <section class="strip">
     <div class="kicker">Live leaderboard</div>
     <h1 class="title">The standings.</h1>
-    <p class="sub">Ranked by percentage return on your cumulative capital (Day&nbsp;1 deposit + any reloads) since 7&nbsp;Sep. Highest&nbsp;% wins. Lost your capital? Reload and keep competing.</p>
+    <p class="sub">Ranked by return % on your cumulative capital, within your category (Bronze, Silver, Gold or Platinum — set by your day-one balance).</p>
     <div class="windowline" id="windowLine" hidden>
       <span class="wl-badge" id="wlBadge"><span class="d"></span> <span id="wlBadgeTxt">Live</span></span>
       <span class="wl-dates" id="wlDates">—</span>
@@ -169,8 +174,8 @@
   <footer class="ft">
     <div class="col a">
       <div class="hdr-brand" style="padding:0;">
-        <span class="dot" style="width:8px;height:8px;background:var(--lime);display:inline-block;"></span>
-        <span class="name" style="font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.16em;">The YG Trader Hunt</span>
+        <span class="dot" style="width:10px;height:10px;background:var(--lime);display:inline-block;"></span>
+        <span class="name" style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.14em;">Traders Hunt · Season Two</span>
       </div>
       <p>Trading leveraged products carries high risk and can cost you all of your deposit. You trade your own account and are responsible for your results — nothing here is advice or a promise of profit. Standings are computed from Elefin account data and may lag; the prize is awarded on verified statements.</p>
     </div>
@@ -187,7 +192,7 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"></path><path d="m10 15 5-3-5-3z"></path></svg>
         </a>
       </div>
-      <div class="copy">© 2026 Yash Gupta. Elefin link is a partner referral.</div>
+      <div class="copy">© 2026 Yash Gupta · Traders Hunt Season Two · Elefin link is a partner referral.</div>
     </div>
   </footer>
 </div>
@@ -200,7 +205,51 @@
   // Backend re-scores every REFRESH_MINUTES (.env REFRESH_CRON=*/15). The browser
   // re-fetches every UI poll (.env UI_POLL_MINUTES=5, sent by the API).
   var REFRESH_MINUTES = 15;
-  var state = { data: null, loading: true, fetching: false, pollMs: 5 * 60 * 1000 };
+  var state = { data: null, loading: true, fetching: false, pollMs: 5 * 60 * 1000, expanded: null, cat: "bronze" };
+
+  // Categories are derived client-side from each entry's cumulative_capital
+  // (already returned by /api/leaderboard — no backend change needed).
+  var CATS = [
+    { key: "bronze", name: "Bronze", min: 100, range: "$100 – $300", prize: "₹25,000 funded account" },
+    { key: "silver", name: "Silver", min: 300, range: "$300 – $500", prize: "₹50,000 funded account" },
+    { key: "gold", name: "Gold", min: 500, range: "$500 – $1,000", prize: "₹1,00,000 cash prize" },
+    { key: "platinum", name: "Platinum", min: 1000, range: "$1,000+", prize: "₹1,50,000 cash prize" }
+  ];
+  var CAT_ORDER = ["bronze", "silver", "gold", "platinum"];
+  function catInfo(k) { for (var i = 0; i < CATS.length; i++) if (CATS[i].key === k) return CATS[i]; return null; }
+  function categoryOf(capital) {
+    var best = null;
+    for (var i = 0; i < CATS.length; i++) if (capital >= CATS[i].min) best = CATS[i].key;
+    return best;
+  }
+
+  // Shown only when there are no qualifying real entries yet (e.g. before
+  // trading opens) so every category preview isn't empty. Clearly labelled
+  // in the UI as example data — never mixed with real entries.
+  var DUMMY_ENTRIES = [
+    { name: "Priya S.", cumulative_capital: 150, return_pct: 18.4, trades: 12, net_profit: 27.6, client_id: 9001 },
+    { name: "Rahul K.", cumulative_capital: 220, return_pct: 9.2, trades: 7, net_profit: 20.24, client_id: 9002 },
+    { name: "Meera T.", cumulative_capital: 110, return_pct: -4.1, trades: 5, net_profit: -4.51, client_id: 9003 },
+    { name: "Arjun V.", cumulative_capital: 350, return_pct: 22.7, trades: 15, net_profit: 79.45, client_id: 9004 },
+    { name: "Sneha D.", cumulative_capital: 480, return_pct: 14.3, trades: 9, net_profit: 68.64, client_id: 9005 },
+    { name: "Kabir M.", cumulative_capital: 650, return_pct: 27.9, trades: 18, net_profit: 181.35, client_id: 9006 },
+    { name: "Isha N.", cumulative_capital: 900, return_pct: 11.6, trades: 10, net_profit: 104.4, client_id: 9007 },
+    { name: "Vikram R.", cumulative_capital: 1500, return_pct: 31.2, trades: 22, net_profit: 468, client_id: 9008 },
+    { name: "Ananya P.", cumulative_capital: 2200, return_pct: 8.5, trades: 6, net_profit: 187, client_id: 9009 },
+    { name: "Aditya R.", cumulative_capital: 180, return_pct: 6.7, trades: 9, net_profit: 12.06, client_id: 9010 },
+    { name: "Neha G.", cumulative_capital: 275, return_pct: -2.3, trades: 4, net_profit: -6.33, client_id: 9011 },
+    { name: "Siddharth J.", cumulative_capital: 130, return_pct: 14.9, trades: 11, net_profit: 19.37, client_id: 9012 },
+    { name: "Kavya S.", cumulative_capital: 420, return_pct: 19.5, trades: 13, net_profit: 81.9, client_id: 9013 },
+    { name: "Rohan P.", cumulative_capital: 310, return_pct: -6.8, trades: 6, net_profit: -21.08, client_id: 9014 },
+    { name: "Diya M.", cumulative_capital: 495, return_pct: 10.2, trades: 8, net_profit: 50.49, client_id: 9015 },
+    { name: "Manav K.", cumulative_capital: 720, return_pct: 16.3, trades: 14, net_profit: 117.36, client_id: 9016 },
+    { name: "Aisha L.", cumulative_capital: 560, return_pct: -3.5, trades: 5, net_profit: -19.6, client_id: 9017 },
+    { name: "Yuvraj T.", cumulative_capital: 980, return_pct: 24.1, trades: 19, net_profit: 236.18, client_id: 9018 },
+    { name: "Sana B.", cumulative_capital: 1200, return_pct: 7.8, trades: 8, net_profit: 93.6, client_id: 9019 },
+    { name: "Harsh V.", cumulative_capital: 3000, return_pct: 15.6, trades: 16, net_profit: 468, client_id: 9020 },
+    { name: "Nisha K.", cumulative_capital: 1800, return_pct: -1.9, trades: 3, net_profit: -34.2, client_id: 9021 },
+    { name: "Varun D.", cumulative_capital: 5000, return_pct: 28.4, trades: 21, net_profit: 1420, client_id: 9022 }
+  ];
 
   // Competition window — authoritative on this page so a stale API snapshot
   // can't show the wrong dates. Keep in sync with .env / config.js and index.html.
@@ -286,6 +335,17 @@
     return (v >= 0 ? "+" : "") + nf.format(v) + "%";
   }
   function signClass(v) { return v > 0 ? "pos" : v < 0 ? "neg" : ""; }
+
+  function money(v) {
+    if (v == null || isNaN(v)) return "—";
+    return (v >= 0 ? "+$" : "−$") + nf.format(Math.abs(v));
+  }
+  function fmtDateTime(iso) {
+    if (!iso) return "—";
+    var d = new Date(iso);
+    if (isNaN(d)) return "—";
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
+  }
 
   function relFromNow(iso) {
     if (!iso) return null;
@@ -380,60 +440,86 @@
     var ageMin = d.generated_at ? (Date.now() - new Date(d.generated_at).getTime()) / 60000 : 0;
     if (d.is_stale || ageMin > 2.5 * REFRESH_MINUTES) {
       var w = d.generated_at ? new Date(d.generated_at).toLocaleString() : "earlier";
-      var div = document.createElement("div");
-      div.className = "notice stale";
-      div.innerHTML = "⚠ Standings last updated " + esc(w) + " — the feed may be catching up.";
-      el.noticeSlot.appendChild(div);
+      // var div = document.createElement("div");
+      // div.className = "notice stale";
+      // div.innerHTML = "⚠ Standings last updated " + esc(w) + " — the feed may be catching up.";
+      // el.noticeSlot.appendChild(div);
     }
   }
 
   function skeletonBoard() {
-    var cells = "";
-    for (var i = 0; i < 3; i++) {
-      cells += '<div class="pcell">' +
+    var cards = "";
+    for (var i = 0; i < 4; i++) {
+      cards += '<div class="lcard">' +
         '<span class="skel" style="width:60px"></span>' +
-        '<span class="skel" style="width:90px;height:44px"></span>' +
         '<span class="skel" style="width:140px"></span>' +
-        '<span class="skel" style="width:100px;height:28px"></span></div>';
+        '<span class="skel" style="width:90px;height:40px"></span></div>';
     }
     var rows = "";
     for (var j = 0; j < 6; j++) {
       rows += '<tr><td class="rk"><span class="skel" style="width:20px"></span></td>' +
         '<td><span class="skel" style="width:160px"></span></td>' +
-        '<td class="col-country"><span class="skel" style="width:80px"></span></td>' +
         '<td class="num"><span class="skel" style="width:60px"></span></td>' +
         '<td class="num col-trades"><span class="skel" style="width:40px"></span></td></tr>';
     }
-    return '<div class="podium">' + cells + '</div>' +
+    return '<div class="cat-leaders">' + cards + '</div>' +
       '<div class="tbl-head"><span>Full standings</span></div>' +
       '<div class="tbl-scroll"><table class="board"><tbody>' + rows + '</tbody></table></div>';
   }
 
-  function podiumCell(e) {
-    if (!e) return '<div class="pcell"><span class="medal">—</span><div class="rank-num">·</div><div class="pname" style="color:var(--dim)">Open</div></div>';
-    var medals = { 1: "Gold", 2: "Silver", 3: "Bronze" };
-    return '<div class="pcell">' +
-      '<span class="medal">' + esc(medals[e.rank] || ("#" + e.rank)) + '</span>' +
-      '<div class="rank-num ' + (e.rank === 1 ? "pos" : "") + '">' + e.rank + '</div>' +
-      '<div class="pname">' + esc(e.name) + '</div>' +
-      '<div class="pret ' + signClass(e.return_pct) + '">' + pct(e.return_pct) + '</div>' +
-      '<div class="pmeta">' + nf0.format(e.trades || 0) + ' trades</div>' +
-      '</div>';
+  // Buckets eligible entries into Bronze/Silver/Gold/Platinum by day-one
+  // capital (cumulative_capital — already returned per entry by the API),
+  // then re-ranks each bucket by return % on its own.
+  function bucketByCategory(entries) {
+    var byCat = { bronze: [], silver: [], gold: [], platinum: [] };
+    entries.forEach(function (e) {
+      var cap = e.cumulative_capital != null ? e.cumulative_capital : e.base_start;
+      var k = categoryOf(Number(cap) || 0);
+      if (k) byCat[k].push(e);
+    });
+    CAT_ORDER.forEach(function (k) {
+      byCat[k].sort(function (a, b) { return (b.return_pct || -Infinity) - (a.return_pct || -Infinity); });
+      byCat[k].forEach(function (e, i) { e._catRank = i + 1; });
+    });
+    return byCat;
   }
 
-  function row(e) {
-    var flag = e.flag ? '<span class="flag">' + e.flag + '</span> ' : "";
-    var ctyName = e.country_name || "";
-    var ctyCell = ctyName ? (flag + esc(ctyName)) : '<span style="color:var(--dimmer)">—</span>';
-    var slTag = e.shortlisted ? ' <span class="sl-tag">Shortlist</span>' : "";
+  function leaderCard(k, byCat) {
+    var c = catInfo(k);
+    var list = byCat[k];
+    var l = list[0];
+    var on = k === state.cat;
+    return '<button type="button" class="lcard' + (on ? ' on' : '') + '" data-cat="' + k + '">' +
+      '<div class="ltop"><span class="lname-cat">' + esc(c.name) + '</span><span class="lcount">' + list.length + ' traders</span></div>' +
+      '<div class="lleader">' + (l ? esc(l.name) : "—") + '</div>' +
+      '<div class="lret ' + (l ? signClass(l.return_pct) : "") + '">' + (l ? pct(l.return_pct) : "—") + '</div>' +
+      '<div class="lprize">Reward · ' + esc(c.prize) + '</div>' +
+      '</button>';
+  }
+
+  function catTab(k) {
+    var c = catInfo(k);
+    var on = k === state.cat;
+    return '<button type="button" class="cat-tab' + (on ? ' on' : '') + '" data-cat="' + k + '">' +
+      esc(c.name) + '<span class="trange">' + esc(c.range) + '</span></button>';
+  }
+
+  function row(e, i) {
     var idLine = e.client_id != null ? '<span class="tid">ID ' + esc(e.client_id) + '</span>' : "";
-    return '<tr>' +
-      '<td class="rk">' + e.rank + '</td>' +
-      '<td><span class="trader"><span class="tname">' + esc(e.name) + '</span>' + slTag + '</span>' + idLine + '</td>' +
-      '<td class="col-country cty">' + ctyCell + '</td>' +
+    return '<tr class="trow" data-idx="' + i + '">' +
+      '<td class="rk">' + e._catRank + '</td>' +
+      '<td><span class="trader"><span class="tname">' + esc(e.name) + '</span></span>' + idLine + '</td>' +
       '<td class="num ' + signClass(e.return_pct) + '">' + pct(e.return_pct) + '</td>' +
       '<td class="num col-trades">' + nf0.format(e.trades || 0) + '</td>' +
       '</tr>';
+  }
+
+  function detailRow(e, generatedAt) {
+    return '<tr class="drow"><td colspan="4"><div class="detail">' +
+      '<div class="dcell"><span class="dlbl">Date</span><span class="dval">' + esc(fmtDateTime(generatedAt)) + '</span></div>' +
+      '<div class="dcell"><span class="dlbl">Day %</span><span class="dval ' + signClass(e.return_pct) + '">' + pct(e.return_pct) + '</span></div>' +
+      '<div class="dcell"><span class="dlbl">Account return</span><span class="dval ' + signClass(e.net_profit) + '">' + money(e.net_profit) + '</span></div>' +
+      '</div></td></tr>';
   }
 
   function renderBoard() {
@@ -441,49 +527,46 @@
 
     if (state.loading && !d) { el.board.innerHTML = skeletonBoard(); return; }
 
-    if (!d || d.status === "error") {
-      el.board.innerHTML = '<div class="empty">The leaderboard is temporarily unavailable. It will reappear on the next update.</div>';
-      return;
-    }
-    if (d.status === "pending") {
-      el.board.innerHTML = '<div class="empty">Standings open when the first results land.<br>Check back soon.</div>';
-      return;
-    }
+    // Showing example data only for now — ignore whatever /api/leaderboard
+    // returns (it still has old data from the previous competition). Switch
+    // back to real entries ((d.entries || []).filter(e => (e.trades||0) > 0))
+    // once Season Two trading results are live.
+    var entries = DUMMY_ENTRIES;
+    var demoNotice = '<div class="notice demo">✦ Example data shown — real standings will replace this once trading results come in.</div>';
 
-    // Standings table: only traders who have taken at least one trade.
-    var entries = (d.entries || []).filter(function (e) { return (e.trades || 0) > 0; });
-    if (entries.length === 0) {
-      el.board.innerHTML = '<div class="empty">No qualifying accounts yet.<br>Place at least one trade on a $100+ account to appear here.</div>';
-      return;
-    }
+    var byCat = bucketByCategory(entries);
+    var leaders = '<div class="cat-leaders">' + CAT_ORDER.map(function (k) { return leaderCard(k, byCat); }).join("") + '</div>';
 
-    var top = (d.top3 && d.top3.length ? d.top3 : entries.slice(0, 3)).filter(function (e) { return e && (e.trades || 0) > 0; });
-    var podium = '<div class="podium">' +
-      podiumCell(top[0]) + podiumCell(top[1]) + podiumCell(top[2]) +
-    '</div>';
-
-    var lastShortlisted = -1;
-    entries.forEach(function (e, i) { if (e.shortlisted) lastShortlisted = i; });
+    var list = byCat[state.cat] || [];
+    state.entries = list;
 
     var body = "";
-    entries.forEach(function (e, i) {
-      body += row(e);
-      if (i === lastShortlisted && i < entries.length - 1) {
-        body += '<tr class="divider"><td colspan="5">Shortlist — top ' + (lastShortlisted + 1) + '</td></tr>';
-      }
+    list.forEach(function (e, i) {
+      body += row(e, i);
+      if (i === state.expanded) body += detailRow(e, d.generated_at);
     });
+    if (!list.length) body = '<tr><td colspan="4" class="empty" style="padding:40px 28px;">No traders in this category yet.</td></tr>';
 
     var table =
-      '<div class="tbl-head"><span>Full standings</span><span>' + esc(entries.length) + ' shown</span></div>' +
+      '<div class="cat-tabs">' + CAT_ORDER.map(catTab).join("") + '</div>' +
+      '<div class="tbl-head"><span>' + esc(catInfo(state.cat).name) + ' standings</span><span>' + esc(list.length) + ' shown</span></div>' +
       '<div class="tbl-scroll"><table class="board">' +
         '<thead><tr>' +
-          '<th>#</th><th>Trader</th><th class="col-country">Country</th>' +
-          '<th class="num">Return %</th><th class="num col-trades">Trades</th>' +
+          '<th>Rank</th><th>Trader</th>' +
+          '<th class="num">Return %</th><th class="num col-trades">Total trades</th>' +
         '</tr></thead>' +
         '<tbody>' + body + '</tbody>' +
       '</table></div>';
 
-    el.board.innerHTML = podium + table;
+    el.board.innerHTML = demoNotice + leaders + table;
+
+    el.board.querySelectorAll("[data-cat]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        state.cat = btn.getAttribute("data-cat");
+        state.expanded = null;
+        renderBoard();
+      });
+    });
   }
 
   function renderAll() { renderWindow(); renderStatus(); renderNotice(); renderBoard(); }
@@ -507,6 +590,14 @@
     el.refreshBtn.disabled = true;
     load();
     setTimeout(function () { el.refreshBtn.disabled = false; }, 4000);
+  });
+
+  el.board.addEventListener("click", function (ev) {
+    var tr = ev.target.closest ? ev.target.closest("tr.trow") : null;
+    if (!tr) return;
+    var idx = Number(tr.getAttribute("data-idx"));
+    state.expanded = state.expanded === idx ? null : idx;
+    renderBoard();
   });
 
   renderAll();

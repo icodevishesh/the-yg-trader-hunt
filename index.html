@@ -12,6 +12,7 @@
 </script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Traders Hunt · Season Two — The YG Trader Hunt</title>
 <script src="./support.js"></script>
 </head>
 <body>
@@ -19,527 +20,365 @@
 <helmet>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap">
 <style>
-  body { margin: 0; background: #0c0e0d; color: #edf2ee; font-family: "Archivo", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  body { margin: 0; background: #070908; color: #edf2ee; font-family: "Archivo", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 64px; }
   a { color: #c6fb3e; text-decoration: none; }
   a:hover { color: #edf2ee; }
-  input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid #c6fb3e; outline-offset: 3px; }
-  ::selection { background: #c6fb3e; color: #0c0e0d; }
   input::placeholder { color: #6c7a72; }
-
-  .how-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  @media (max-width: 900px) {
-    .how-grid {
-      grid-template-columns: repeat(2, 1fr) !important;
-    }
-    .how-item {
-      padding: 28px 20px !important;
-    }
-    .how-grid > *:nth-child(1) .how-item,
-    .how-grid > *:nth-child(3) .how-item,
-    .how-grid > *:nth-child(5) .how-item {
-      border-right: 1px solid #232925 !important;
-    }
-    .how-grid > *:nth-child(2) .how-item,
-    .how-grid > *:nth-child(4) .how-item,
-    .how-grid > *:nth-child(6) .how-item {
-      border-right: none !important;
-    }
-    .how-grid > *:nth-child(1) .how-item,
-    .how-grid > *:nth-child(2) .how-item,
-    .how-grid > *:nth-child(3) .how-item,
-    .how-grid > *:nth-child(4) .how-item {
-      border-bottom: 1px solid #232925 !important;
-    }
-    .how-grid > *:nth-child(5) .how-item,
-    .how-grid > *:nth-child(6) .how-item {
-      border-bottom: none !important;
-    }
-  }
-  @media (max-width: 767px) {
-    .prize-card-1 {
-      padding: 32px 24px 20px 24px !important;
-      border-right: none !important;
-      border-bottom: 1px solid #232925 !important;
-    }
-    .prize-card-2 {
-      padding: 24px 24px 32px 24px !important;
-    }
-    .hero-section {
-      display: flex !important;
-      flex-direction: column !important;
-    }
-    .hero-image-col {
-      order: 1 !important;
-      border-bottom: 1px solid #232925 !important;
-    }
-    .hero-image-col > div:first-child {
-      min-height: 380px !important;
-      height: 380px !important;
-    }
-    .hero-image-col > div:nth-child(2) {
-      min-height: 0 !important;
-      height: auto !important;
-    }
-    .hero-img {
-      object-position: 58% 10% !important;
-      transform: scale(1.18) !important;
-      transform-origin: 58% 10% !important;
-    }
-    .hero-content-col {
-      order: 2 !important;
-      border-right: none !important;
-      padding-top: 40px !important;
-    }
-    .how-header, .section-label {
-      font-size: 13px !important;
-    }
-  }
-  @media (max-width: 600px) {
-    .how-grid {
-      grid-template-columns: 1fr !important;
-    }
-    .how-item {
-      border-right: none !important;
-      border-bottom: 1px solid #232925 !important;
-    }
-    .how-grid > *:last-child .how-item {
-      border-bottom: none !important;
-    }
-  }
+  input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid #c6fb3e; outline-offset: 2px; }
+  ::selection { background: #c6fb3e; color: #0c0e0d; }
 </style>
 </helmet>
 
-<div style="max-width: 1280px; margin: 0 auto; background: #0c0e0d; border-left: 1px solid #232925; border-right: 1px solid #232925;">
+<div style="max-width: 1320px; margin: 0 auto; background: #0c0e0d; border-left: 2px solid #232925; border-right: 2px solid #232925;">
 
-  <header style="position: sticky; top: 0; z-index: 20; display: flex; align-items: stretch; justify-content: space-between; gap: 16px; background: rgba(12,14,13,0.94); backdrop-filter: blur(8px); border-bottom: 1px solid #232925;">
-    <div style="display: flex; align-items: center; gap: 12px; padding: 18px 28px;">
-      <span style="display: inline-block; width: 8px; height: 8px; background: #c6fb3e;"></span>
-      <span style="font-weight: 600; letter-spacing: 0.16em; font-size: 11px; text-transform: uppercase;">The YG Trader Hunt</span>
-    </div>
-    <div style="display: flex; align-items: stretch; margin-left: auto;">
-      <a href="/leaderboard" style="display: flex; align-items: center; padding: 0 22px; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: #9aa5a0; border-left: 1px solid #232925;" style-hover="color: #edf2ee;">Leaderboard</a>
-      <a href="https://partners.elefin.com/go/YASH" target="_blank" rel="noopener" style="display: flex; align-items: center; gap: 10px; background: #c6fb3e; color: #0c0e0d; padding: 0 28px; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;" style-hover="background: #d6ff6b; color: #0c0e0d;">Open Elefin account →</a>
-    </div>
+  <header style="position: sticky; top: 0; z-index: 20; display: flex; flex-wrap: wrap; align-items: stretch; background: #0c0e0d; border-bottom: 2px solid #3a423d;">
+    <a href="#top" style="display: flex; align-items: center; gap: 12px; padding: 16px 28px; color: #edf2ee;">
+      <span style="display: inline-block; width: 10px; height: 10px; background: #c6fb3e;"></span>
+      <span style="font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em;">Traders Hunt · Season Two</span>
+    </a>
+    <nav style="display: flex; flex-wrap: wrap; align-items: center; gap: 28px; padding: 0 28px; margin-left: auto; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;">
+      <a href="#join" style="color: #8a968f;" style-hover="color: #edf2ee;">How to join</a>
+      <a href="/leaderboard" style="display: flex; align-items: center; gap: 8px; color: #edf2ee;" style-hover="color: #c6fb3e;"><span style="width: 6px; height: 6px; background: #c6fb3e;"></span>Leaderboard</a>
+    </nav>
+    <a href="https://partners.elefin.com/go/YASH" target="_blank" rel="noopener" style="display: flex; align-items: center; background: #c6fb3e; color: #0c0e0d; padding: 16px 28px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; border-left: 2px solid #3a423d;" style-hover="background: #d6ff6b; color: #0c0e0d;">Open Elefin account →</a>
   </header>
 
-  <section class="hero-section" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); border-bottom: 1px solid #232925;">
-    <div class="hero-content-col" style="padding: 72px 28px 0; display: flex; flex-direction: column; gap: 32px; border-right: 1px solid #232925;">
-      <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">One week · One winner</div>
-      <h1 style="margin: 0; font-weight: 600; font-size: clamp(42px, 5.6vw, 78px); line-height: 1.0; letter-spacing: -0.04em;">Get a Chance to<br>Win <span style="color: #c6fb3e;">$2,000</span><br>& spend a week<br>trading with me.</h1>
-      <p style="margin: 0; max-width: 34ch; font-size: 18px; line-height: 1.55; color: #9aa5a0;">The top 5 traders by percentage profit get shortlisted then one winner is drawn at random from those five.</p>
+  <section id="top" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); border-bottom: 2px solid #3a423d;">
+    <div style="padding: 56px 28px; border-right: 2px solid #232925; display: flex; flex-direction: column; gap: 28px;">
+      <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+        <span style="background: #c6fb3e; color: #0c0e0d; padding: 5px 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;">Season Two</span>
+        <span style="background: #1c2610; color: #c6fb3e; padding: 5px 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;">Live trading competition</span>
+      </div>
+      <h1 style="margin: 0; font-family: inherit; font-weight: 700; font-size: clamp(44px, 6vw, 84px); line-height: 0.98; letter-spacing: -0.045em;">Compete.<br>Trade smart.<br><span style="color: #c6fb3e;">Earn rewards.</span></h1>
+      <p style="margin: 0; max-width: 44ch; font-size: 18px; line-height: 1.55; color: #b4bdb8; text-wrap: pretty;">Four categories, four winners. Post the highest return % in yours — then race the other category winners for 2× rewards and a week with Yash Sir.</p>
       <div style="display: flex; flex-wrap: wrap; gap: 12px;">
-        <a href="#enter" style="display: inline-flex; align-items: center; gap: 10px; background: #c6fb3e; color: #0c0e0d; padding: 17px 30px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em;" style-hover="background: #d6ff6b; color: #0c0e0d;">Enter now →</a>
-        <!-- <a href="#rules" style="display: inline-flex; align-items: center; gap: 10px; border: 1px solid #3a423d; color: #edf2ee; padding: 16px 30px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em;" style-hover="border-color: #c6fb3e; color: #c6fb3e;">Rules</a> -->
+        <a href="#enter" style="display: inline-flex; align-items: center; gap: 12px; background: #c6fb3e; color: #0c0e0d; padding: 16px 28px; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em;" style-hover="background: #d6ff6b; color: #0c0e0d;">Register now →</a>
+        <a href="/leaderboard" style="display: inline-flex; align-items: center; gap: 12px; border: 2px solid #3a423d; color: #edf2ee; padding: 14px 28px; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em;" style-hover="background: #c6fb3e; color: #0c0e0d;">Live leaderboard</a>
       </div>
-      <div style="border-top: 1px solid #232925; padding: 24px 28px; margin-top: auto; margin-left: -28px; margin-right: -28px;">
-        <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Key competition stats</div>
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px;">
-          <div>
-            <div style="font-size: clamp(24px, 2.4vw, 32px); font-weight: 400; line-height: 1; letter-spacing: -0.03em;">$100</div>
-            <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #6c7a72; margin-top: 8px;">Min deposit</div>
-          </div>
-          <div style="border-left: 1px solid #232925; padding-left: 12px;">
-            <div style="font-size: clamp(24px, 2.4vw, 32px); font-weight: 400; line-height: 1; letter-spacing: -0.03em;">5 days</div>
-            <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #6c7a72; margin-top: 8px;">Window</div>
-          </div>
-          <div style="border-left: 1px solid #232925; padding-left: 12px;">
-            <div style="font-size: clamp(24px, 2.4vw, 32px); font-weight: 400; line-height: 1; letter-spacing: -0.03em; color: #c6fb3e;">% return</div>
-            <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #6c7a72; margin-top: 8px;">Scoring</div>
-          </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); border-top: 2px solid #232925; margin-top: auto;">
+        <div style="padding: 28px 16px 0 0;">
+          <div style="font-size: 34px; font-weight: 600; letter-spacing: -0.03em; line-height: 1;">4</div>
+          <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: #8a968f; margin-top: 8px;">Categories</div>
+        </div>
+        <div style="padding: 28px 16px 0 16px; border-left: 2px solid #232925;">
+          <div style="font-size: 34px; font-weight: 600; letter-spacing: -0.03em; line-height: 1;">$100</div>
+          <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: #8a968f; margin-top: 8px;">Minimum to enter</div>
+        </div>
+        <div style="padding: 28px 16px 0 16px; border-left: 2px solid #232925;">
+          <div style="font-size: 34px; font-weight: 600; letter-spacing: -0.03em; line-height: 1;">₹1.5L</div>
+          <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: #8a968f; margin-top: 8px;">Highest Price Pool</div>
+        </div>
+        <div style="padding: 28px 0 0 16px; border-left: 2px solid #232925;">
+          <div style="font-size: 34px; font-weight: 600; letter-spacing: -0.03em; line-height: 1; color: #c6fb3e;">2×</div>
+          <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: #8a968f; margin-top: 8px;">Weekly reward</div>
         </div>
       </div>
     </div>
-
-    <div class="hero-image-col" style="display: flex; flex-direction: column;">
-      <div style="position: relative; flex: 1; min-height: 440px; overflow: hidden; background: #141816;">
-        <img class="hero-img" src="assets/yash.jpg" alt="Yash Gupta" style="width: 100%; height: 100%; object-fit: cover; object-position: 58% top; filter: grayscale(1) contrast(1.06) brightness(0.92);">
-        <div style="position: absolute; inset: auto 0 0 0; padding: 20px 24px; background: linear-gradient(to top, rgba(12,14,13,0.95), rgba(12,14,13,0));">
-          <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">Host</div>
-          <div style="font-size: 20px; font-weight: 600; letter-spacing: -0.02em; margin-top: 6px;">Yash Gupta</div>
-        </div>
-      </div>
-      <div style="border-top: 1px solid #232925; padding: 24px 28px;">
-        <sc-if value="{{ isLive }}" hint-placeholder-val="{{ false }}">
-          <div class="section-label" style="display: flex; align-items: center; gap: 8px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">
-            <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #c6fb3e; box-shadow: 0 0 8px #c6fb3e;"></span>
-            <span>Live · {{ windowLabel }}</span>
-          </div>
-        </sc-if>
-        <sc-if value="{{ notLive }}" hint-placeholder-val="{{ true }}">
-          <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">{{ timerLabel }}</div>
-        </sc-if>
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px;">
-          <div>
-            <div style="font-size: clamp(24px, 2.4vw, 32px); font-weight: 400; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums;">{{ cdDays }}</div>
-            <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #6c7a72; margin-top: 8px;">Days</div>
-          </div>
-          <div style="border-left: 1px solid #232925; padding-left: 12px;">
-            <div style="font-size: clamp(24px, 2.4vw, 32px); font-weight: 400; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums;">{{ cdHours }}</div>
-            <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #6c7a72; margin-top: 8px;">Hrs</div>
-          </div>
-          <div style="border-left: 1px solid #232925; padding-left: 12px;">
-            <div style="font-size: clamp(24px, 2.4vw, 32px); font-weight: 400; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums;">{{ cdMins }}</div>
-            <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #6c7a72; margin-top: 8px;">Min</div>
-          </div>
-          <div style="border-left: 1px solid #232925; padding-left: 12px;">
-            <div style="font-size: clamp(24px, 2.4vw, 32px); font-weight: 400; line-height: 1; letter-spacing: -0.03em; color: #c6fb3e; font-variant-numeric: tabular-nums;">{{ cdSecs }}</div>
-            <div style="font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #6c7a72; margin-top: 8px;">Sec</div>
-          </div>
-        </div>
-        <div style="font-size: 11px; color: #9aa5a0; margin-top: 14px; letter-spacing: 0.02em;">{{ countLabel }}</div>
+    <div style="position: relative; min-height: 460px; background: #c6fb3e; overflow: hidden;">
+      <img src="assets/yash.jpg" alt="Yash Gupta" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center top; filter: grayscale(1) contrast(1.08);">
+      <div style="position: absolute; left: 0; bottom: 0; display: flex; flex-direction: column; gap: 4px; background: #0c0e0d; padding: 16px 28px; border-top: 2px solid #3a423d; border-right: 2px solid #3a423d;">
+        <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.16em; color: #8a968f;">Hosted by</span>
+        <span style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em;">Yash Gupta</span>
       </div>
     </div>
   </section>
 
-
-  <!-- Section 2 -->
-  <section id="prize" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); border-bottom: 1px solid #232925; background: #11150f;">
-    <div class="prize-card-1" style="padding: 56px 28px; border-right: 1px solid #232925;">
-      <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">The prize</div>
-      <div style="font-size: clamp(48px, 6vw, 80px); font-weight: 500; letter-spacing: -0.045em; line-height: 1; margin-top: 20px; color: #c6fb3e;">$2,000</div>
-      <div style="font-size: 17px; line-height: 1.55; color: #9aa5a0; margin-top: 16px; max-width: 26ch;">Cash Reward, paid by me to the winner.</div>
+  <section id="prizes" style="border-bottom: 2px solid #3a423d;">
+    <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 16px; padding: 28px; border-bottom: 2px solid #232925;">
+      <h2 style="margin: 0; font-weight: 700; font-size: clamp(28px, 3.2vw, 42px); letter-spacing: -0.035em;">Categories &amp; rewards</h2>
+      <span style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: #8a968f;">One winner per category</span>
     </div>
-    <div class="prize-card-2" style="padding: 56px 28px;">
-      <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Plus</div>
-      <div style="font-size: clamp(48px, 6vw, 80px); font-weight: 500; letter-spacing: -0.045em; line-height: 1; margin-top: 20px;">7 days</div>
-      <div style="font-size: 17px; line-height: 1.55; color: #9aa5a0; margin-top: 16px; max-width: 30ch;">Trading live at my desk — travel and stay sponsored.</div>
-    </div>
-  </section>
-
-  <section id="how" style="border-bottom: 1px solid #232925;">
-    <div class="how-header" style="padding: 24px 28px; border-bottom: 1px solid #232925; display: flex; align-items: center; justify-content: space-between; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">
-      <span>How it works</span>
-    </div>
-    <div class="how-grid" style="display: grid;">
-      <a href="https://partners.elefin.com/go/YASH" target="_blank" rel="noopener" style="text-decoration: none; color: inherit; display: block;">
-        <div class="how-item" style="padding: 38px 28px; border-right: 1px solid #232925; border-bottom: 1px solid #232925; height: 100%; transition: all 0.15s ease; position: relative;" style-hover="background: rgba(198, 251, 62, 0.06); outline: 1px solid #c6fb3e; outline-offset: -1px; z-index: 1;">
-          <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">STEP 1</div>
-          <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25; color: #edf2ee;">Open an account</h3>
-          <p style="margin: 12px 0 0; font-size: 14px; line-height: 1.55; color: #9aa5a0;">Sign up on Elefin using my link.<br>Takes 5 minutes.</p>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
+      <div style="padding: 28px; border-right: 2px solid #232925; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px;">
+          <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: #c6fb3e;">Bronze</span>
+          <span style="font-size: 13px; font-weight: 600; color: #8a968f; font-variant-numeric: tabular-nums;">₹10,000 – ₹30,000</span>
         </div>
-      </a>
-      <div class="how-item" style="padding: 38px 28px; border-right: 1px solid #232925; border-bottom: 1px solid #232925;">
-        <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">STEP 2</div>
-        <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25; color: #edf2ee;">Add money</h3>
-        <p style="margin: 12px 0 0; font-size: 14px; line-height: 1.55; color: #9aa5a0;">Deposit at least $100. The money<br>stays yours.</p>
+        <div style="font-size: clamp(36px, 3.6vw, 48px); font-weight: 700; letter-spacing: -0.04em; line-height: 1; margin-top: 12px;">₹25,000</div>
+        <div style="font-size: 14px; color: #b4bdb8;">Cash prize</div>
       </div>
-      <div class="how-item" onClick="{{ openModal }}" style="padding: 38px 28px; border-bottom: 1px solid #232925; cursor: pointer; transition: all 0.15s ease; position: relative;" style-hover="background: rgba(198, 251, 62, 0.06); outline: 1px solid #c6fb3e; outline-offset: -1px; z-index: 1;">        <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">STEP 3</div>
-        <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25; color: #edf2ee;">Fill the form</h3>
-        <p style="margin: 12px 0 0; font-size: 14px; line-height: 1.55; color: #9aa5a0;">Send me your details here so I<br>know you're in.</p>
+      <div style="padding: 28px; border-right: 2px solid #232925; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px;">
+          <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: #c6fb3e;">Silver</span>
+          <span style="font-size: 13px; font-weight: 600; color: #8a968f; font-variant-numeric: tabular-nums;">₹30,000 – ₹50,000</span>
+        </div>
+        <div style="font-size: clamp(36px, 3.6vw, 48px); font-weight: 700; letter-spacing: -0.04em; line-height: 1; margin-top: 12px;">₹50,000</div>
+        <div style="font-size: 14px; color: #b4bdb8;">Cash prize</div>
       </div>
-      <div class="how-item" style="padding: 38px 28px; border-right: 1px solid #232925;">
-        <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">STEP 4</div>
-        <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25; color: #edf2ee;">Trade 7–11 Sep</h3>
-        <p style="margin: 12px 0 0; font-size: 14px; line-height: 1.55; color: #9aa5a0;">Grow your account as much as<br>you can, in %.</p>
+      <div style="padding: 28px; border-right: 2px solid #232925; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px;">
+          <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: #c6fb3e;">Gold</span>
+          <span style="font-size: 13px; font-weight: 600; color: #8a968f; font-variant-numeric: tabular-nums;">₹50,000 – ₹1,00,000</span>
+        </div>
+        <div style="font-size: clamp(36px, 3.6vw, 48px); font-weight: 700; letter-spacing: -0.04em; line-height: 1; margin-top: 12px;">₹1,00,000</div>
+        <div style="font-size: 14px; color: #b4bdb8;">Cash prize</div>
       </div>
-      <div class="how-item" style="padding: 38px 28px; border-right: 1px solid #232925;">
-        <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">STEP 5</div>
-        <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25; color: #edf2ee;">We pick the top 5</h3>
-        <p style="margin: 12px 0 0; font-size: 14px; line-height: 1.55; color: #9aa5a0;">My team checks every account<br>and names the 5 highest %.</p>
+      <div style="padding: 28px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px;">
+          <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: #c6fb3e;">Platinum</span>
+          <span style="font-size: 13px; font-weight: 600; color: #8a968f; font-variant-numeric: tabular-nums;">₹1,00,000+</span>
+        </div>
+        <div style="font-size: clamp(36px, 3.6vw, 48px); font-weight: 700; letter-spacing: -0.04em; line-height: 1; margin-top: 12px;">₹1,50,000</div>
+        <div style="font-size: 14px; color: #b4bdb8;">Cash prize</div>
       </div>
-      <div class="how-item" style="padding: 38px 28px;">
-        <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em;">STEP 6</div>
-        <h3 style="margin: 18px 0 0; font-weight: 500; font-size: 20px; letter-spacing: -0.02em; line-height: 1.25; color: #edf2ee;">One winner is drawn</h3>
-        <p style="margin: 12px 0 0; font-size: 14px; line-height: 1.55; color: #9aa5a0;">A random pick from those 5 wins<br>$2,000 and the week with me.</p>
+    </div>
+    <div style="padding: 16px 28px; border-top: 2px solid #232925; font-size: 14px; color: #8a968f;">Your category is set by your account balance on day one of the competition.</div>
+  </section>
+
+  <section id="winner" style="border-bottom: 2px solid #3a423d;">
+    <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 16px; padding: 28px; border-bottom: 2px solid #232925;">
+      <h2 style="margin: 0; font-weight: 700; font-size: clamp(28px, 3.2vw, 42px); letter-spacing: -0.035em;">How the winner is decided</h2>
+      <span style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: #8a968f;">Highest return % on net capital</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
+      <div style="padding: 28px; border-right: 2px solid #232925;">
+        <div style="font-size: 13px; font-weight: 700; color: #c6fb3e; letter-spacing: 0.12em;">01</div>
+        <div style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-top: 16px;">Day-one balance recorded</div>
+        <div style="font-size: 14px; line-height: 1.55; color: #b4bdb8; margin-top: 8px;">We note every trader's account balance when the competition opens.</div>
       </div>
-      <div class="how-item-final" style="grid-column: 1 / -1; padding: 48px 28px; border-top: 1px solid #232925; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #11150f;">
-        <div style="font-size: 11px; font-weight: 600; color: #c6fb3e; letter-spacing: 0.16em; text-transform: uppercase;">Final Step · 12 Sep</div>
-        <h3 style="margin: 14px 0 0; font-weight: 600; font-size: clamp(22px, 2.5vw, 30px); letter-spacing: -0.02em; line-height: 1.25; color: #edf2ee;">The Winner Is Announced</h3>
-        <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6; color: #9aa5a0; max-width: 48ch;">Trading runs 7–11 Sep. Accounts are verified and the winner is announced on 12 Sep — a chance to trade with me for 7 days, travel and stay sponsored.</p>
+      <div style="padding: 28px; border-right: 2px solid #232925;">
+        <div style="font-size: 13px; font-weight: 700; color: #c6fb3e; letter-spacing: 0.12em;">02</div>
+        <div style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-top: 16px;">Category assigned</div>
+        <div style="font-size: 14px; line-height: 1.55; color: #b4bdb8; margin-top: 8px;">That starting balance places you in Bronze, Silver, Gold or Platinum.</div>
+      </div>
+      <div style="padding: 28px; border-right: 2px solid #232925;">
+        <div style="font-size: 13px; font-weight: 700; color: #c6fb3e; letter-spacing: 0.12em;">03</div>
+        <div style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-top: 16px;">Cash flows adjusted</div>
+        <div style="font-size: 14px; line-height: 1.55; color: #b4bdb8; margin-top: 8px;">Every deposit and withdrawal is adjusted to give your net capital.</div>
+      </div>
+      <div style="padding: 28px;">
+        <div style="font-size: 13px; font-weight: 700; color: #c6fb3e; letter-spacing: 0.12em;">04</div>
+        <div style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-top: 16px;">Highest % wins</div>
+        <div style="font-size: 14px; line-height: 1.55; color: #b4bdb8; margin-top: 8px;">The best return % on net capital in each category takes the reward.</div>
       </div>
     </div>
   </section>
 
-  <section style="border-bottom: 1px solid #232925;">
-    <div style="padding: 56px 28px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 24px;">
-      <h2 style="margin: 0; font-weight: 600; font-size: clamp(26px, 3.2vw, 38px); line-height: 1.1; letter-spacing: -0.035em; max-width: 32ch;">Start here — the account must be under my referral.</h2>
-      <a href="https://partners.elefin.com/go/YASH" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; justify-content: center; gap: 16px; background: #c6fb3e; color: #0c0e0d; padding: 22px 36px; text-decoration: none; width: fit-content;" style-hover="background: #d6ff6b; color: #0c0e0d;">
-        <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em;">Open account on Elefin</div>
-        <span style="font-weight: 400; font-size: 22px;">→</span>
-      </a>
-      <div style="font-size: 14px; line-height: 1.6; color: #6c7a72;">Entries I can't verify will be disqualified.</div>
-    </div>
-    <!-- <div id="rules" style="padding: 56px 28px;">
-      <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Rules</div>
-      <div style="display: flex; flex-direction: column; margin-top: 20px;">
-        <div style="padding: 18px 0; border-top: 1px solid #232925; font-size: 16px; line-height: 1.5; color: #c3ccc7;">Top 5 by percentage profit are shortlisted; the winner is drawn at random <br/>from them.</div>
-        <div style="padding: 18px 0; border-top: 1px solid #232925; font-size: 16px; line-height: 1.5; color: #c3ccc7;">Scored on percentage return — every account size competes equally.</div>
-        <div style="padding: 18px 0; border-top: 1px solid #232925; font-size: 16px; line-height: 1.5; color: #c3ccc7;">Min $100 deposit, verified Elefin account under my referral.</div>
-        <div style="padding: 18px 0; border-top: 1px solid #232925; font-size: 16px; line-height: 1.5; color: #c3ccc7;">Your account, your trades. No copy trading, no shared logins.</div>
-        <div style="padding: 18px 0; border-top: 1px solid #232925; border-bottom: 1px solid #232925; font-size: 16px; line-height: 1.5; color: #c3ccc7;">All positions closed by the deadline; results verified on statements.</div>
+  <section id="weekly" style="background: #11150f; color: #edf2ee; border-bottom: 2px solid #3a423d;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+      <div style="padding: 56px 28px; border-right: 2px solid #232925; display: flex; flex-direction: column; gap: 16px;">
+        <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: #c6fb3e;">Bonus · Weekly Winner Challenge</div>
+        <h2 style="margin: 0; font-weight: 800; font-size: clamp(36px, 4.6vw, 64px); line-height: 0.98; letter-spacing: -0.04em;">Four winners.<br>One more race.</h2>
+        <p style="margin: 0; font-size: 17px; line-height: 1.55; max-width: 36ch; color: #b4bdb8;">Only the category winners take part.</p>
       </div>
-    </div> -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+        <div style="padding: 28px; border-right: 2px solid #232925; border-bottom: 2px solid #232925;">
+          <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: #c6fb3e;">01</div>
+          <div style="font-size: 21px; font-weight: 700; letter-spacing: -0.02em; margin-top: 12px;">Category winners only</div>
+          <div style="font-size: 14px; line-height: 1.5; color: #b4bdb8; margin-top: 8px;">The four category winners go head to head.</div>
+        </div>
+        <div style="padding: 28px; border-bottom: 2px solid #232925;">
+          <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: #c6fb3e;">02</div>
+          <div style="font-size: 21px; font-weight: 700; letter-spacing: -0.02em; margin-top: 12px;">Trade the week</div>
+          <div style="font-size: 14px; line-height: 1.5; color: #b4bdb8; margin-top: 8px;">Ranked on trading performance each week.</div>
+        </div>
+        <div style="padding: 28px; border-right: 2px solid #232925;">
+          <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: #c6fb3e;">03</div>
+          <div style="font-size: 21px; font-weight: 700; letter-spacing: -0.02em; margin-top: 12px;">2× your reward</div>
+          <div style="font-size: 14px; line-height: 1.5; color: #b4bdb8; margin-top: 8px;">Highest weekly return % doubles their current reward.</div>
+        </div>
+        <div style="padding: 28px;">
+          <div style="font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: #c6fb3e;">04</div>
+          <div style="font-size: 21px; font-weight: 700; letter-spacing: -0.02em; margin-top: 12px;">A week with Yash Sir</div>
+          <div style="font-size: 14px; line-height: 1.5; color: #b4bdb8; margin-top: 8px;">The weekly winner also spends one week with Yash Sir.</div>
+        </div>
+      </div>
+    </div>
   </section>
 
-  <section id="enter" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); border-bottom: 1px solid #232925;">
-    <div style="padding: 56px 28px; border-right: 1px solid #232925; display: flex; flex-direction: column; gap: 20px;">
-      <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">Entry form</div>
-      <h2 style="margin: 0; font-weight: 600; font-size: clamp(30px, 3.8vw, 48px); line-height: 1.05; letter-spacing: -0.04em;">Put your name in the hunt.</h2>
-      <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #9aa5a0; max-width: 32ch;">Under a minute. Use the same name and email as your Elefin account.</p>
-    </div>
+  <section style="background: #c6fb3e; color: #0c0e0d; border-bottom: 2px solid #3a423d; padding: 28px;">
+    <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em;">How to challenge YG</div>
+    <div style="margin-top: 8px; font-size: 16px; font-weight: 600; line-height: 1.5; max-width: 60ch;">Fill the form with the same email ID as your Elefin account, and select "Yes" in the Challenge YG column.</div>
+  </section>
 
+  <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); border-bottom: 2px solid #3a423d;">
+    <div style="padding: 56px 28px; border-right: 2px solid #232925; display: flex; flex-direction: column; gap: 16px;">
+      <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: #c6fb3e;">Fair by design</div>
+      <h2 style="margin: 0; font-weight: 700; font-size: clamp(28px, 3.2vw, 42px); line-height: 1.05; letter-spacing: -0.035em;">Deposits never count as profit.</h2>
+      <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #b4bdb8; max-width: 40ch;">Every deposit and withdrawal is adjusted, so your return % reflects your trading alone.</p>
+    </div>
+    <div style="padding: 56px 28px;">
+      <div style="display: grid; grid-template-columns: 90px 1fr auto; font-size: 15px; font-variant-numeric: tabular-nums;">
+        <span style="padding: 12px 0; border-bottom: 1px solid #1d2320; color: #8a968f;">9:00</span><span style="padding: 12px 0; border-bottom: 1px solid #1d2320;">Start of day</span><span style="padding: 12px 0; border-bottom: 1px solid #1d2320; font-weight: 600;">₹10,000</span>
+        <span style="padding: 12px 0; border-bottom: 1px solid #1d2320; color: #8a968f;">→ 1:00</span><span style="padding: 12px 0; border-bottom: 1px solid #1d2320;">Trading profit</span><span style="padding: 12px 0; border-bottom: 1px solid #1d2320; font-weight: 600;">+₹500</span>
+        <span style="padding: 12px 0; border-bottom: 1px solid #1d2320; color: #8a968f;">1:00</span><span style="padding: 12px 0; border-bottom: 1px solid #1d2320; color: #8a968f;">Deposit — set aside</span><span style="padding: 12px 0; border-bottom: 1px solid #1d2320; color: #8a968f; text-decoration: line-through;">+₹5,000</span>
+        <span style="padding: 12px 0; border-bottom: 1px solid #1d2320; color: #8a968f;">→ close</span><span style="padding: 12px 0; border-bottom: 1px solid #1d2320;">Trading profit</span><span style="padding: 12px 0; border-bottom: 1px solid #1d2320; font-weight: 600;">+₹300</span>
+        <span style="padding: 12px 0; border-bottom: 2px solid #3a423d; color: #8a968f;">Close</span><span style="padding: 12px 0; border-bottom: 2px solid #3a423d;">End balance</span><span style="padding: 12px 0; border-bottom: 2px solid #3a423d; font-weight: 600;">₹15,800</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 16px; margin-top: 16px;">
+        <span style="font-size: 44px; font-weight: 700; letter-spacing: -0.04em; color: #c6fb3e;">8%</span>
+        <span style="font-size: 15px; color: #b4bdb8;">return (₹800 ÷ ₹10,000) — not 58%.</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="join" style="border-bottom: 2px solid #3a423d;">
+    <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 16px; padding: 28px; border-bottom: 2px solid #232925;">
+      <h2 style="margin: 0; font-weight: 700; font-size: clamp(28px, 3.2vw, 42px); letter-spacing: -0.035em;">How to join</h2>
+      <span style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: #8a968f;">Four steps</span>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));">
+      <div style="padding: 28px; border-right: 2px solid #232925;">
+        <div style="font-size: 13px; font-weight: 700; color: #c6fb3e; letter-spacing: 0.12em;">01</div>
+        <div style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-top: 16px;">Open an account</div>
+        <div style="font-size: 14px; line-height: 1.55; color: #b4bdb8; margin-top: 8px;">Sign up on Elefin using my link.</div>
+      </div>
+      <div style="padding: 28px; border-right: 2px solid #232925;">
+        <div style="font-size: 13px; font-weight: 700; color: #c6fb3e; letter-spacing: 0.12em;">02</div>
+        <div style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-top: 16px;">Fund your account</div>
+        <div style="font-size: 14px; line-height: 1.55; color: #b4bdb8; margin-top: 8px;">₹10,000 minimum. Your day-one balance sets your category.</div>
+      </div>
+      <div style="padding: 28px; border-right: 2px solid #232925;">
+        <div style="font-size: 13px; font-weight: 700; color: #c6fb3e; letter-spacing: 0.12em;">03</div>
+        <div style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-top: 16px;">Register your entry</div>
+        <div style="font-size: 14px; line-height: 1.55; color: #b4bdb8; margin-top: 8px;">Fill in the form below so we know you're in.</div>
+      </div>
+      <div style="padding: 28px;">
+        <div style="font-size: 13px; font-weight: 700; color: #c6fb3e; letter-spacing: 0.12em;">04</div>
+        <div style="font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin-top: 16px;">Trade for the top %</div>
+        <div style="font-size: 14px; line-height: 1.55; color: #b4bdb8; margin-top: 8px;">Highest return % in your category wins.</div>
+      </div>
+    </div>
+    <a href="https://partners.elefin.com/go/YASH" target="_blank" rel="noopener" style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 28px; background: #c6fb3e; color: #0c0e0d; border-top: 2px solid #3a423d;" style-hover="background: #d6ff6b; color: #0c0e0d;">
+      <span style="display: flex; flex-direction: column; gap: 8px;">
+        <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: #0c0e0d;">Step one · open your account</span>
+        <span style="font-size: clamp(20px, 2.4vw, 30px); font-weight: 700; letter-spacing: -0.025em; word-break: break-all;">partners.elefin.com/go/YASH</span>
+      </span>
+      <span style="display: inline-flex; align-items: center; gap: 12px; background: #0c0e0d; color: #c6fb3e; padding: 16px 28px; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em;">Open Elefin account →</span>
+    </a>
+  </section>
+
+  <section id="enter" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); border-bottom: 2px solid #3a423d;">
+    <div style="padding: 56px 28px; border-right: 2px solid #232925; display: flex; flex-direction: column; gap: 16px;">
+      <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: #c6fb3e;">Registration</div>
+      <h2 style="margin: 0; font-weight: 700; font-size: clamp(30px, 3.6vw, 48px); line-height: 1.02; letter-spacing: -0.04em;">Enter Season Two.</h2>
+      <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #b4bdb8; max-width: 36ch;">Use the same name and email as your Elefin account.</p>
+      <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px; border-top: 2px solid #232925; padding-top: 16px;">
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: #8a968f;">Winner declaration</div>
+        <div style="font-size: 14px; line-height: 1.6; color: #b4bdb8;">Each category has its own winner.<br>All deposits and withdrawals verified first.<br>Based on verified trading performance.</div>
+      </div>
+    </div>
     <div style="padding: 56px 28px; background: #11150f;">
       <sc-if value="{{ submitted }}" hint-placeholder-val="{{ false }}">
-        <div style="border: 1px solid #3a423d; padding: 40px 28px;">
-          <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">Entry received</div>
-          <h3 style="margin: 20px 0 12px; font-weight: 600; font-size: clamp(24px, 2.8vw, 32px); letter-spacing: -0.03em;">You're in, {{ firstName }}.</h3>
-          <p style="margin: 0 0 28px; font-size: 16px; line-height: 1.6; color: #9aa5a0; max-width: 36ch;">I'll verify your account and message you with the start time.</p>
+        <div style="border: 2px solid #3a423d; background: #0c0e0d; padding: 56px 28px; display: flex; flex-direction: column; gap: 16px;">
+          <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: #c6fb3e;">Entry received</div>
+          <div style="font-size: clamp(26px, 3vw, 36px); font-weight: 700; letter-spacing: -0.035em;">You're in, {{ firstName }}.</div>
+          <div style="font-size: 16px; line-height: 1.6; color: #b4bdb8;">We'll verify your account and message you before trading opens.</div>
           <div style="display: flex; flex-wrap: wrap; gap: 12px;">
-            <a href="https://t.me/YashGuptaTrader" target="_blank" rel="noopener" style="background: #c6fb3e; color: #0c0e0d; padding: 15px 26px; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.14em;" style-hover="background: #d6ff6b; color: #0c0e0d;">Join the Telegram →</a>
-            <button type="button" onClick="{{ reset }}" style="border: 1px solid #3a423d; background: transparent; color: #edf2ee; padding: 14px 26px; font-family: inherit; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.14em; cursor: pointer;" style-hover="border-color: #c6fb3e; color: #c6fb3e;">Another entry</button>
+            <a href="/leaderboard" style="background: #c6fb3e; color: #0c0e0d; padding: 14px 28px; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em;" style-hover="background: #d6ff6b; color: #0c0e0d;">See the leaderboard →</a>
+            <button type="button" onClick="{{ reset }}" style="border: 2px solid #3a423d; background: transparent; color: #edf2ee; padding: 12px 28px; font-family: inherit; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; cursor: pointer;" style-hover="background: #c6fb3e; color: #0c0e0d;">Another entry</button>
           </div>
         </div>
       </sc-if>
       <sc-if value="{{ notSubmitted }}" hint-placeholder-val="{{ true }}">
-        <form onSubmit="{{ onSubmit }}" style="display: grid; gap: 26px;">
+        <form onSubmit="{{ onSubmit }}" style="display: grid; gap: 28px;">
           <div style="display: grid; gap: 8px;">
-            <label for="yg-name" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #9aa5a0;">Name <span style="color: #c6fb3e;">*</span></label>
-            <input id="yg-name" type="text" value="{{ name }}" onChange="{{ onName }}" placeholder="Full name" style="width: 100%; padding: 12px 0; font-family: inherit; font-size: 17px; color: #edf2ee; background: transparent; border: 0; border-bottom: 1px solid #3a423d; border-radius: 0;">
-            <sc-if value="{{ errName }}" hint-placeholder-val="{{ false }}">
-              <div style="font-size: 13px; color: #ff8a6b;">{{ errName }}</div>
-            </sc-if>
+            <label for="s2-name" style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;">Name <span style="color: #c6fb3e;">*</span></label>
+            <input id="s2-name" type="text" value="{{ name }}" onChange="{{ onName }}" placeholder="Full name" style="width: 100%; padding: 14px 16px; font-family: inherit; font-size: 16px; color: #edf2ee; background: #0c0e0d; border: 2px solid #3a423d; border-radius: 0;">
+            <sc-if value="{{ errName }}" hint-placeholder-val="{{ false }}"><div style="font-size: 13px; font-weight: 600; color: #c6fb3e;">{{ errName }}</div></sc-if>
           </div>
-          <div style="display: grid; gap: 8px;">
-            <label for="yg-phone" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #9aa5a0;">WhatsApp number <span style="color: #c6fb3e;">*</span></label>
-            <input id="yg-phone" type="tel" value="{{ phone }}" onChange="{{ onPhone }}" placeholder="+91 98765 43210" style="width: 100%; padding: 12px 0; font-family: inherit; font-size: 17px; color: #edf2ee; background: transparent; border: 0; border-bottom: 1px solid #3a423d; border-radius: 0;">
-            <sc-if value="{{ errPhone }}" hint-placeholder-val="{{ false }}">
-              <div style="font-size: 13px; color: #ff8a6b;">{{ errPhone }}</div>
-            </sc-if>
-          </div>
-          <div style="display: grid; gap: 8px;">
-            <label for="yg-email" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #9aa5a0;">Email <span style="color: #c6fb3e;">*</span></label>
-            <input id="yg-email" type="email" value="{{ email }}" onChange="{{ onEmail }}" placeholder="you@email.com" style="width: 100%; padding: 12px 0; font-family: inherit; font-size: 17px; color: #edf2ee; background: transparent; border: 0; border-bottom: 1px solid #3a423d; border-radius: 0;">
-            <sc-if value="{{ errEmail }}" hint-placeholder-val="{{ false }}">
-              <div style="font-size: 13px; color: #ff8a6b;">{{ errEmail }}</div>
-            </sc-if>
-          </div>
-          <div style="display: grid; gap: 8px;">
-            <label for="yg-capital" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #9aa5a0;">Capital deposited <span style="color: #6c7a72;">(optional)</span></label>
-            <div style="display: flex; border-bottom: 1px solid #3a423d;">
-              <span style="display: flex; align-items: center; padding-right: 10px; font-size: 17px; color: #6c7a72;">$</span>
-              <input id="yg-capital" type="number" min="100" step="10" value="{{ capital }}" onChange="{{ onCapital }}" placeholder="100" style="flex: 1; padding: 12px 0; font-family: inherit; font-size: 17px; color: #edf2ee; background: transparent; border: 0; border-radius: 0;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 28px;">
+            <div style="display: grid; gap: 8px;">
+              <label for="s2-phone" style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;">WhatsApp number <span style="color: #c6fb3e;">*</span></label>
+              <input id="s2-phone" type="tel" value="{{ phone }}" onChange="{{ onPhone }}" placeholder="+91 98765 43210" style="width: 100%; padding: 14px 16px; font-family: inherit; font-size: 16px; color: #edf2ee; background: #0c0e0d; border: 2px solid #3a423d; border-radius: 0;">
+              <sc-if value="{{ errPhone }}" hint-placeholder-val="{{ false }}"><div style="font-size: 13px; font-weight: 600; color: #c6fb3e;">{{ errPhone }}</div></sc-if>
+            </div>
+            <div style="display: grid; gap: 8px;">
+              <label for="s2-email" style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;">Email <span style="color: #c6fb3e;">*</span></label>
+              <input id="s2-email" type="email" value="{{ email }}" onChange="{{ onEmail }}" placeholder="you@email.com" style="width: 100%; padding: 14px 16px; font-family: inherit; font-size: 16px; color: #edf2ee; background: #0c0e0d; border: 2px solid #3a423d; border-radius: 0;">
+              <sc-if value="{{ errEmail }}" hint-placeholder-val="{{ false }}"><div style="font-size: 13px; font-weight: 600; color: #c6fb3e;">{{ errEmail }}</div></sc-if>
             </div>
           </div>
-          <label for="yg-agree" style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer; font-size: 14px; line-height: 1.55; color: #9aa5a0;">
-            <input id="yg-agree" type="checkbox" checked="{{ agree }}" onChange="{{ onAgree }}" style="width: 18px; height: 18px; accent-color: #c6fb3e; margin: 2px 0 0; flex: 0 0 auto;">
-            <span>My account is under Yash's referral link and I accept the rules.</span>
+          <div style="display: grid; gap: 8px;">
+            <label for="s2-account-id" style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;">Wallet ID / Account ID <span style="color: #c6fb3e;">*</span></label>
+            <input id="s2-account-id" type="text" value="{{ accountId }}" onChange="{{ onAccountId }}" placeholder="Your Elefin account ID" style="width: 100%; padding: 14px 16px; font-family: inherit; font-size: 16px; color: #edf2ee; background: #0c0e0d; border: 2px solid #3a423d; border-radius: 0;">
+            <div style="font-size: 12px; line-height: 1.5; color: #8a968f;">*Please use only the wallet ID/account ID that you are using to participate in the competition.</div>
+            <sc-if value="{{ errAccountId }}" hint-placeholder-val="{{ false }}"><div style="font-size: 13px; font-weight: 600; color: #c6fb3e;">{{ errAccountId }}</div></sc-if>
+          </div>
+          <div style="display: grid; gap: 8px;">
+            <label for="s2-capital" style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em;">Capital deposited <span style="color: #6c7a72;">(optional)</span></label>
+            <div style="display: flex; border: 2px solid #3a423d; background: #0c0e0d;">
+              <span style="display: flex; align-items: center; padding: 0 14px; font-weight: 700; border-right: 2px solid #3a423d;">$</span>
+              <input id="s2-capital" type="number" min="0" step="10" value="{{ capital }}" onChange="{{ onCapital }}" placeholder="500" style="flex: 1; min-width: 0; padding: 14px 16px; font-family: inherit; font-size: 16px; color: #edf2ee; background: transparent; border: 0; border-radius: 0;">
+              <span style="display: flex; align-items: center; padding: 0 16px; font-size: 13px; font-weight: 700; color: #c6fb3e; background: #1c2610; border-left: 2px solid #3a423d; white-space: nowrap;">{{ bonusLabel }}</span>
+            </div>
+          </div>
+          <label for="s2-agree" style="display: flex; align-items: flex-start; gap: 12px; font-size: 14px; line-height: 1.5; color: #b4bdb8; cursor: pointer;">
+            <input id="s2-agree" type="checkbox" checked="{{ agree }}" onChange="{{ onAgree }}" style="width: 20px; height: 20px; margin: 0; accent-color: #c6fb3e; flex: 0 0 auto;">
+            <span>My account is under Yash's referral link and I accept the competition rules.</span>
           </label>
-          <sc-if value="{{ errAgree }}" hint-placeholder-val="{{ false }}">
-            <div style="font-size: 13px; color: #ff8a6b; margin-top: -16px;">{{ errAgree }}</div>
-          </sc-if>
-          <button type="submit" style="display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; background: #c6fb3e; color: #0c0e0d; border: 0; padding: 19px 26px; font-family: inherit; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.16em; cursor: pointer;" style-hover="background: #d6ff6b; color: #0c0e0d;">
-            <span>{{ submitLabel }}</span><span style="font-size: 18px; letter-spacing: 0;">→</span>
+          <sc-if value="{{ errAgree }}" hint-placeholder-val="{{ false }}"><div style="font-size: 13px; font-weight: 600; color: #c6fb3e; margin-top: calc(-1 * 16px);">{{ errAgree }}</div></sc-if>
+          <button type="submit" style="display: flex; align-items: center; justify-content: space-between; width: 100%; background: #c6fb3e; color: #0c0e0d; border: 0; padding: 18px 28px; font-family: inherit; font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.12em; cursor: pointer;" style-hover="background: #d6ff6b;">
+            <span>Register my entry</span><span>→</span>
           </button>
         </form>
       </sc-if>
     </div>
   </section>
 
-  <!-- Step 3 Pop-up Modal -->
-  <sc-if value="{{ showModal }}" hint-placeholder-val="{{ false }}">
-    <div style="position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; background: rgba(0, 0, 0, 0.82); backdrop-filter: blur(8px);">
-      <div style="position: absolute; inset: 0;" onClick="{{ closeModal }}"></div>
-      <div style="position: relative; z-index: 1001; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; background: #11150f; border: 1px solid #232925; box-shadow: 0 24px 60px rgba(0,0,0,0.85); padding: 40px 32px;">
-        <button type="button" onClick="{{ closeModal }}" aria-label="Close modal" style="position: absolute; top: 20px; right: 20px; background: transparent; border: 0; color: #9aa5a0; font-size: 22px; cursor: pointer; line-height: 1; padding: 6px 10px;" style-hover="color: #c6fb3e;">✕</button>
-
-        <div style="margin-bottom: 28px;">
-          <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">Entry form</div>
-          <h2 style="margin: 8px 0 0; font-weight: 600; font-size: clamp(24px, 3.2vw, 36px); line-height: 1.05; letter-spacing: -0.04em;">Put your name in the hunt.</h2>
-          <p style="margin: 8px 0 0; font-size: 14px; line-height: 1.55; color: #9aa5a0;">Under a minute. Use the same name and email as your Elefin account.</p>
-        </div>
-
-        <sc-if value="{{ submitted }}" hint-placeholder-val="{{ false }}">
-          <div style="border: 1px solid #3a423d; padding: 32px 24px;">
-            <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #c6fb3e;">Entry received</div>
-            <h3 style="margin: 16px 0 12px; font-weight: 600; font-size: clamp(20px, 2.5vw, 28px); letter-spacing: -0.03em;">You're in, {{ firstName }}.</h3>
-            <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.6; color: #9aa5a0;">I'll verify your account and message you with the start time.</p>
-            <div style="display: flex; flex-wrap: wrap; gap: 12px;">
-              <a href="https://t.me/YashGuptaTrader" target="_blank" rel="noopener" style="background: #c6fb3e; color: #0c0e0d; padding: 14px 22px; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.14em;" style-hover="background: #d6ff6b; color: #0c0e0d;">Join the Telegram →</a>
-              <button type="button" onClick="{{ reset }}" style="border: 1px solid #3a423d; background: transparent; color: #edf2ee; padding: 13px 22px; font-family: inherit; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.14em; cursor: pointer;" style-hover="border-color: #c6fb3e; color: #c6fb3e;">Another entry</button>
-            </div>
-          </div>
-        </sc-if>
-        <sc-if value="{{ notSubmitted }}" hint-placeholder-val="{{ true }}">
-
-          <form onSubmit="{{ onSubmit }}" style="display: grid; gap: 24px;">
-            <div style="display: grid; gap: 8px;">
-              <label for="yg-modal-name" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #9aa5a0;">Name <span style="color: #c6fb3e;">*</span></label>
-              <input id="yg-modal-name" type="text" value="{{ name }}" onChange="{{ onName }}" placeholder="Full name" style="width: 100%; padding: 12px 0; font-family: inherit; font-size: 16px; color: #edf2ee; background: transparent; border: 0; border-bottom: 1px solid #3a423d; border-radius: 0;">
-              <sc-if value="{{ errName }}" hint-placeholder-val="{{ false }}">
-                <div style="font-size: 13px; color: #ff8a6b;">{{ errName }}</div>
-              </sc-if>
-            </div>
-            <div style="display: grid; gap: 8px;">
-              <label for="yg-modal-phone" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #9aa5a0;">WhatsApp number <span style="color: #c6fb3e;">*</span></label>
-              <input id="yg-modal-phone" type="tel" value="{{ phone }}" onChange="{{ onPhone }}" placeholder="+91 98765 43210" style="width: 100%; padding: 12px 0; font-family: inherit; font-size: 16px; color: #edf2ee; background: transparent; border: 0; border-bottom: 1px solid #3a423d; border-radius: 0;">
-              <sc-if value="{{ errPhone }}" hint-placeholder-val="{{ false }}">
-                <div style="font-size: 13px; color: #ff8a6b;">{{ errPhone }}</div>
-              </sc-if>
-            </div>
-            <div style="display: grid; gap: 8px;">
-              <label for="yg-modal-email" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #9aa5a0;">Email <span style="color: #c6fb3e;">*</span></label>
-              <input id="yg-modal-email" type="email" value="{{ email }}" onChange="{{ onEmail }}" placeholder="you@email.com" style="width: 100%; padding: 12px 0; font-family: inherit; font-size: 16px; color: #edf2ee; background: transparent; border: 0; border-bottom: 1px solid #3a423d; border-radius: 0;">
-              <sc-if value="{{ errEmail }}" hint-placeholder-val="{{ false }}">
-                <div style="font-size: 13px; color: #ff8a6b;">{{ errEmail }}</div>
-              </sc-if>
-            </div>
-            <div style="display: grid; gap: 8px;">
-              <label for="yg-modal-capital" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; color: #9aa5a0;">Capital deposited <span style="color: #6c7a72;">(optional)</span></label>
-              <div style="display: flex; border-bottom: 1px solid #3a423d;">
-                <span style="display: flex; align-items: center; padding-right: 10px; font-size: 16px; color: #6c7a72;">$</span>
-                <input id="yg-modal-capital" type="number" min="100" step="10" value="{{ capital }}" onChange="{{ onCapital }}" placeholder="100" style="flex: 1; padding: 12px 0; font-family: inherit; font-size: 16px; color: #edf2ee; background: transparent; border: 0; border-radius: 0;">
-              </div>
-            </div>
-            <label for="yg-modal-agree" style="display: flex; align-items: flex-start; gap: 12px; cursor: pointer; font-size: 13px; line-height: 1.55; color: #9aa5a0;">
-              <input id="yg-modal-agree" type="checkbox" checked="{{ agree }}" onChange="{{ onAgree }}" style="width: 18px; height: 18px; accent-color: #c6fb3e; margin: 2px 0 0; flex: 0 0 auto;">
-              <span>My account is under Yash's referral link and I accept the rules.</span>
-            </label>
-            <sc-if value="{{ errAgree }}" hint-placeholder-val="{{ false }}">
-              <div style="font-size: 13px; color: #ff8a6b; margin-top: -16px;">{{ errAgree }}</div>
-            </sc-if>
-            <button type="submit" style="display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; background: #c6fb3e; color: #0c0e0d; border: 0; padding: 18px 24px; font-family: inherit; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.16em; cursor: pointer;" style-hover="background: #d6ff6b; color: #0c0e0d;">
-              <span>{{ submitLabel }}</span><span style="font-size: 18px; letter-spacing: 0;">→</span>
-            </button>
-          </form>
-        </sc-if>
-      </div>
-    </div>
-  </sc-if>
-
-  <footer style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
-    <div style="padding: 40px 28px; border-right: 1px solid #232925; display: flex; flex-direction: column; gap: 16px;">
+  <footer style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+    <div style="padding: 56px 28px; border-right: 2px solid #232925; display: flex; flex-direction: column; gap: 16px;">
       <div style="display: flex; align-items: center; gap: 12px;">
-        <span style="display: inline-block; width: 8px; height: 8px; background: #c6fb3e;"></span>
-        <span style="font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em;">The YG Trader Hunt</span>
+        <span style="width: 10px; height: 10px; background: #c6fb3e;"></span>
+        <span style="font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.14em;">Traders Hunt · Season Two</span>
       </div>
-      <p style="margin: 0; max-width: 56ch; font-size: 12px; line-height: 1.7; color: #6c7a72;">Trading leveraged products carries high risk and can cost you all of your deposit. You trade your own account and are responsible for your results — nothing here is advice or a promise of profit. Prize awarded on verified statements.</p>
+      <p style="margin: 0; max-width: 60ch; font-size: 12px; line-height: 1.7; color: #8a968f;">Risk warning: trading involves risk — only trade with capital you can afford to lose. Account data is recorded daily and may be audited; the organiser may disqualify unfair practices (multiple or shared accounts, order splitting, copy-trading, platform exploits, false deposit records). The organiser's decision on scores, rankings and rewards is final. Funded accounts follow the provider's own terms; taxes are the winner's responsibility.</p>
+      <a href="/uploads/Traders_Hunt_Season_2_Rules_v3.pdf" target="_blank" rel="noopener" style="font-size: 12px; font-weight: 600;">Full competition rules (PDF) →</a>
     </div>
-    <div style="padding: 40px 28px; display: flex; flex-direction: column; gap: 14px;">
-      <div class="section-label" style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; color: #6c7a72;">Follow</div>
-      <div style="display: flex; flex-wrap: wrap; gap: 12px;">
-        <a href="https://www.instagram.com/iiamyashgupta" target="_blank" rel="noopener" aria-label="Instagram — @iiamyashgupta" title="Instagram — @iiamyashgupta" style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 1px solid #3a423d; color: #edf2ee;" style-hover="border-color: #c6fb3e; color: #c6fb3e;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+    <div style="padding: 56px 28px; display: flex; flex-direction: column; gap: 16px;">
+      <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: #8a968f;">Follow</div>
+      <div style="display: flex; gap: 12px;">
+        <a href="https://www.instagram.com/iiamyashgupta" target="_blank" rel="noopener" aria-label="Instagram" title="Instagram — @iiamyashgupta" style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 2px solid #3a423d; color: #edf2ee;" style-hover="background: #c6fb3e; border-color: #c6fb3e; color: #0c0e0d;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2" width="20" height="20" rx="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
         </a>
-        <a href="https://t.me/YashGuptaTrader" target="_blank" rel="noopener" aria-label="Telegram — YashGuptaTrader" title="Telegram — YashGuptaTrader" style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 1px solid #3a423d; color: #edf2ee;" style-hover="border-color: #c6fb3e; color: #c6fb3e;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg>
+        <a href="https://t.me/YashGuptaTrader" target="_blank" rel="noopener" aria-label="Telegram" title="Telegram — YashGuptaTrader" style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 2px solid #3a423d; color: #edf2ee;" style-hover="background: #c6fb3e; border-color: #c6fb3e; color: #0c0e0d;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="M22 2 11 13"></path></svg>
         </a>
-        <a href="https://www.youtube.com/@iamyashgupta" target="_blank" rel="noopener" aria-label="YouTube — @iamyashgupta" title="YouTube — @iamyashgupta" style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 1px solid #3a423d; color: #edf2ee;" style-hover="border-color: #c6fb3e; color: #c6fb3e;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"></path><path d="m10 15 5-3-5-3z"></path></svg>
+        <a href="https://www.youtube.com/@iamyashgupta" target="_blank" rel="noopener" aria-label="YouTube" title="YouTube — @iamyashgupta" style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: 2px solid #3a423d; color: #edf2ee;" style-hover="background: #c6fb3e; border-color: #c6fb3e; color: #0c0e0d;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"></path><path d="m10 15 5-3-5-3z"></path></svg>
         </a>
       </div>
-      <div style="font-size: 11px; color: #4f5a54; margin-top: 8px;">© 2026 Yash Gupta. Elefin link is a partner referral.</div>
+      <div style="font-size: 12px; color: #6c7a72; margin-top: auto;">© 2026 Yash Gupta · Elefin link is a partner referral.</div>
     </div>
   </footer>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;startTime&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;2026-09-07T00:00:00+05:30&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Competition&quot;},&quot;deadline&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;2026-09-11T23:59:59+05:30&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Competition&quot;},&quot;winnerAnnounce&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;2026-09-12T12:00:00+05:30&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Competition&quot;},&quot;submitLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Lock in my entry&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;},&quot;formEndpoint&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://script.google.com/macros/s/AKfycbwhRZFia2ghXEO3LunEH_0sUlYpmQSfY2hI-p4HP4gI1nIvkPofYjrQVYFZL4HKN4Gi/exec&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;formEndpoint&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;https://script.google.com/macros/s/AKfycbwhRZFia2ghXEO3LunEH_0sUlYpmQSfY2hI-p4HP4gI1nIvkPofYjrQVYFZL4HKN4Gi/exec&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Form&quot;}}">
 class Component extends DCLogic {
-  state = { name: "", phone: "", email: "", capital: "", agree: false, errors: {}, submitted: false, showModal: false, now: Date.now() };
-
-  componentDidMount() {
-    this.timer = setInterval(() => this.setState({ now: Date.now() }), 1000);
-    this.handleKeyDown = (e) => {
-      if (e.key === "Escape" && this.state.showModal) {
-        this.setState({ showModal: false });
-      }
-    };
-    window.addEventListener("keydown", this.handleKeyDown);
-  }
-  componentWillUnmount() {
-    clearInterval(this.timer);
-    window.removeEventListener("keydown", this.handleKeyDown);
-  }
-
-  startTime() {
-    const d = new Date(this.props.startTime ?? "2026-09-07T00:00:00+05:30");
-    return isNaN(d) ? new Date("2026-09-07T00:00:00+05:30") : d;
-  }
-
-  deadline() {
-    const d = new Date(this.props.deadline ?? "2026-09-11T23:59:59+05:30");
-    return isNaN(d) ? new Date("2026-09-11T23:59:59+05:30") : d;
-  }
-
-  announceTime() {
-    const d = new Date(this.props.winnerAnnounce ?? "2026-09-12T12:00:00+05:30");
-    return isNaN(d) ? new Date("2026-09-12T12:00:00+05:30") : d;
-  }
+  state = { name: '', phone: '', email: '', accountId: '', capital: '', agree: false, errors: {}, submitted: false };
 
   validate() {
-    const e = {};
-    if (!this.state.name.trim()) e.name = "Please enter your name.";
-    const digits = this.state.phone.replace(/[^0-9]/g, "");
-    if (!digits) e.phone = "Please enter your WhatsApp number.";
-    else if (digits.length < 8) e.phone = "That number looks too short.";
-    if (!this.state.email.trim()) e.email = "Please enter your email.";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(this.state.email.trim())) e.email = "Please enter a valid email address.";
-    if (!this.state.agree) e.agree = "Please confirm your account and the rules.";
+    const e = {}, s = this.state;
+    if (!s.name.trim()) e.name = 'Please enter your name.';
+    const digits = s.phone.replace(/[^0-9]/g, '');
+    if (!digits) e.phone = 'Please enter your WhatsApp number.'; else if (digits.length < 8) e.phone = 'That number looks too short.';
+    if (!s.email.trim()) e.email = 'Please enter your email.'; else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s.email.trim())) e.email = 'Please enter a valid email.';
+    if (!s.accountId.trim()) e.accountId = 'Please enter your Wallet ID / Account ID.';
+    if (!s.agree) e.agree = 'Please confirm your account and the rules.';
     return e;
   }
 
   renderVals() {
-    const now = this.state.now;
-    const startMs = this.startTime().getTime();
-    const endMs = this.deadline().getTime();
-
-    const fmt = (d) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
-    const windowLabel = fmt(this.startTime()) + " – " + fmt(this.deadline()) + " " + this.deadline().getFullYear();
-    const announceLabel = fmt(this.announceTime());
-
-    let ms = 0;
-    let timerLabel = "Live · " + windowLabel;
-    let countLabel = "Countdown to start · winner announced " + announceLabel;
-    let isLive = false;
-
-    if (now < startMs) {
-      ms = Math.max(0, startMs - now);
-      timerLabel = "Live · " + windowLabel;
-      countLabel = "Countdown to start · winner announced " + announceLabel;
-      isLive = false;
-    } else if (now < endMs) {
-      ms = Math.max(0, endMs - now);
-      timerLabel = "Live · " + windowLabel;
-      countLabel = "Time remaining · winner announced " + announceLabel;
-      isLive = true;
-    } else {
-      ms = 0;
-      timerLabel = "Trading closed · winner announced " + announceLabel;
-      countLabel = "Trading closed " + fmt(this.deadline()) + " · winner announced " + announceLabel;
-      isLive = false;
-    }
-
-    const pad = (n) => String(n).padStart(2, "0");
-    const err = this.state.errors;
+    const s = this.state, err = s.errors;
+    const c = parseFloat(s.capital);
+    const cat = isNaN(c) ? null : c >= 1000 ? 'Platinum' : c >= 500 ? 'Gold' : c >= 300 ? 'Silver' : c >= 100 ? 'Bronze' : 'Below $100';
     return {
-      isLive,
-      notLive: !isLive,
-      timerLabel,
-      windowLabel,
-      countLabel,
-      cdDays: pad(Math.floor(ms / 86400000)),
-      cdHours: pad(Math.floor(ms / 3600000) % 24),
-      cdMins: pad(Math.floor(ms / 60000) % 60),
-      cdSecs: pad(Math.floor(ms / 1000) % 60),
-      name: this.state.name, phone: this.state.phone, email: this.state.email,
-      capital: this.state.capital, agree: this.state.agree,
-      errName: err.name || "", errPhone: err.phone || "", errEmail: err.email || "", errAgree: err.agree || "",
-      submitted: this.state.submitted, notSubmitted: !this.state.submitted,
-      showModal: this.state.showModal,
-      openModal: () => this.setState({ showModal: true }),
-      closeModal: () => this.setState({ showModal: false }),
-      firstName: (this.state.name.trim().split(/\s+/)[0] || "trader"),
-      submitLabel: this.props.submitLabel ?? "Lock in my entry",
+      name: s.name, phone: s.phone, email: s.email, accountId: s.accountId, capital: s.capital, agree: s.agree,
+      bonusLabel: cat == null ? 'Category: —' : cat,
+      errName: err.name || '', errPhone: err.phone || '', errEmail: err.email || '', errAccountId: err.accountId || '', errAgree: err.agree || '',
+      submitted: s.submitted, notSubmitted: !s.submitted,
+      firstName: s.name.trim().split(/\s+/)[0] || 'trader',
       onName: (ev) => this.setState({ name: ev.target.value }),
       onPhone: (ev) => this.setState({ phone: ev.target.value }),
       onEmail: (ev) => this.setState({ email: ev.target.value }),
+      onAccountId: (ev) => this.setState({ accountId: ev.target.value }),
       onCapital: (ev) => this.setState({ capital: ev.target.value }),
       onAgree: (ev) => this.setState({ agree: ev.target.checked }),
-      reset: () => this.setState({ name: "", phone: "", email: "", capital: "", agree: false, errors: {}, submitted: false }),
+      reset: () => this.setState({ name: '', phone: '', email: '', accountId: '', capital: '', agree: false, errors: {}, submitted: false }),
       onSubmit: (ev) => {
         ev.preventDefault();
         const errors = this.validate();
@@ -547,23 +386,24 @@ class Component extends DCLogic {
         const endpoint = this.props.formEndpoint || window.YG_FORM_ENDPOINT || "https://script.google.com/macros/s/AKfycbwhRZFia2ghXEO3LunEH_0sUlYpmQSfY2hI-p4HP4gI1nIvkPofYjrQVYFZL4HKN4Gi/exec";
         if (endpoint) {
           const body = new URLSearchParams();
-          body.append("name", this.state.name);
-          body.append("phone", this.state.phone);
-          body.append("email", this.state.email);
-          body.append("capital", this.state.capital || "N/A");
-          body.append("timestamp", new Date().toLocaleString());
+          body.append('name', s.name);
+          body.append('phone', s.phone);
+          body.append('email', s.email);
+          body.append('accountId', s.accountId);
+          body.append('capital', s.capital || 'N/A');
+          body.append('timestamp', new Date().toLocaleString());
           try {
             fetch(endpoint, {
-              method: "POST",
-              mode: "no-cors",
-              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
               body: body
             });
           } catch (e) {
-            console.error("Form submit error:", e);
+            console.error('Form submit error:', e);
           }
         } else {
-          console.warn("Form submission skipped: formEndpoint is empty. Please configure your Google Apps Script Web App URL.");
+          console.warn('Form submission skipped: formEndpoint is empty.');
         }
         this.setState({ errors: {}, submitted: true });
       }
