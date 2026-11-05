@@ -18,7 +18,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const elefin = require('../services/elefin');
+const elefin = require('../src/elefin-client');
 
 const ARGV = process.argv.slice(2);
 const argVal = (n, d) => {

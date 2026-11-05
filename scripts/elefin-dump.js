@@ -22,7 +22,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const elefin = require('../services/elefin');
+const elefin = require('../src/elefin-client');
 
 const ARGV = process.argv.slice(2);
 const argVal = (n, d) => {
@@ -30,10 +30,10 @@ const argVal = (n, d) => {
   return i >= 0 && ARGV[i + 1] ? ARGV[i + 1] : d;
 };
 
-const EMAIL = argVal('--email', 'soumitra.sarawgi007@gmail.com').toLowerCase();
+const EMAIL = argVal('--email', 'Yashagarwalbaddy@gmail.com').toLowerCase();
 const ONLY_LOGIN = argVal('--login', null);
-const FROM = argVal('--from', '2026-08-01T00:00:00Z');
-const TO = argVal('--to', '2026-10-01T00:00:00Z');
+const FROM = argVal('--from', '2026-10-01T00:00:00Z');
+const TO = argVal('--to', '2026-11-01T00:00:00Z');
 const OUT_ROOT = path.resolve(process.cwd(), argVal('--out-dir', 'data/elefin-dump'));
 const SLEEP_MS = Number(argVal('--sleep', '1100'));
 const PAGE = 200;

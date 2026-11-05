@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Traders Hunt Admin</title>
+<style>
+  :root {
+    --bg: #0c0e0d; --panel: #141816; --line: #3a423d; --text: #edf2ee; --muted: #9aa5a0;
+    --accent: #c6fb3e; --danger: #ff7b6b; --ok: #6be3a0; --warn: #ffd166;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 Archivo, system-ui, sans-serif; }
+  a, button { color: inherit; }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--line); }
+  h1 { font-size: 16px; margin: 0; letter-spacing: .08em; text-transform: uppercase; }
+  h2 { font-size: 13px; margin: 0 0 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  main { padding: 16px; max-width: 1100px; margin: 0 auto; display: grid; gap: 20px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); padding: 16px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+  label { display: grid; gap: 4px; font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  input, select, textarea { font: inherit; color: var(--text); background: transparent; border: 1px solid var(--line); padding: 9px 10px; width: 100%; text-transform: none; letter-spacing: 0; font-weight: 400; }
+  button { font: inherit; font-weight: 600; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; padding: 9px 14px; background: transparent; border: 1px solid var(--line); cursor: pointer; }
+  button.primary { background: var(--accent); color: #0c0e0d; border-color: var(--accent); }
+  button.danger { border-color: var(--danger); color: var(--danger); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; word-break: break-word; }
+  .table-wrap { overflow-x: auto; }
+  .badge { display: inline-block; font-size: 11px; padding: 1px 7px; border: 1px solid var(--line); margin: 0 4px 4px 0; }
+  .badge.ok { color: var(--ok); border-color: var(--ok); } .badge.bad { color: var(--danger); border-color: var(--danger); } .badge.warn { color: var(--warn); border-color: var(--warn); }
+  .err { color: var(--danger); font-size: 13px; min-height: 1.2em; }
+  .banner { padding: 10px 14px; border: 1px solid var(--warn); color: var(--warn); }
+  .toast { position: fixed; right: 16px; bottom: 16px; background: var(--accent); color: #0c0e0d; padding: 10px 16px; font-weight: 600; }
+  .hidden { display: none !important; }
+  .muted { color: var(--muted); }
+  pre { margin: 0; white-space: pre-wrap; font-size: 12px; }
+  #login { max-width: 360px; margin: 12vh auto; }
+  @media (prefers-reduced-motion: no-preference) { button { transition: border-color .15s; } }
+</style>
+</head>
+<body>
+<section id="login" class="panel hidden" aria-labelledby="login-h">
+  <h2 id="login-h">Admin sign in</h2>
+  <form id="login-form" class="grid" style="grid-template-columns:1fr">
+    <label>Username <input id="lu" autocomplete="username" required></label>
+    <label>Password <input id="lp" type="password" autocomplete="current-password" required></label>
+    <div id="login-err" class="err" role="alert"></div>
+    <button class="primary" type="submit">Sign in</button>
+  </form>
+</section>
+
+<div id="app" class="hidden">
+  <header>
+    <h1>Traders Hunt · Admin <span id="who" class="muted"></span></h1>
+    <div class="row">
+      <button id="rescore" type="button">Re-score now</button>
+      <button id="logout" type="button">Sign out</button>
+    </div>
+  </header>
+  <main>
+    <div id="banner" class="banner hidden" role="status"></div>
+
+    <section class="panel" aria-labelledby="r-h">
+      <h2 id="r-h">Rounds</h2>
+      <div id="rounds" class="grid"></div>
+      <p id="rounds-err" class="err" role="alert"></p>
+    </section>
+
+    <section id="w2" class="panel hidden" aria-labelledby="w2-h">
+      <h2 id="w2-h">Week 2 - Beat YG Sir</h2>
+      <p class="muted">One board: the week-1 category winners plus YG Sir. Every entry is added here by an admin. The #1 finisher wins; if it is a category winner their reward is doubled and they spend a week with YG Sir. If YG Sir finishes #1, everyone keeps their normal reward.</p>
+      <div id="w2-dates" class="muted" style="margin-bottom:12px"></div>
+
+      <h2>Category winners</h2>
+      <div class="row" style="margin-bottom:12px">
+        <label style="min-width:240px">Week-1 winner <select id="w2-email"></select></label>
+        <label style="flex:1;min-width:220px">Reason <input id="w2-reason" placeholder="e.g. Accepted the week 2 challenge (min 10 characters)"></label>
+        <button id="w2-add" class="primary" type="button" style="align-self:end">Add winner</button>
+      </div>
+
+      <h2>YG Sir</h2>
+      <div class="grid" style="margin-bottom:12px">
+        <label>Data source
+          <select id="hs-mode">
+            <option value="manual">Manual - I will enter his numbers</option>
+            <option value="elefin">Elefin account - scored like everyone else</option>
+          </select>
+        </label>
+        <label>Name <input id="hs-name" value="YG Sir"></label>
+        <label class="hs-elefin">Email <input id="hs-email" type="email" placeholder="his Elefin email"></label>
+        <label class="hs-elefin">Account ID <input id="hs-wallet" inputmode="numeric" placeholder="MT5 login"></label>
+        <label style="grid-column:1/-1">Reason <input id="hs-reason" placeholder="min 10 characters"></label>
+      </div>
+      <button id="hs-save" type="button">Set YG Sir</button>
+
+      <div class="table-wrap" style="margin-top:16px"><table><thead><tr><th>Email</th><th>Name</th><th>Account</th><th>Role</th><th>Source</th><th>Status</th><th></th></tr></thead><tbody id="w2-rows"></tbody></table></div>
+      <p id="w2-empty" class="muted hidden">No entrants yet.</p>
+      <p id="w2-err" class="err" role="alert"></p>
+    </section>
+
+    <section class="panel" aria-labelledby="t-h">
+      <h2 id="t-h">Traders</h2>
+      <div class="row" style="margin-bottom:12px">
+        <label style="flex:1;min-width:200px">Search <input id="q" type="search" placeholder="email, wallet id or name"></label>
+        <label>Status
+          <select id="status"><option value="">All</option></select>
+        </label>
+        <button id="add" class="primary" type="button" style="align-self:end">Add trader</button>
+      </div>
+      <div id="counts" class="row" style="margin-bottom:8px"></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Email</th><th>Wallet id</th><th>Name</th><th>Status</th><th>Category</th><th>Elefin check</th><th>Flags</th><th></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <p id="empty" class="muted hidden">No traders yet.</p>
+      <p id="list-err" class="err" role="alert"></p>
+    </section>
+
+    <section id="editor" class="panel hidden" aria-labelledby="e-h"></section>
+    <section id="history" class="panel hidden" aria-labelledby="h-h"></section>
+  </main>
+</div>
+<div id="toast" class="toast hidden" role="status"></div>
+
+<script>
+(function () {
+  'use strict';
+  const BASE = location.pathname.replace(/\/+$/, '');
+  const $ = (id) => document.getElementById(id);
+  const STATUSES = ['pending', 'active', 'needs_account', 'withdrawn', 'disqualified'];
+  const FIELDS = [
+    ['start_capital', 'Start capital (USD)', 'number'], ['balance_start', 'Balance at start', 'number'], ['captured_at', 'Entered at', 'datetime-local'],
+    ['dep_w', 'Deposits since entry', 'number'], ['wdr_w', 'Withdrawals since entry', 'number'],
+    ['closed_pnl', 'Closed P/L', 'number'], ['closed_trades', 'Closed trades', 'number'],
+  ];
+  let state = { me: null, page: 1, trader: null };
+
+  // Small DOM helper: text goes through textContent, so server data can never inject markup.
+  function h(tag, attrs, ...kids) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (k === 'on') for (const [ev, fn] of Object.entries(v)) el.addEventListener(ev, fn);
+      else if (v === true) el.setAttribute(k, '');
+      else if (v !== false && v != null) el.setAttribute(k, v);
+    }
+    for (const kid of kids.flat()) el.append(kid instanceof Node ? kid : document.createTextNode(kid ?? ''));
+    return el;
+  }
+  const badge = (t, cls) => h('span', { class: 'badge ' + (cls || '') }, t);
+
+  async function api(path, opts = {}) {
+    const res = await fetch(BASE + '/api' + path, {
+      method: opts.method || 'GET', credentials: 'same-origin',
+      headers: opts.body ? { 'Content-Type': 'application/json' } : {},
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401 && path !== '/login') { showLogin(); throw new Error('Session expired. Please sign in again.'); }
+    if (!res.ok) { const e = new Error((data.error && data.error.message) || 'Request failed'); e.code = data.error && data.error.code; e.field = data.error && data.error.field; throw e; }
+    return data;
+  }
+  function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); setTimeout(() => t.classList.add('hidden'), 3000); }
+  const when = (iso) => (iso ? new Date(iso).toLocaleString() : '—');
+
+  // ---------- login ----------
+  function showLogin() { $('app').classList.add('hidden'); $('login').classList.remove('hidden'); $('lu').focus(); }
+  $('login-form').addEventListener('submit', async (ev) => {
+    ev.preventDefault(); $('login-err').textContent = '';
+    try { await api('/login', { method: 'POST', body: { username: $('lu').value, password: $('lp').value } }); $('lp').value = ''; boot(); }
+    catch (e) { $('login-err').textContent = e.message; }
+  });
+  $('logout').addEventListener('click', async () => { await api('/logout', { method: 'POST', body: {} }).catch(() => {}); showLogin(); });
+  $('rescore').addEventListener('click', async () => { try { await api('/rescore', { method: 'POST', body: {} }); toast('Re-score started'); } catch (e) { toast(e.message); } });
+
+  // ---------- traders list ----------
+  let timer;
+  $('q').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { state.page = 1; loadTraders(); }, 250); });
+  $('status').addEventListener('change', () => { state.page = 1; loadTraders(); });
+  $('add').addEventListener('click', () => openEditor(null));
+
+  async function loadTraders() {
+    $('list-err').textContent = '';
+    try {
+      const d = await api('/traders?page=' + state.page + '&status=' + encodeURIComponent($('status').value) + '&q=' + encodeURIComponent($('q').value));
+      $('counts').replaceChildren(...STATUSES.map((s) => badge(s + ': ' + (d.counts[s] || 0))));
+      $('empty').classList.toggle('hidden', d.rows.length > 0);
+      $('rows').replaceChildren(...d.rows.map(rowEl));
+    } catch (e) { $('list-err').textContent = e.message; }
+  }
+  function rowEl(t) {
+    const chk = t.elefin_check;
+    return h('tr', {},
+      h('td', {}, t.email), h('td', {}, t.wallet_id || '—'), h('td', {}, t.name || '—'),
+      h('td', {}, badge(t.status, t.status === 'active' ? 'ok' : t.status === 'disqualified' ? 'bad' : 'warn')),
+      h('td', {}, t.category || '—'),
+      h('td', {}, chk ? [badge(chk.owner_match ? 'owner match' : 'no match', chk.owner_match ? 'ok' : 'bad'), h('div', { class: 'muted' }, when(chk.at))] : '—'),
+      h('td', {}, (t.flags || []).map((f) => badge(f, /mismatch|unpriceable/.test(f) ? 'bad' : '')), t.manual ? badge('manual: ' + t.manual, 'warn') : ''),
+      h('td', {}, h('button', { type: 'button', on: { click: () => openEditor(t) } }, 'Open')));
+  }
+
+  // ---------- editor (trader + manual data) ----------
+  function field(label, input, id) { return h('label', { for: id }, label, input); }
+  function openEditor(t) {
+    state.trader = t;
+    const ed = $('editor'); ed.classList.remove('hidden');
+    const locked = state.me.finalized;
+    const isNew = !t;
+    const err = h('div', { class: 'err', id: 'ed-err', role: 'alert' });
+    const email = h('input', { id: 'f-email', type: 'email', value: t ? t.email : '', disabled: !isNew, required: true });
+    const wallet = h('input', { id: 'f-wallet', inputmode: 'numeric', value: t ? t.wallet_id || '' : '' });
+    const name = h('input', { id: 'f-name', value: t ? t.name || '' : '' });
+    const notes = h('textarea', { id: 'f-notes', rows: 2 }, t ? t.notes || '' : '');
+    const reason = h('input', { id: 'f-reason', placeholder: 'Why? (min 10 characters, goes in the audit log)' });
+    const status = h('select', { id: 'f-status' }, STATUSES.map((s) => h('option', { value: s, selected: t && t.status === s }, s)));
+    const checkOut = h('div', { class: 'muted', id: 'check-out', 'aria-live': 'polite' });
+
+    const save = h('button', { type: 'button', class: 'primary', disabled: locked || (isNew && !state.me.entry_open), on: { click: async () => {
+      err.textContent = '';
+      try {
+        if (isNew) await api('/traders', { method: 'POST', body: { email: email.value, wallet_id: wallet.value, name: name.value, notes: notes.value, reason: reason.value } });
+        else {
+          const cur = await api('/traders?q=' + encodeURIComponent(t.email));
+          const fresh = cur.rows.find((r) => r.email === t.email) || t;
+          await api('/traders/' + encodeURIComponent(t.email), { method: 'PATCH', body: { version: fresh.version || 1, name: name.value, notes: notes.value, wallet_id: wallet.value, reason: reason.value } });
+        }
+        toast('Saved'); closeEditor(); loadTraders();
+      } catch (e) { err.textContent = e.message; if (e.code === 'stale') loadTraders(); }
+    } } }, isNew ? 'Add trader' : 'Save changes');
+
+    const check = h('button', { type: 'button', disabled: isNew, on: { click: async () => {
+      checkOut.textContent = 'Checking…';
+      try {
+        const c = await api('/traders/' + encodeURIComponent(t.email) + '/check', { method: 'POST', body: {} });
+        checkOut.textContent = (c.owner_match ? '✅ ' : '❌ ') + c.message + (c.equity != null ? ' · equity $' + c.equity : '') + (c.logins.length ? ' · logins: ' + c.logins.join(', ') : '');
+      } catch (e) { checkOut.textContent = '❌ ' + e.message; }
+    } } }, 'Check in Elefin');
+
+    const setStatus = h('button', { type: 'button', disabled: isNew || locked, on: { click: async () => {
+      err.textContent = '';
+      try {
+        const cur = await api('/traders?q=' + encodeURIComponent(t.email));
+        const fresh = cur.rows.find((r) => r.email === t.email) || t;
+        await api('/traders/' + encodeURIComponent(t.email) + '/status', { method: 'POST', body: { to: status.value, version: fresh.version || 1, reason: reason.value } });
+        toast('Status updated'); closeEditor(); loadTraders();
+      } catch (e) { err.textContent = e.message + (e.code === 'check_required' ? ' (Use "Check in Elefin" first.)' : ''); }
+    } } }, 'Change status');
+
+    const sections = [
+      h('h2', { id: 'e-h' }, isNew ? 'Add trader' : 'Trader: ' + t.email),
+      h('div', { class: 'grid' }, field('Email', email, 'f-email'), field('Wallet id (MT5 login)', wallet, 'f-wallet'), field('Name', name, 'f-name')),
+      field('Notes', notes, 'f-notes'),
+      field('Reason for this change', reason, 'f-reason'),
+      h('div', { class: 'row' }, save, check, field('Status', status, 'f-status'), setStatus, h('button', { type: 'button', on: { click: () => { closeEditor(); } } }, 'Close')),
+      checkOut, err,
+    ];
+    if (!isNew && t.wallet_id) sections.push(manualSection(t, reason));
+    if (!isNew) sections.push(h('div', {}, h('button', { type: 'button', on: { click: () => openHistory(t.email) } }, 'History')));
+    ed.replaceChildren(...sections);
+    (isNew ? email : name).focus();
+  }
+  function closeEditor() { $('editor').classList.add('hidden'); $('history').classList.add('hidden'); }
+
+  function manualSection(t, reason, scope) {
+    const P = scope === 'week2' ? '/week2' : '';
+    const locked = scope === 'week2' ? !!state.w2closed : !!state.me.finalized;
+    const wrap = h('div', { style: 'margin-top:20px;border-top:1px solid var(--line);padding-top:16px' });
+    const err = h('div', { class: 'err', role: 'alert' });
+    const out = h('pre', { 'aria-live': 'polite' });
+    const mode = h('select', { id: 'm-mode' }, h('option', { value: 'fields' }, 'fields — patch only the listed values'), h('option', { value: 'full' }, 'full — score entirely from our database'));
+    const source = h('select', { id: 'm-source' }, ['mt5_statement', 'broker_email', 'organiser', 'other'].map((s) => h('option', { value: s }, s)));
+    const ref = h('input', { id: 'm-ref', placeholder: 'e.g. ReportHistorys-12345992151.xlsx' });
+    const inputs = {};
+    const grid = h('div', { class: 'grid' }, FIELDS.map(([k, label, type]) => { inputs[k] = h('input', { id: 'm-' + k, type, step: type === 'number' ? '0.01' : null }); return field(label, inputs[k], 'm-' + k); }));
+    let version = null;
+
+    const collect = () => {
+      const f = {};
+      for (const [k, , type] of FIELDS) {
+        const v = inputs[k].value; if (v === '') continue;
+        f[k] = type === 'datetime-local' ? new Date(v).toISOString() : Number(v);
+      }
+      return f;
+    };
+    const fill = (doc) => {
+      version = doc ? doc.version : null;
+      for (const [k, , type] of FIELDS) {
+        const v = doc && doc.fields ? doc.fields[k] : undefined;
+        inputs[k].value = v == null ? '' : type === 'datetime-local' ? new Date(new Date(v) - new Date(v).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : v;
+      }
+      if (doc) { mode.value = doc.mode; source.value = doc.source; ref.value = doc.source_ref || ''; }
+      out.textContent = doc ? (doc.enabled ? 'Manual entry active — entered by ' + doc.entered_by + ' at ' + when(doc.entered_at) + '. ' + doc.reason : 'Manual entry is switched off.') : 'No manual entry. Scoring uses Elefin data.';
+    };
+    api(P + '/manual/' + t.wallet_id).then((d) => fill(d.current)).catch((e) => { out.textContent = e.message; });
+
+    const run = (fn) => async () => { err.textContent = ''; try { await fn(); } catch (e) { err.textContent = e.message; if (e.code === 'stale') api(P + '/manual/' + t.wallet_id).then((d) => fill(d.current)); } };
+    const preview = h('button', { type: 'button', on: { click: run(async () => {
+      const r = await api(P + '/preview/' + t.wallet_id, { method: 'POST', body: { mode: mode.value, fields: collect() } });
+      out.textContent = 'Preview — category ' + (r.category || '—') + ', return ' + (r.return_pct == null ? '—' : r.return_pct.toFixed(2) + '%') + ', P/L ' + r.pnl + ', net capital ' + r.net_capital +
+        '\neligible: ' + r.eligible + ', prize-eligible: ' + r.winner_eligible + (r.reasons.length ? '\nreasons: ' + r.reasons.join(', ') : '') + (r.flags.length ? '\nflags: ' + r.flags.join(', ') : '') + (r.warnings.length ? '\n' + r.warnings.join('\n') : '');
+    }) } }, 'Preview');
+    const save = h('button', { type: 'button', class: 'primary', disabled: locked, on: { click: run(async () => {
+      const d = await api(P + '/manual/' + t.wallet_id, { method: 'PUT', body: { mode: mode.value, fields: collect(), source: source.value, source_ref: ref.value, reason: reason.value, version } });
+      fill(d); toast('Manual entry saved — applies on the next scoring run'); loadTraders();
+    }) } }, 'Save manual entry');
+    const off = h('button', { type: 'button', class: 'danger', disabled: locked, on: { click: run(async () => {
+      const d = await api(P + '/manual/' + t.wallet_id + '/disable', { method: 'POST', body: { reason: reason.value } });
+      fill(d); toast('Back to Elefin data'); loadTraders();
+    }) } }, 'Switch off');
+
+    wrap.append(h('h2', {}, 'Manual data'), h('p', { class: 'muted' }, 'Category is always derived from the start capital. Leave a field empty to keep the Elefin value (fields mode). The reason above is required.'),
+      h('div', { class: 'grid' }, field('Mode', mode, 'm-mode'), field('Source', source, 'm-source'), field('Source reference', ref, 'm-ref')), grid,
+      h('div', { class: 'row', style: 'margin-top:12px' }, preview, save, off), err, out);
+    return wrap;
+  }
+
+  // ---------- history ----------
+  async function openHistory(target) {
+    const box = $('history'); box.classList.remove('hidden');
+    box.replaceChildren(h('h2', { id: 'h-h' }, 'History'), h('p', { class: 'muted' }, 'Loading…'));
+    try {
+      const rows = await api('/audit?target=' + encodeURIComponent(target));
+      const wallet = state.trader && state.trader.wallet_id ? await api('/audit?target=' + encodeURIComponent(state.trader.wallet_id)) : [];
+      const all = rows.concat(wallet).sort((a, b) => (a.at < b.at ? 1 : -1));
+      box.replaceChildren(h('h2', { id: 'h-h' }, 'History'), all.length ? h('div', { class: 'table-wrap' }, h('table', {}, h('thead', {}, h('tr', {}, ['When', 'Who', 'Action', 'Reason', 'Before → after'].map((x) => h('th', {}, x)))),
+        h('tbody', {}, all.map((a) => h('tr', {}, h('td', {}, when(a.at)), h('td', {}, a.admin), h('td', {}, a.action), h('td', {}, a.reason || '—'), h('td', {}, h('pre', {}, JSON.stringify({ before: a.before, after: a.after }, null, 1))))))) ) : h('p', { class: 'muted' }, 'No history yet.'));
+    } catch (e) { box.replaceChildren(h('h2', { id: 'h-h' }, 'History'), h('p', { class: 'err' }, e.message)); }
+  }
+
+  // ---------- rounds + week 2 ----------
+  const ROUND_LABEL = { week1: 'Week 1 - main competition', week2: 'Week 2 - Beat YG Sir' };
+  const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+  const rewardTxt = (r) => (r ? inr.format(r.value) + (r.type === 'cash' ? ' cash' : '') : '-');
+  const LOCK_TXT = { week1_not_finalized: 'Opens after week 1 is finalized.', dates_not_set: 'Set WEEK2_START and WEEK2_END in .env to open week 2.' };
+  let poll;
+  async function loadRounds() {
+    $('rounds-err').textContent = '';
+    try {
+      const d = await api('/rounds');
+      state.rounds = d;
+      state.w2closed = ['finalizing', 'finalized'].includes(d.week2.status);
+      $('rounds').replaceChildren(roundCard('week1', d.week1, d), roundCard('week2', d.week2, d));
+      const open = d.week2.status !== 'locked';
+      $('w2').classList.toggle('hidden', !open);
+      if (open) { fillWinners(d.week1); loadWeek2(state.w2closed); }
+      clearTimeout(poll);
+      if ([d.week1.status, d.week2.status].includes('finalizing')) poll = setTimeout(loadRounds, 5000);
+      else if (state.me) state.me = Object.assign(state.me, await api('/me'));
+    } catch (e) { $('rounds-err').textContent = e.message; }
+  }
+  function roundCard(round, r, all) {
+    const reason = h('input', { id: 'rf-' + round, placeholder: 'Reason (min 10 characters)' });
+    const err = h('div', { class: 'err', role: 'alert' });
+    const done = r.status === 'finalized';
+    const busy = r.status === 'finalizing';
+    const needs = round === 'week2' && r.status !== 'locked' && (!all.week2_entrants || !all.week2_has_host);
+    const blocked = r.status === 'locked' || needs;
+    const btn = h('button', { type: 'button', class: 'danger', disabled: done || busy || blocked, on: { click: async () => {
+      err.textContent = '';
+      const msg = 'Finalize "' + ROUND_LABEL[round] + '"?\n\nThis scores it one last time, marks the winner and stops updating every trader in this round. It cannot be undone from this panel.';
+      if (!window.confirm(msg)) return;
+      try {
+        await api('/rounds/' + round + '/finalize', { method: 'POST', body: { confirm: true, reason: reason.value } });
+        toast('Finalizing - this can take a few minutes');
+        loadRounds();
+      } catch (e) { err.textContent = e.message; }
+    } } }, done ? 'Finalized' : busy ? 'Finalizing...' : 'Finalize ' + (round === 'week1' ? 'week 1' : 'week 2'));
+    const kids = [h('h2', {}, ROUND_LABEL[round]), badge(r.status, done ? 'ok' : r.status === 'failed' ? 'bad' : 'warn')];
+    if (round === 'week2' && r.status !== 'locked') kids.push(h('span', { class: 'muted' }, ' ' + (all.week2_entrants || 0) + ' on the board'));
+    if (r.status === 'locked') kids.push(h('p', { class: 'muted' }, LOCK_TXT[r.reason] || 'Locked.'));
+    if (r.status === 'failed') kids.push(h('p', { class: 'err' }, 'Last attempt failed: ' + (r.error || 'unknown error') + '. You can try again.'));
+    if (done) {
+      kids.push(h('p', { class: 'muted' }, 'Finalized ' + when(r.finalized_at) + ' by ' + r.finalized_by + '. These traders are no longer updated.'));
+      if (round === 'week1') {
+        const cats = state.categories || {};
+        kids.push(h('ul', {}, Object.entries(r.winners || {}).map(([c, w]) => h('li', {}, c + ' (' + rewardTxt(cats[c]) + '): ' + (w ? w.name + ' - ' + w.email + ' - ' + (w.return_pct == null ? 'n/a' : w.return_pct.toFixed(2) + '%') : 'no winner')))));
+      } else if (r.challenge) {
+        const c = r.challenge;
+        kids.push(h('p', {}, c.host_won ? 'YG Sir finished #1. Every category winner keeps their normal reward.'
+          : c.winner ? 'Winner: ' + c.winner.name + ' (' + c.winner.category + ') - reward ' + rewardTxt(c.winner.base_reward) + ' doubled to ' + rewardTxt(c.winner.final_reward) + ' + a week with YG Sir.'
+          : 'No eligible entrant.'));
+        kids.push(h('ol', {}, (c.standings || []).map((e) => h('li', {}, (e.is_host ? 'YG Sir' : e.name) + ' - ' + (e.return_pct == null ? 'n/a' : e.return_pct.toFixed(2) + '%')))));
+      }
+    } else if (!blocked) {
+      kids.push(h('label', { for: 'rf-' + round }, 'Reason', reason), h('div', { class: 'row', style: 'margin-top:8px' }, btn), err);
+    } else if (needs) {
+      kids.push(h('p', { class: 'muted' }, 'Add at least one category winner and YG Sir below to enable finalizing.'));
+    }
+    return h('div', { class: 'panel', style: 'background:transparent' }, kids);
+  }
+
+  function fillWinners(w1) {
+    const sel = $('w2-email');
+    const keep = sel.value;
+    const opts = Object.entries(w1.winners || {}).filter(([, w]) => w).map(([c, w]) => h('option', { value: w.email }, c + ': ' + w.name + ' (' + w.email + ')'));
+    sel.replaceChildren(...(opts.length ? opts : [h('option', { value: '' }, 'No week-1 winners')]));
+    if (keep) sel.value = keep;
+  }
+
+  async function loadWeek2(readOnly) {
+    $('w2-err').textContent = '';
+    $('w2-add').disabled = readOnly; $('hs-save').disabled = readOnly;
+    try {
+      const me = await api('/me');
+      const d = await api('/week2/entrants');
+      const w = state.rounds && state.rounds.week2;
+      $('w2-dates').textContent = me.week2 ? 'Window (from .env): ' + when(me.week2.start) + ' to ' + when(me.week2.end) : '';
+      const rows = d.rows.filter((t) => t.status !== 'withdrawn');
+      $('w2-empty').classList.toggle('hidden', rows.length > 0);
+      $('w2-rows').replaceChildren(...rows.map((t) => h('tr', {},
+        h('td', {}, t.is_host ? '-' : t.email), h('td', {}, t.name || '-'), h('td', {}, t.wallet_id),
+        h('td', {}, t.is_host ? badge('YG Sir', 'warn') : badge('winner: ' + (t.week1_winner_of || '?'), 'ok')),
+        h('td', {}, t.account_source || 'elefin'), h('td', {}, badge(t.status, 'ok')),
+        h('td', {}, h('div', { class: 'row' },
+          h('button', { type: 'button', on: { click: () => openWeek2Manual(t) } }, 'Manual data'),
+          h('button', { type: 'button', class: 'danger', disabled: readOnly, on: { click: async () => {
+            const why = window.prompt('Reason for removing ' + (t.is_host ? 'YG Sir' : t.email) + ' (min 10 characters):');
+            if (!why) return;
+            try { await api('/week2/entrants/' + encodeURIComponent(t.email) + '/remove', { method: 'POST', body: { reason: why } }); loadRounds(); }
+            catch (e) { $('w2-err').textContent = e.message; }
+          } } }, 'Remove'))))));
+    } catch (e) { $('w2-err').textContent = e.message; }
+  }
+
+  function openWeek2Manual(t) {
+    const ed = $('editor'); ed.classList.remove('hidden');
+    const reason = h('input', { id: 'f-reason', placeholder: 'Why? (min 10 characters, goes in the audit log)' });
+    ed.replaceChildren(
+      h('h2', { id: 'e-h' }, 'Week 2 manual data: ' + (t.is_host ? 'YG Sir' : t.email)),
+      h('p', { class: 'muted' }, t.account_source === 'manual' ? 'YG Sir has no Elefin account here, so use "full" mode and enter every number.' : 'Patch a value, or replace the whole entry.'),
+      field('Reason for this change', reason, 'f-reason'),
+      h('div', { class: 'row', style: 'margin:8px 0' }, h('button', { type: 'button', on: { click: closeEditor } }, 'Close')),
+      manualSection(t, reason, 'week2'));
+    ed.scrollIntoView();
+  }
+
+  $('hs-mode').addEventListener('change', () => { const m = $('hs-mode').value === 'manual'; document.querySelectorAll('.hs-elefin').forEach((x) => x.classList.toggle('hidden', m)); });
+  $('hs-mode').dispatchEvent(new Event('change'));
+  $('hs-save').addEventListener('click', async () => {
+    $('w2-err').textContent = '';
+    const mode = $('hs-mode').value;
+    const body = { mode, name: $('hs-name').value, reason: $('hs-reason').value };
+    if (mode === 'elefin') { body.email = $('hs-email').value; body.wallet_id = $('hs-wallet').value; }
+    try { await api('/week2/host', { method: 'PUT', body }); toast('YG Sir saved'); loadRounds(); }
+    catch (e) { $('w2-err').textContent = e.message; }
+  });
+  $('w2-add').addEventListener('click', async () => {
+    $('w2-err').textContent = '';
+    try {
+      await api('/week2/entrants', { method: 'POST', body: { email: $('w2-email').value, reason: $('w2-reason').value } });
+      toast('Added to week 2');
+      loadRounds();
+    } catch (e) { $('w2-err').textContent = e.message; }
+  });
+
+  // ---------- boot ----------
+  async function boot() {
+    try {
+      state.me = await api('/me');
+    } catch (e) { return showLogin(); }
+    $('login').classList.add('hidden'); $('app').classList.remove('hidden');
+    $('who').textContent = '· ' + state.me.username + ' · ' + state.me.cohort;
+    const b = $('banner');
+    b.classList.toggle('hidden', !(state.me.finalized || !state.me.entry_open));
+    b.textContent = state.me.finalized ? 'The competition is finalized: everything is read-only.' : 'Entry is closed: new traders cannot be added. Status changes to withdrawn/disqualified still work.';
+    $('add').disabled = state.me.finalized || !state.me.entry_open;
+    if ($('status').options.length === 1) STATUSES.forEach((s) => $('status').append(h('option', { value: s }, s)));
+    try { const pub = await (await fetch('/api/leaderboard')).json(); state.categories = Object.fromEntries((pub.categories || []).map((c) => [c.id, c.reward])); } catch (e) { /* rewards are display-only */ }
+    loadRounds();
+    loadTraders();
+  }
+  boot();
+})();
+</script>
+</body>
+</html>

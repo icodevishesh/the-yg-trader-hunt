@@ -45,7 +45,7 @@
   .strip { padding: 56px 28px 28px; border-bottom: 2px solid var(--border); }
   .kicker { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--lime); }
   h1.title { margin: 16px 0 0; font-weight: 700; font-size: clamp(38px, 5vw, 68px); line-height: 1.0; letter-spacing: -0.045em; }
-  .sub { margin: 16px 0 0; max-width: 52ch; font-size: 16px; line-height: 1.55; color: var(--muted); }
+  .sub { margin: 16px 0 0; max-width: 56ch; font-size: 16px; line-height: 1.55; color: var(--muted); }
 
   .windowline { margin-top: 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .wl-badge { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; padding: 5px 10px; border: 2px solid var(--lime); color: var(--lime); display: inline-flex; align-items: center; gap: 8px; }
@@ -64,50 +64,65 @@
   .status .refresh { background: transparent; border: 2px solid var(--border); color: var(--text); font-family: inherit; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; padding: 8px 16px; cursor: pointer; }
   .status .refresh:hover { border-color: var(--lime); color: var(--lime); }
   .status .refresh[disabled] { opacity: 0.5; cursor: default; }
-  .tag-mock { border: 2px solid var(--amber); color: var(--amber); font-size: 9px; font-weight: 700; letter-spacing: 0.16em; padding: 3px 8px; text-transform: uppercase; }
 
-  .notice { margin: 0; padding: 14px 28px; border-bottom: 2px solid var(--divider); font-size: 13px; display: flex; gap: 10px; align-items: center; }
-  .notice.stale { background: rgba(240,193,75,0.08); color: var(--amber); }
+  .notice { margin: 0; padding: 14px 28px; border-bottom: 2px solid var(--divider); font-size: 14px; line-height: 1.5; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .notice.warn { background: rgba(240,193,75,0.08); color: var(--amber); }
   .notice.final { background: rgba(198,251,62,0.08); color: var(--lime); }
-  .notice.demo { background: rgba(240,193,75,0.08); color: var(--amber); }
+  .notice.err { background: rgba(255,138,107,0.08); color: var(--neg); }
+  .notice button { background: transparent; border: 2px solid currentColor; color: inherit; font-family: inherit; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; padding: 6px 12px; cursor: pointer; }
 
   .pos { color: var(--lime); }
   .neg { color: var(--neg); }
+
+  /* Round switch */
+  .round-tabs { display: flex; flex-wrap: wrap; border-bottom: 2px solid var(--border); }
+  .round-tab { flex: 1 1 240px; padding: 18px 28px; border: 0; border-right: 2px solid var(--divider); background: transparent; color: var(--text); font-family: inherit; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; cursor: pointer; text-align: left; }
+  .round-tab:last-child { border-right: 0; }
+  .round-tab[aria-selected="true"] { background: var(--lime); color: var(--bg); }
+  .round-tab[disabled] { color: var(--dim); cursor: not-allowed; }
+  .round-tab .rsub { display: block; margin-top: 3px; font-size: 11px; font-weight: 500; letter-spacing: 0.04em; text-transform: none; opacity: 0.8; }
 
   /* Category leader cards */
   .cat-leaders { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); border-bottom: 2px solid var(--border); }
   .lcard { text-align: left; padding: 28px; border: 0; border-right: 2px solid var(--divider); background: transparent; color: var(--text); font-family: inherit; cursor: pointer; display: flex; flex-direction: column; gap: 10px; }
   .lcard:last-child { border-right: none; }
-  .lcard.on { background: var(--surface); }
-  .lcard:hover { background: var(--surface); }
+  .lcard[aria-selected="true"], .lcard:hover { background: var(--surface); }
   .lcard .ltop { display: flex; justify-content: space-between; gap: 12px; width: 100%; }
   .lcard .lname-cat { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--lime); }
   .lcard .lcount { font-size: 12px; color: var(--muted); }
   .lcard .lleader { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-top: 8px; }
   .lcard .lret { font-size: 40px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
   .lcard .lprize { font-size: 13px; color: var(--muted); }
+  .lcard .lwin { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--amber); }
 
   /* Category tabs */
   .cat-tabs { display: flex; flex-wrap: wrap; border-bottom: 2px solid var(--divider); }
   .cat-tab { padding: 18px 28px; border: 0; border-right: 2px solid var(--divider); background: transparent; color: var(--text); font-family: inherit; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; cursor: pointer; text-align: left; }
-  .cat-tab.on { background: var(--lime); color: var(--bg); }
+  .cat-tab[aria-selected="true"] { background: var(--lime); color: var(--bg); }
   .cat-tab .trange { display: block; font-size: 11px; font-weight: 500; letter-spacing: 0.04em; text-transform: none; margin-top: 3px; opacity: 0.75; }
 
+  .rules { padding: 20px 28px; border-bottom: 2px solid var(--divider); font-size: 14px; line-height: 1.6; color: var(--muted); max-width: 90ch; }
+  .rules b { color: var(--text); }
+
   /* Table */
-  .tbl-head { padding: 20px 28px; border-bottom: 2px solid var(--divider); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: var(--dim); display: flex; justify-content: space-between; }
+  .tbl-head { padding: 20px 28px; border-bottom: 2px solid var(--divider); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: var(--dim); display: flex; justify-content: space-between; gap: 12px; }
   .tbl-scroll { overflow-x: auto; }
   table.board { width: 100%; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
   table.board thead th { background: var(--panel); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--dim); text-align: left; padding: 14px 16px; border-bottom: 2px solid var(--border); white-space: nowrap; }
   table.board tbody td { padding: 16px 16px; border-bottom: 1px solid var(--divider); font-size: 14px; }
-  table.board tbody tr:hover { background: rgba(198,251,62,0.05); }
-  table.board .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.board tbody tr.trow:hover { background: rgba(198,251,62,0.05); }
+  table.board .num { text-align: right; white-space: nowrap; }
+  table.board th.num { text-align: right; }
   table.board td.rk { color: var(--dim); width: 48px; font-weight: 700; }
-  .trader { display: flex; align-items: center; gap: 10px; }
+  .trader { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .trader .tname { font-weight: 600; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .tid { display: block; margin-top: 3px; font-size: 11px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .tid { display: block; margin-top: 3px; font-size: 11px; color: var(--dim); }
+  .tag { font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; padding: 3px 7px; border: 2px solid var(--border); color: var(--muted); }
+  .tag.host { border-color: var(--lime); color: var(--lime); }
   .empty { padding: 72px 28px; text-align: center; color: var(--muted); font-size: 15px; line-height: 1.6; }
 
   tr.trow { cursor: pointer; }
+  tr.trow:focus-visible { outline: 2px solid var(--lime); outline-offset: -2px; }
   tr.drow td { padding: 0; border-bottom: 1px solid var(--divider); background: var(--surface); }
   .detail { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1px; background: var(--divider); }
   .dcell { display: flex; flex-direction: column; gap: 6px; padding: 16px 20px; background: var(--surface); }
@@ -116,6 +131,7 @@
 
   .skel { display: inline-block; background: linear-gradient(90deg, #1a1f1b 25%, #232925 37%, #1a1f1b 63%); background-size: 400% 100%; animation: sh 1.3s ease-in-out infinite; height: 1em; border-radius: 2px; }
   @keyframes sh { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+  @media (prefers-reduced-motion: reduce) { .skel, .wl-badge.live .d, .status .live-dot.on { animation: none; } }
 
   footer.ft { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); border-top: 2px solid var(--border); }
   footer.ft .col { padding: 40px 28px; display: flex; flex-direction: column; gap: 14px; }
@@ -127,7 +143,7 @@
   footer.ft .socials a:hover { border-color: var(--lime); color: var(--lime); }
   footer.ft .copy { font-size: 11px; color: var(--dimmer); margin-top: 6px; }
 
-  @media (max-width: 640px) { .col-trades { display: none; } }
+  @media (max-width: 640px) { .col-hide { display: none; } }
   @media (max-width: 767px) {
     .hdr-cta { display: none; }
     .hdr-nav { gap: 18px; padding: 0 20px; }
@@ -152,22 +168,19 @@
   <section class="strip">
     <div class="kicker">Live leaderboard</div>
     <h1 class="title">The standings.</h1>
-    <p class="sub">Ranked by return % on your cumulative capital, within your category (Bronze, Silver, Gold or Platinum — set by your day-one balance).</p>
+    <p class="sub" id="subText">Ranked by return % on your net capital, within your category (Bronze, Silver, Gold or Platinum — set by your balance when you enter).</p>
     <div class="windowline" id="windowLine" hidden>
       <span class="wl-badge" id="wlBadge"><span class="d"></span> <span id="wlBadgeTxt">Live</span></span>
       <span class="wl-dates" id="wlDates">—</span>
     </div>
-    <div class="status" id="status">
+    <div class="status" id="status" aria-live="polite">
       <span class="item"><span class="live-dot" id="liveDot"></span> <span id="updatedTxt">Loading…</span></span>
-      <span class="item" id="nextItem" hidden><span>Next update</span> <b id="nextTxt">—</b></span>
-      <span class="item" id="endsItem" hidden><span>Ends</span> <b id="endsTxt">—</b></span>
-      <span class="item" id="countItem" hidden><b id="countTxt">0</b> <span>traders in the hunt</span></span>
-      <span class="item" id="leaderItem" hidden><span>Leading</span> <b id="leaderTxt">—</b></span>
-      <span class="item" id="mockItem" hidden><span class="tag-mock">Mock data</span></span>
+      <span class="item" id="countItem" hidden><b id="countTxt">0</b> <span id="countLbl">traders in the hunt</span></span>
       <button class="refresh" id="refreshBtn" type="button">Refresh</button>
     </div>
   </section>
 
+  <div class="round-tabs" id="roundTabs" role="tablist" aria-label="Round"></div>
   <div id="noticeSlot"></div>
   <main id="board"></main>
 
@@ -177,7 +190,7 @@
         <span class="dot" style="width:10px;height:10px;background:var(--lime);display:inline-block;"></span>
         <span class="name" style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:0.14em;">Traders Hunt · Season Two</span>
       </div>
-      <p>Trading leveraged products carries high risk and can cost you all of your deposit. You trade your own account and are responsible for your results — nothing here is advice or a promise of profit. Standings are computed from Elefin account data and may lag; the prize is awarded on verified statements.</p>
+      <p>Trading leveraged products carries high risk and can cost you all of your deposit. You trade your own account and are responsible for your results — nothing here is advice or a promise of profit. Standings are computed from Elefin account data and may lag; only closed trades count, and prizes are awarded after the organisers verify the results.</p>
     </div>
     <div class="col">
       <div class="lbl">Follow</div>
@@ -201,390 +214,341 @@
 (function () {
   "use strict";
 
+  // Everything on this page comes from /api/leaderboard: dates, categories, rewards, boards and
+  // winners. Nothing is hardcoded, so changing .env or src/config.js changes the page.
   var API = "/api/leaderboard";
-  // Backend re-scores every REFRESH_MINUTES (.env REFRESH_CRON=*/15). The browser
-  // re-fetches every UI poll (.env UI_POLL_MINUTES=5, sent by the API).
-  var REFRESH_MINUTES = 15;
-  var state = { data: null, loading: true, fetching: false, pollMs: 5 * 60 * 1000, expanded: null, cat: "bronze" };
-
-  // Categories are derived client-side from each entry's cumulative_capital
-  // (already returned by /api/leaderboard — no backend change needed).
-  var CATS = [
-    { key: "bronze", name: "Bronze", min: 100, range: "$100 – $300", prize: "₹25,000 funded account" },
-    { key: "silver", name: "Silver", min: 300, range: "$300 – $500", prize: "₹50,000 funded account" },
-    { key: "gold", name: "Gold", min: 500, range: "$500 – $1,000", prize: "₹1,00,000 cash prize" },
-    { key: "platinum", name: "Platinum", min: 1000, range: "$1,000+", prize: "₹1,50,000 cash prize" }
-  ];
-  var CAT_ORDER = ["bronze", "silver", "gold", "platinum"];
-  function catInfo(k) { for (var i = 0; i < CATS.length; i++) if (CATS[i].key === k) return CATS[i]; return null; }
-  function categoryOf(capital) {
-    var best = null;
-    for (var i = 0; i < CATS.length; i++) if (capital >= CATS[i].min) best = CATS[i].key;
-    return best;
-  }
-
-  // Shown only when there are no qualifying real entries yet (e.g. before
-  // trading opens) so every category preview isn't empty. Clearly labelled
-  // in the UI as example data — never mixed with real entries.
-  var DUMMY_ENTRIES = [
-    { name: "Priya S.", cumulative_capital: 150, return_pct: 18.4, trades: 12, net_profit: 27.6, client_id: 9001 },
-    { name: "Rahul K.", cumulative_capital: 220, return_pct: 9.2, trades: 7, net_profit: 20.24, client_id: 9002 },
-    { name: "Meera T.", cumulative_capital: 110, return_pct: -4.1, trades: 5, net_profit: -4.51, client_id: 9003 },
-    { name: "Arjun V.", cumulative_capital: 350, return_pct: 22.7, trades: 15, net_profit: 79.45, client_id: 9004 },
-    { name: "Sneha D.", cumulative_capital: 480, return_pct: 14.3, trades: 9, net_profit: 68.64, client_id: 9005 },
-    { name: "Kabir M.", cumulative_capital: 650, return_pct: 27.9, trades: 18, net_profit: 181.35, client_id: 9006 },
-    { name: "Isha N.", cumulative_capital: 900, return_pct: 11.6, trades: 10, net_profit: 104.4, client_id: 9007 },
-    { name: "Vikram R.", cumulative_capital: 1500, return_pct: 31.2, trades: 22, net_profit: 468, client_id: 9008 },
-    { name: "Ananya P.", cumulative_capital: 2200, return_pct: 8.5, trades: 6, net_profit: 187, client_id: 9009 },
-    { name: "Aditya R.", cumulative_capital: 180, return_pct: 6.7, trades: 9, net_profit: 12.06, client_id: 9010 },
-    { name: "Neha G.", cumulative_capital: 275, return_pct: -2.3, trades: 4, net_profit: -6.33, client_id: 9011 },
-    { name: "Siddharth J.", cumulative_capital: 130, return_pct: 14.9, trades: 11, net_profit: 19.37, client_id: 9012 },
-    { name: "Kavya S.", cumulative_capital: 420, return_pct: 19.5, trades: 13, net_profit: 81.9, client_id: 9013 },
-    { name: "Rohan P.", cumulative_capital: 310, return_pct: -6.8, trades: 6, net_profit: -21.08, client_id: 9014 },
-    { name: "Diya M.", cumulative_capital: 495, return_pct: 10.2, trades: 8, net_profit: 50.49, client_id: 9015 },
-    { name: "Manav K.", cumulative_capital: 720, return_pct: 16.3, trades: 14, net_profit: 117.36, client_id: 9016 },
-    { name: "Aisha L.", cumulative_capital: 560, return_pct: -3.5, trades: 5, net_profit: -19.6, client_id: 9017 },
-    { name: "Yuvraj T.", cumulative_capital: 980, return_pct: 24.1, trades: 19, net_profit: 236.18, client_id: 9018 },
-    { name: "Sana B.", cumulative_capital: 1200, return_pct: 7.8, trades: 8, net_profit: 93.6, client_id: 9019 },
-    { name: "Harsh V.", cumulative_capital: 3000, return_pct: 15.6, trades: 16, net_profit: 468, client_id: 9020 },
-    { name: "Nisha K.", cumulative_capital: 1800, return_pct: -1.9, trades: 3, net_profit: -34.2, client_id: 9021 },
-    { name: "Varun D.", cumulative_capital: 5000, return_pct: 28.4, trades: 21, net_profit: 1420, client_id: 9022 }
-  ];
-
-  // Competition window — authoritative on this page so a stale API snapshot
-  // can't show the wrong dates. Keep in sync with .env / config.js and index.html.
-  var WINDOW = {
-    start: "2026-09-07T00:00:00+05:30",
-    end: "2026-09-12T23:59:59+05:30",
-    announce: "2026-09-13T00:00:00+05:30",
-    // Competition finished 2026-09-12 — final result published (lb_result +
-    // lb_current.competition_over). This lets the API's flags drive Ended/Announced.
-    live: false
+  var state = {
+    round: "week1", cat: null, w1: null, w2: null,
+    loading: true, fetching: false, failed: false,
+    expanded: null, pollMs: 5 * 60 * 1000
   };
-
-  // Total registered participants — the "N traders in the hunt" counter shows
-  // this (everyone in the cohort), NOT just those with >=1 trade. The standings
-  // table below stays limited to traders who have taken at least one trade.
-  var COHORT_SIZE = 1539;
 
   var nf = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
   var nf0 = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
+  var inr = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 
   var el = {
     board: document.getElementById("board"),
     noticeSlot: document.getElementById("noticeSlot"),
+    roundTabs: document.getElementById("roundTabs"),
     liveDot: document.getElementById("liveDot"),
     updatedTxt: document.getElementById("updatedTxt"),
-    nextItem: document.getElementById("nextItem"),
-    nextTxt: document.getElementById("nextTxt"),
-    endsItem: document.getElementById("endsItem"),
-    endsTxt: document.getElementById("endsTxt"),
     countItem: document.getElementById("countItem"),
     countTxt: document.getElementById("countTxt"),
-    leaderItem: document.getElementById("leaderItem"),
-    leaderTxt: document.getElementById("leaderTxt"),
-    mockItem: document.getElementById("mockItem"),
+    countLbl: document.getElementById("countLbl"),
     refreshBtn: document.getElementById("refreshBtn"),
+    subText: document.getElementById("subText"),
     windowLine: document.getElementById("windowLine"),
     wlBadge: document.getElementById("wlBadge"),
     wlBadgeTxt: document.getElementById("wlBadgeTxt"),
     wlDates: document.getElementById("wlDates")
   };
 
-  var DFMT = { day: "numeric", month: "short", timeZone: "Asia/Kolkata" };
-  function fmtDay(iso) {
-    var d = new Date(iso);
-    return isNaN(d) ? null : d.toLocaleDateString("en-GB", DFMT);
-  }
-
-  function renderWindow() {
-    var d = state.data || {};
-    var a = fmtDay(WINDOW.start), b = fmtDay(WINDOW.end);
-    if (!a) { el.windowLine.hidden = true; return; }
-    var startYr = new Date(WINDOW.start).getFullYear();
-
-    var now = Date.now();
-    var started = WINDOW.live || now >= new Date(WINDOW.start).getTime();
-    var ended = !WINDOW.live && (d.competition_over || now > new Date(WINDOW.end).getTime());
-    var announced = !WINDOW.live && (d.winner_announced || now >= new Date(WINDOW.announce).getTime());
-    var annTxt = fmtDay(WINDOW.announce);
-
-    var cls, txt, dates;
-    if (WINDOW.live) { cls = "live"; txt = "Live"; dates = "since " + a + " " + startYr; }
-    else if (!started) { cls = "pre"; txt = "Starts soon"; dates = a + " – " + b + " " + startYr; }
-    else if (!ended) { cls = "live"; txt = "Live"; dates = a + " – " + b + " " + startYr; }
-    else if (announced) { cls = "live"; txt = "Final"; dates = a + " – " + b + " " + startYr; }
-    else {
-      cls = "over"; txt = "Trading closed";
-      dates = a + " – " + b + " " + startYr + (annTxt ? " · winner " + annTxt : "");
-    }
-    el.wlBadge.className = "wl-badge " + cls;
-    el.wlBadgeTxt.textContent = txt;
-    el.wlDates.textContent = dates;
-    el.windowLine.hidden = false;
-  }
+  var SUB = {
+    week1: "Ranked by return % on your net capital, within your category (Bronze, Silver, Gold or Platinum — set by your balance when you enter).",
+    week2: "The four category winners take on Yash Sir on one board, ranked by return % for the week. Finish first and your prize is doubled."
+  };
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
     });
   }
-
-  function pct(v) {
-    if (v == null || isNaN(v)) return "—";
-    return (v >= 0 ? "+" : "") + nf.format(v) + "%";
-  }
+  function pct(v) { return v == null || isNaN(v) ? "—" : (v >= 0 ? "+" : "") + nf.format(v) + "%"; }
   function signClass(v) { return v > 0 ? "pos" : v < 0 ? "neg" : ""; }
-
-  function money(v) {
-    if (v == null || isNaN(v)) return "—";
-    return (v >= 0 ? "+$" : "−$") + nf.format(Math.abs(v));
+  function usd(v) { return v == null || isNaN(v) ? "—" : "$" + nf.format(v); }
+  function usdSigned(v) { return v == null || isNaN(v) ? "—" : (v >= 0 ? "+$" : "−$") + nf.format(Math.abs(v)); }
+  function prize(r) {
+    if (!r || r.value == null) return "—";
+    var amount = r.currency === "INR" ? inr.format(r.value) : nf0.format(r.value);
+    return amount + (r.type === "cash" ? " cash prize" : "");
   }
-  function fmtDateTime(iso) {
-    if (!iso) return "—";
+  function range(c) {
+    if (c.id === "challenge") return "";
+    return "$" + nf0.format(c.min_usd) + (c.max_usd == null ? "+" : " – $" + nf0.format(c.max_usd));
+  }
+  function fmtDay(iso) {
     var d = new Date(iso);
-    if (isNaN(d)) return "—";
-    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
+    return isNaN(d) ? null : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
   }
-
   function relFromNow(iso) {
     if (!iso) return null;
     var diff = Date.now() - new Date(iso).getTime();
-    var past = diff >= 0;
-    var s = Math.abs(diff) / 1000;
-    var out;
+    var s = Math.abs(diff) / 1000, out;
     if (s < 60) out = Math.round(s) + " sec";
     else if (s < 3600) out = Math.round(s / 60) + " min";
-    else if (s < 86400) {
-      var h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60);
-      if (m === 60) { h += 1; m = 0; }
-      out = h + "h" + (m ? " " + String(m).padStart(2, "0") + "m" : "");
-    } else {
-      var d = Math.floor(s / 86400), hh = Math.floor((s % 86400) / 3600);
-      out = d + "d" + (hh ? " " + String(hh).padStart(2, "0") + "h" : "");
-    }
-    return { text: out, past: past };
+    else if (s < 86400) { var h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60); out = h + "h" + (m && m < 60 ? " " + String(m).padStart(2, "0") + "m" : ""); }
+    else out = Math.floor(s / 86400) + "d " + String(Math.floor((s % 86400) / 3600)).padStart(2, "0") + "h";
+    return { text: out, past: diff >= 0 };
+  }
+
+  function cur() { return state.round === "week2" ? state.w2 : state.w1; }
+  function week2Open() { return !!(state.w2 && state.w2.phase !== "locked"); }
+
+  // ---------- header: phase badge + dates ----------
+  var PHASE = {
+    pending: ["pre", "Starts soon"],
+    live_entry_open: ["live", "Live · entry open"],
+    live: ["live", "Live"],
+    closed_verifying: ["over", "Trading closed"],
+    announced: ["over", "Trading closed"],
+    finalized: ["live", "Final"],
+    locked: ["pre", "Opens soon"],
+    unconfigured: ["pre", "Starts soon"]
+  };
+
+  function renderWindow() {
+    var d = cur();
+    if (!d || !d.competition || !d.competition.start) { el.windowLine.hidden = true; return; }
+    var p = PHASE[d.phase] || PHASE.pending;
+    var a = fmtDay(d.competition.start), b = fmtDay(d.competition.end);
+    var txt = a && b ? a + " – " + b : "";
+    if (d.phase === "live_entry_open" && d.competition.entry_cutoff) txt += " · entry open until " + fmtDay(d.competition.entry_cutoff);
+    el.wlBadge.className = "wl-badge " + p[0];
+    el.wlBadgeTxt.textContent = p[1];
+    el.wlDates.textContent = txt;
+    el.windowLine.hidden = false;
   }
 
   function renderStatus() {
-    var d = state.data;
+    var d = cur();
     el.liveDot.classList.toggle("on", state.fetching);
+    el.subText.textContent = SUB[state.round];
+    if (!d) { el.updatedTxt.textContent = state.failed ? "Unavailable" : "Loading…"; el.countItem.hidden = true; return; }
 
-    if (!d) { el.updatedTxt.textContent = state.loading ? "Loading…" : "Unavailable"; return; }
-
-    if (d.status === "pending") {
-      el.updatedTxt.textContent = "Waiting for the first results";
-    } else if (d.generated_at) {
+    if (d.status === "pending") el.updatedTxt.textContent = d.phase === "locked" ? "Not open yet" : "Waiting for the first results";
+    else if (d.generated_at) {
       var r = relFromNow(d.generated_at);
-      el.updatedTxt.innerHTML = "Updated <b>" + esc(r ? r.text : "—") + (r && r.past ? " ago" : "") + "</b>";
+      el.updatedTxt.innerHTML = "Updated <b>" + esc(r ? r.text : "—") + "</b>" + (r && r.past ? " ago" : "");
     }
 
-    // Next update = last score + REFRESH_MINUTES. Don't trust the API's
-    // next_refresh_at (a stale backend can put it an hour out).
-    var nextAt = d.generated_at ? new Date(new Date(d.generated_at).getTime() + REFRESH_MINUTES * 60000) : null;
-    if (nextAt) {
-      var nr = relFromNow(nextAt.toISOString());
-      el.nextItem.hidden = false;
-      el.nextTxt.textContent = nr.past ? "any moment" : "in " + nr.text;
+    var st = d.stats || {};
+    if (state.round === "week1" && st.registered != null) {
+      el.countItem.hidden = false;
+      el.countTxt.textContent = nf0.format(st.registered);
+      el.countLbl.textContent = "registered · " + nf0.format(st.entered || 0) + " entered · " + nf0.format(st.ranked || 0) + " ranked";
+    } else if (state.round === "week2" && d.status === "ok") {
+      el.countItem.hidden = false;
+      el.countTxt.textContent = nf0.format(st.ranked || 0);
+      el.countLbl.textContent = "on the board";
     } else {
-      el.nextItem.hidden = true;
+      el.countItem.hidden = true;
     }
-
-    var nowMs = Date.now();
-    var ended = !WINDOW.live && (d.competition_over || nowMs > new Date(WINDOW.end).getTime());
-    var announced = !WINDOW.live && (d.winner_announced || nowMs >= new Date(WINDOW.announce).getTime());
-    var annTxt = fmtDay(WINDOW.announce);
-    if (WINDOW.live) {
-      el.endsItem.hidden = true;
-    } else {
-      var er = relFromNow(WINDOW.end);
-      el.endsItem.hidden = false;
-      if (ended) el.endsTxt.textContent = announced ? "final result" : (annTxt ? "winner " + annTxt : "trading closed");
-      else el.endsTxt.textContent = "in " + er.text;
-    }
-
-    // Total in the hunt — the whole cohort, not just those already trading.
-    el.countItem.hidden = false;
-    el.countTxt.textContent = nf0.format(COHORT_SIZE);
-
-    var wp = d.winner_provisional;
-    if (wp && wp.name) {
-      el.leaderItem.hidden = false;
-      el.leaderItem.querySelector("span").textContent = announced ? "Winner" : "Leading";
-      el.leaderTxt.textContent = wp.name + " " + pct(wp.return_pct);
-    } else {
-      el.leaderItem.hidden = true;
-    }
-
-    el.mockItem.hidden = d.source !== "mock";
   }
 
+  // ---------- round tabs ----------
+  function renderRounds() {
+    var open2 = week2Open();
+    var sel1 = state.round === "week1", sel2 = state.round === "week2";
+    el.roundTabs.innerHTML =
+      '<button type="button" class="round-tab" role="tab" data-round="week1" aria-selected="' + sel1 + '">Week 1' +
+        '<span class="rsub">Four categories, one winner each</span></button>' +
+      '<button type="button" class="round-tab" role="tab" data-round="week2" aria-selected="' + sel2 + '"' + (open2 ? "" : " disabled") + '>Week 2 · Beat Yash Sir' +
+        '<span class="rsub">' + (open2 ? "Category winners vs Yash Sir" : "Opens after week 1 is finalized") + '</span></button>';
+  }
+
+  // ---------- notices ----------
   function renderNotice() {
-    var d = state.data;
-    el.noticeSlot.innerHTML = "";
-    if (!d) return;
-    var over = !WINDOW.live && (d.competition_over || Date.now() > new Date(WINDOW.end).getTime());
-    if (over) {
-      var announced = d.winner_announced || Date.now() >= new Date(WINDOW.announce).getTime();
-      var annTxt = fmtDay(WINDOW.announce);
-      var fin = document.createElement("div");
-      fin.className = "notice final";
-      if (announced) {
-        fin.innerHTML = "✦ Final standings — trading is closed. The winner is the highest&nbsp;% return that did not add funds.";
-      } else {
-        fin.innerHTML = "✦ Trading closed. Accounts are being verified — the winner is announced" +
-          (annTxt ? " on <b>" + esc(annTxt) + "</b>" : " shortly") + ". Standings are frozen.";
-      }
-      el.noticeSlot.appendChild(fin);
+    var d = cur();
+    var html = "";
+    if (state.failed && !d) {
+      html = '<div class="notice err" role="alert">The leaderboard could not be loaded. <button type="button" id="retryBtn">Try again</button></div>';
+    } else if (d && state.failed) {
+      html = '<div class="notice warn">Showing the last results. The latest update could not be loaded. <button type="button" id="retryBtn">Try again</button></div>';
     }
-    var ageMin = d.generated_at ? (Date.now() - new Date(d.generated_at).getTime()) / 60000 : 0;
-    if (d.is_stale || ageMin > 2.5 * REFRESH_MINUTES) {
-      var w = d.generated_at ? new Date(d.generated_at).toLocaleString() : "earlier";
-      // var div = document.createElement("div");
-      // div.className = "notice stale";
-      // div.innerHTML = "⚠ Standings last updated " + esc(w) + " — the feed may be catching up.";
-      // el.noticeSlot.appendChild(div);
+    if (d && d.status === "ok" && d.phase === "finalized") {
+      html += '<div class="notice final">' + finalText(d) + "</div>";
+    } else if (d && d.status === "ok" && (d.phase === "closed_verifying" || d.phase === "announced")) {
+      html += '<div class="notice warn">Trading is closed. The organisers are verifying accounts; standings are final once the round is confirmed.</div>';
     }
+    el.noticeSlot.innerHTML = html;
+    var retry = document.getElementById("retryBtn");
+    if (retry) retry.addEventListener("click", load);
   }
 
-  function skeletonBoard() {
-    var cards = "";
-    for (var i = 0; i < 4; i++) {
-      cards += '<div class="lcard">' +
-        '<span class="skel" style="width:60px"></span>' +
-        '<span class="skel" style="width:140px"></span>' +
-        '<span class="skel" style="width:90px;height:40px"></span></div>';
+  function finalText(d) {
+    var w = d.winners;
+    if (state.round === "week2" && w && w.challenge) {
+      var c = w.challenge;
+      if (c.host_won) return "✦ Final — Yash Sir finished first. Every category winner keeps their normal prize.";
+      if (c.winner) {
+        return "✦ Final — <b>" + esc(c.winner.name) + "</b> beat Yash Sir with " + esc(pct(c.winner.return_pct)) +
+          ". Prize doubled" + (c.winner.final_reward ? " to <b>" + esc(prize(c.winner.final_reward)) + "</b>" : "") + ", plus a week with Yash Sir.";
+      }
+      return "✦ Final — no eligible entrant finished the challenge.";
     }
+    return "✦ Final standings — trading is closed and the winners are confirmed.";
+  }
+
+  // ---------- board ----------
+  function skeleton() {
     var rows = "";
     for (var j = 0; j < 6; j++) {
       rows += '<tr><td class="rk"><span class="skel" style="width:20px"></span></td>' +
         '<td><span class="skel" style="width:160px"></span></td>' +
-        '<td class="num"><span class="skel" style="width:60px"></span></td>' +
-        '<td class="num col-trades"><span class="skel" style="width:40px"></span></td></tr>';
+        '<td class="num"><span class="skel" style="width:60px"></span></td></tr>';
     }
-    return '<div class="cat-leaders">' + cards + '</div>' +
-      '<div class="tbl-head"><span>Full standings</span></div>' +
-      '<div class="tbl-scroll"><table class="board"><tbody>' + rows + '</tbody></table></div>';
+    return '<div class="tbl-head"><span>Standings</span></div><div class="tbl-scroll"><table class="board"><tbody>' + rows + "</tbody></table></div>";
   }
 
-  // Buckets eligible entries into Bronze/Silver/Gold/Platinum by day-one
-  // capital (cumulative_capital — already returned per entry by the API),
-  // then re-ranks each bucket by return % on its own.
-  function bucketByCategory(entries) {
-    var byCat = { bronze: [], silver: [], gold: [], platinum: [] };
-    entries.forEach(function (e) {
-      var cap = e.cumulative_capital != null ? e.cumulative_capital : e.base_start;
-      var k = categoryOf(Number(cap) || 0);
-      if (k) byCat[k].push(e);
-    });
-    CAT_ORDER.forEach(function (k) {
-      byCat[k].sort(function (a, b) { return (b.return_pct || -Infinity) - (a.return_pct || -Infinity); });
-      byCat[k].forEach(function (e, i) { e._catRank = i + 1; });
-    });
-    return byCat;
+  function leaderCard(c, b, winner) {
+    var on = c.id === state.cat;
+    var l = winner || (b && b.leader);
+    var count = b && b.entries ? b.entries.length : 0;
+    return '<button type="button" class="lcard" role="tab" aria-selected="' + on + '" data-cat="' + esc(c.id) + '">' +
+      '<div class="ltop"><span class="lname-cat">' + esc(c.label) + '</span><span class="lcount">' + count + ' ranked</span></div>' +
+      (winner ? '<div class="lwin">Winner</div>' : "") +
+      '<div class="lleader">' + (l ? esc(l.name) : "—") + "</div>" +
+      '<div class="lret ' + (l ? signClass(l.return_pct) : "") + '">' + (l ? pct(l.return_pct) : "—") + "</div>" +
+      '<div class="lprize">Prize · ' + esc(prize(c.reward)) + "</div></button>";
   }
 
-  function leaderCard(k, byCat) {
-    var c = catInfo(k);
-    var list = byCat[k];
-    var l = list[0];
-    var on = k === state.cat;
-    return '<button type="button" class="lcard' + (on ? ' on' : '') + '" data-cat="' + k + '">' +
-      '<div class="ltop"><span class="lname-cat">' + esc(c.name) + '</span><span class="lcount">' + list.length + ' traders</span></div>' +
-      '<div class="lleader">' + (l ? esc(l.name) : "—") + '</div>' +
-      '<div class="lret ' + (l ? signClass(l.return_pct) : "") + '">' + (l ? pct(l.return_pct) : "—") + '</div>' +
-      '<div class="lprize">Reward · ' + esc(c.prize) + '</div>' +
-      '</button>';
-  }
-
-  function catTab(k) {
-    var c = catInfo(k);
-    var on = k === state.cat;
-    return '<button type="button" class="cat-tab' + (on ? ' on' : '') + '" data-cat="' + k + '">' +
-      esc(c.name) + '<span class="trange">' + esc(c.range) + '</span></button>';
+  function catTab(c) {
+    return '<button type="button" class="cat-tab" role="tab" aria-selected="' + (c.id === state.cat) + '" data-cat="' + esc(c.id) + '">' +
+      esc(c.label) + '<span class="trange">' + esc(range(c)) + "</span></button>";
   }
 
   function row(e, i) {
-    var idLine = e.client_id != null ? '<span class="tid">ID ' + esc(e.client_id) + '</span>' : "";
-    return '<tr class="trow" data-idx="' + i + '">' +
-      '<td class="rk">' + e._catRank + '</td>' +
-      '<td><span class="trader"><span class="tname">' + esc(e.name) + '</span></span>' + idLine + '</td>' +
-      '<td class="num ' + signClass(e.return_pct) + '">' + pct(e.return_pct) + '</td>' +
-      '<td class="num col-trades">' + nf0.format(e.trades || 0) + '</td>' +
-      '</tr>';
+    var tags = (e.is_host ? '<span class="tag host">Host</span>' : "") + (e.late_entry ? '<span class="tag">Late entry</span>' : "");
+    var country = e.country ? '<span class="tid">' + esc(e.country) + "</span>" : "";
+    return '<tr class="trow" tabindex="0" data-idx="' + i + '" aria-expanded="' + (state.expanded === i) + '">' +
+      '<td class="rk">' + esc(e.rank) + "</td>" +
+      '<td><span class="trader"><span class="tname">' + esc(e.name) + "</span>" + tags + "</span>" + country + "</td>" +
+      '<td class="num ' + signClass(e.return_pct) + '">' + pct(e.return_pct) + "</td>" +
+      '<td class="num col-hide ' + signClass(e.pnl) + '">' + usdSigned(e.pnl) + "</td>" +
+      '<td class="num col-hide">' + nf0.format(e.closed_trades || 0) + "</td></tr>";
   }
 
-  function detailRow(e, generatedAt) {
-    return '<tr class="drow"><td colspan="4"><div class="detail">' +
-      '<div class="dcell"><span class="dlbl">Date</span><span class="dval">' + esc(fmtDateTime(generatedAt)) + '</span></div>' +
-      '<div class="dcell"><span class="dlbl">Day %</span><span class="dval ' + signClass(e.return_pct) + '">' + pct(e.return_pct) + '</span></div>' +
-      '<div class="dcell"><span class="dlbl">Account return</span><span class="dval ' + signClass(e.net_profit) + '">' + money(e.net_profit) + '</span></div>' +
-      '</div></td></tr>';
+  function detailRow(e, d) {
+    return '<tr class="drow"><td colspan="5"><div class="detail">' +
+      '<div class="dcell"><span class="dlbl">Start capital</span><span class="dval">' + usd(e.start_capital) + "</span></div>" +
+      '<div class="dcell"><span class="dlbl">Net capital</span><span class="dval">' + usd(e.net_capital) + "</span></div>" +
+      '<div class="dcell"><span class="dlbl">Closed P/L</span><span class="dval ' + signClass(e.pnl) + '">' + usdSigned(e.pnl) + "</span></div>" +
+      '<div class="dcell"><span class="dlbl">Return</span><span class="dval ' + signClass(e.return_pct) + '">' + pct(e.return_pct) + "</span></div>" +
+      '<div class="dcell"><span class="dlbl">Closed trades</span><span class="dval">' + nf0.format(e.closed_trades || 0) + "</span></div>" +
+      "</div></td></tr>";
+  }
+
+  function table(title, entries, d, emptyMsg) {
+    var body = "";
+    entries.forEach(function (e, i) {
+      body += row(e, i);
+      if (i === state.expanded) body += detailRow(e, d);
+    });
+    if (!entries.length) body = '<tr><td colspan="5" class="empty" style="padding:40px 28px;">' + esc(emptyMsg) + "</td></tr>";
+    return '<div class="tbl-head"><span>' + esc(title) + "</span><span>" + entries.length + " ranked</span></div>" +
+      '<div class="tbl-scroll"><table class="board"><thead><tr>' +
+      '<th>Rank</th><th>Trader</th><th class="num">Return %</th><th class="num col-hide">Closed P/L</th><th class="num col-hide">Trades</th>' +
+      "</tr></thead><tbody>" + body + "</tbody></table></div>";
   }
 
   function renderBoard() {
-    var d = state.data;
+    var d = cur();
+    if (state.loading && !d) { el.board.innerHTML = skeleton(); return; }
+    if (!d) { el.board.innerHTML = '<div class="empty">Standings are not available right now.</div>'; return; }
 
-    if (state.loading && !d) { el.board.innerHTML = skeletonBoard(); return; }
+    if (d.status !== "ok") {
+      var msg = d.phase === "locked"
+        ? "Week 2 opens after week 1 is finalized. The four category winners will race Yash Sir here."
+        : "The competition has not produced any results yet. Standings appear here once trading starts and the first scores are in.";
+      el.board.innerHTML = '<div class="empty">' + esc(msg) + "</div>";
+      return;
+    }
 
-    // Showing example data only for now — ignore whatever /api/leaderboard
-    // returns (it still has old data from the previous competition). Switch
-    // back to real entries ((d.entries || []).filter(e => (e.trades||0) > 0))
-    // once Season Two trading results are live.
-    var entries = DUMMY_ENTRIES;
-    var demoNotice = '<div class="notice demo">✦ Example data shown — real standings will replace this once trading results come in.</div>';
+    var cats = d.categories || [];
+    var html = "";
 
-    var byCat = bucketByCategory(entries);
-    var leaders = '<div class="cat-leaders">' + CAT_ORDER.map(function (k) { return leaderCard(k, byCat); }).join("") + '</div>';
+    if (state.round === "week2") {
+      var b2 = (d.boards || {}).challenge || { entries: [] };
+      state.entries = b2.entries || [];
+      html += '<div class="rules"><b>How it works.</b> One board: the four category winners and Yash Sir, all starting from the same moment. Closed trades only. ' +
+        "If a category winner finishes first, their category prize is <b>doubled</b> and they spend a week with Yash Sir. " +
+        "If Yash Sir finishes first, everyone keeps their normal prize.</div>";
+      html += table("Beat Yash Sir", state.entries, d, "No one is on the board yet. Results appear after the first scoring run.");
+      el.board.innerHTML = html;
+      return;
+    }
 
-    var list = byCat[state.cat] || [];
-    state.entries = list;
+    if (!state.cat || !cats.some(function (c) { return c.id === state.cat; })) state.cat = cats.length ? cats[0].id : null;
+    var winners = d.winners && d.winners.categories ? d.winners.categories : {};
+    html += '<div class="cat-leaders" role="tablist" aria-label="Category leaders">' + cats.map(function (c) {
+      return leaderCard(c, (d.boards || {})[c.id], winners[c.id]);
+    }).join("") + "</div>";
 
-    var body = "";
-    list.forEach(function (e, i) {
-      body += row(e, i);
-      if (i === state.expanded) body += detailRow(e, d.generated_at);
-    });
-    if (!list.length) body = '<tr><td colspan="4" class="empty" style="padding:40px 28px;">No traders in this category yet.</td></tr>';
-
-    var table =
-      '<div class="cat-tabs">' + CAT_ORDER.map(catTab).join("") + '</div>' +
-      '<div class="tbl-head"><span>' + esc(catInfo(state.cat).name) + ' standings</span><span>' + esc(list.length) + ' shown</span></div>' +
-      '<div class="tbl-scroll"><table class="board">' +
-        '<thead><tr>' +
-          '<th>Rank</th><th>Trader</th>' +
-          '<th class="num">Return %</th><th class="num col-trades">Total trades</th>' +
-        '</tr></thead>' +
-        '<tbody>' + body + '</tbody>' +
-      '</table></div>';
-
-    el.board.innerHTML = demoNotice + leaders + table;
-
-    el.board.querySelectorAll("[data-cat]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        state.cat = btn.getAttribute("data-cat");
-        state.expanded = null;
-        renderBoard();
-      });
-    });
+    var active = cats.filter(function (c) { return c.id === state.cat; })[0];
+    var b = active ? (d.boards || {})[active.id] : null;
+    state.entries = b && b.entries ? b.entries : [];
+    html += '<div class="cat-tabs" role="tablist" aria-label="Category">' + cats.map(catTab).join("") + "</div>";
+    html += table(active ? active.label + " standings" : "Standings", state.entries, d, "No traders in this category yet.");
+    el.board.innerHTML = html;
   }
 
-  function renderAll() { renderWindow(); renderStatus(); renderNotice(); renderBoard(); }
+  function renderAll() { renderRounds(); renderWindow(); renderStatus(); renderNotice(); renderBoard(); }
+
+  // ---------- data ----------
+  function get(url) {
+    return fetch(url, { headers: { "Accept": "application/json" } })
+      .then(function (r) { return r.json(); });
+  }
 
   function load() {
     if (state.fetching) return;
     state.fetching = true;
+    state.failed = false;
     renderStatus();
-    fetch(API, { headers: { "Accept": "application/json" } })
-      .then(function (r) { return r.json().catch(function () { return { status: "error" }; }); })
-      .then(function (json) {
-        state.data = json;
-        state.loading = false;
-        if (json && json.ui_poll_minutes) state.pollMs = Math.max(1, json.ui_poll_minutes) * 60 * 1000;
+    Promise.all([get(API), get(API + "?round=week2").catch(function () { return null; })])
+      .then(function (res) {
+        if (!res[0] || res[0].status === "error") throw new Error("api");
+        state.w1 = res[0];
+        if (res[1] && res[1].status !== "error") state.w2 = res[1];
+        if (res[0].ui_poll_minutes) state.pollMs = Math.max(1, res[0].ui_poll_minutes) * 60 * 1000;
+        if (state.round === "week2" && !week2Open()) state.round = "week1";
       })
-      .catch(function () { state.data = { status: "error" }; state.loading = false; })
-      .then(function () { state.fetching = false; renderAll(); });
+      .catch(function () { state.failed = true; })
+      .then(function () { state.loading = false; state.fetching = false; renderAll(); });
   }
+
+  // ---------- interaction ----------
+  function selectRound(r) {
+    if (r === "week2" && !week2Open()) return;
+    state.round = r;
+    state.expanded = null;
+    history.replaceState(null, "", r === "week2" ? "#week2" : location.pathname + location.search);
+    renderAll();
+  }
+
+  el.roundTabs.addEventListener("click", function (ev) {
+    var b = ev.target.closest ? ev.target.closest("[data-round]") : null;
+    if (b && !b.disabled) selectRound(b.getAttribute("data-round"));
+  });
+
+  el.board.addEventListener("click", function (ev) {
+    var catBtn = ev.target.closest ? ev.target.closest("[data-cat]") : null;
+    if (catBtn) {
+      state.cat = catBtn.getAttribute("data-cat");
+      state.expanded = null;
+      history.replaceState(null, "", "#" + state.cat);
+      renderBoard();
+      return;
+    }
+    var tr = ev.target.closest ? ev.target.closest("tr.trow") : null;
+    if (!tr) return;
+    var idx = Number(tr.getAttribute("data-idx"));
+    state.expanded = state.expanded === idx ? null : idx;
+    renderBoard();
+  });
+
+  el.board.addEventListener("keydown", function (ev) {
+    if (ev.key !== "Enter" && ev.key !== " ") return;
+    var tr = ev.target.closest ? ev.target.closest("tr.trow") : null;
+    if (!tr) return;
+    ev.preventDefault();
+    var idx = Number(tr.getAttribute("data-idx"));
+    state.expanded = state.expanded === idx ? null : idx;
+    renderBoard();
+    var again = el.board.querySelector('tr.trow[data-idx="' + idx + '"]');
+    if (again) again.focus();
+  });
 
   el.refreshBtn.addEventListener("click", function () {
     el.refreshBtn.disabled = true;
@@ -592,13 +556,9 @@
     setTimeout(function () { el.refreshBtn.disabled = false; }, 4000);
   });
 
-  el.board.addEventListener("click", function (ev) {
-    var tr = ev.target.closest ? ev.target.closest("tr.trow") : null;
-    if (!tr) return;
-    var idx = Number(tr.getAttribute("data-idx"));
-    state.expanded = state.expanded === idx ? null : idx;
-    renderBoard();
-  });
+  // #week2 or #gold etc. selects the round / category on load.
+  var hash = (location.hash || "").replace("#", "").toLowerCase();
+  if (hash === "week2") state.round = "week2"; else if (hash) state.cat = hash;
 
   renderAll();
   load();
