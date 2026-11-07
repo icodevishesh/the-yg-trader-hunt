@@ -17,7 +17,11 @@ async function postRegistration(row, endpoint = config.googleFormEndpoint) {
   });
   try {
     const res = await fetch(endpoint, { method: 'POST', body, redirect: 'follow', signal: AbortSignal.timeout(15000) });
-    return res.ok ? { ok: true } : { ok: false, error: `HTTP ${res.status}` };
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+    // Apps Script answers 200 with an HTML error page when the script itself fails,
+    // so only an explicit {"ok":true} from doPost counts as written.
+    const text = await res.text().catch(() => '');
+    return /"ok"\s*:\s*true/.test(text) ? { ok: true } : { ok: false, error: `unexpected reply: ${text.replace(/\s+/g, ' ').slice(0, 120)}` };
   } catch (err) {
     return { ok: false, error: String(err.message || err) };
   }

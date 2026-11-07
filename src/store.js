@@ -49,10 +49,24 @@ const mongoStore = {
     }
   },
 
-  async loadUnsynced(cohort, maxAttempts, limit) {
+  /**
+   * Rows not yet in the sheet: fresh ones (< maxAttempts tries), rows without google_sync
+   * (older admin adds, registry imports), and failed rows whose last try is older than
+   * retryAfterMs, so a fixed endpoint eventually picks everything up again.
+   */
+  async loadUnsynced(cohort, maxAttempts, limit, retryAfterMs = 60 * 60000) {
+    const staleBefore = new Date(Date.now() - retryAfterMs).toISOString();
     return (await connect()).collection(C.traders)
-      // Rows without google_sync (older admin adds, registry imports) count as never sent.
-      .find({ cohort, 'google_sync.ok': { $ne: true }, $or: [{ 'google_sync.attempts': { $lt: maxAttempts } }, { 'google_sync.attempts': { $exists: false } }] })
+      .find({
+        cohort,
+        'google_sync.ok': { $ne: true },
+        $or: [
+          { 'google_sync.attempts': { $lt: maxAttempts } },
+          { 'google_sync.attempts': { $exists: false } },
+          { 'google_sync.at': { $lt: staleBefore } },
+        ],
+      })
+      .sort({ 'google_sync.at': 1 })
       .limit(limit)
       .toArray();
   },
