@@ -51,7 +51,8 @@ const mongoStore = {
 
   async loadUnsynced(cohort, maxAttempts, limit) {
     return (await connect()).collection(C.traders)
-      .find({ cohort, 'google_sync.ok': { $ne: true }, 'google_sync.attempts': { $lt: maxAttempts } })
+      // Rows without google_sync (older admin adds, registry imports) count as never sent.
+      .find({ cohort, 'google_sync.ok': { $ne: true }, $or: [{ 'google_sync.attempts': { $lt: maxAttempts } }, { 'google_sync.attempts': { $exists: false } }] })
       .limit(limit)
       .toArray();
   },

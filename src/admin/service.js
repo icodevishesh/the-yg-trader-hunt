@@ -142,6 +142,7 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
         name: input.name ? value.name : null, notes: input.notes ? String(input.notes).slice(0, 500) : null,
         status: 'pending', cohort, version: 1, added_at: new Date(now()).toISOString(), added_by: ctx.admin,
         updated_at: null, updated_by: null, elefin_check: null,
+        google_sync: { ok: false, attempts: 0 }, // picked up by the scheduler's sheet mirror
       };
       const res = await repo.insertTrader(cohort, row);
       if (res !== true) throw conflict(res === 'wallet' ? 'duplicate_wallet' : 'duplicate_email', res === 'wallet' ? 'That wallet id belongs to another trader.' : 'That email is already registered.');

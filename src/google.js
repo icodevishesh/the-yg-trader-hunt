@@ -7,12 +7,13 @@ const { config } = require('./config');
 async function postRegistration(row, endpoint = config.googleFormEndpoint) {
   if (!endpoint) return { ok: false, skipped: true, error: 'GOOGLE_FORM_ENDPOINT not set' };
   const body = new URLSearchParams({
-    name: row.name,
-    phone: row.phone,
+    // Admin-added traders have no phone/registered_at; send '' rather than the string "undefined".
+    name: row.name || '',
+    phone: row.phone || '',
     email: row.email,
     wallet_id: row.wallet_id || '',
     capital: row.declared_capital == null ? 'N/A' : String(row.declared_capital),
-    timestamp: row.registered_at,
+    timestamp: row.registered_at || row.added_at || '',
   });
   try {
     const res = await fetch(endpoint, { method: 'POST', body, redirect: 'follow', signal: AbortSignal.timeout(15000) });
