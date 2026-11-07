@@ -96,6 +96,7 @@ function buildConfig(env = process.env) {
       key: str(env.ELEFIN_API_KEY, ''),
       secret: str(env.ELEFIN_API_SECRET, ''),
       baseUrl: str(env.ELEFIN_API_BASE_URL, 'https://el.theloginarea.com/api/v1').replace(/\/+$/, ''),
+      ipv4: str(env.ELEFIN_IPV4, '1') !== '0', // the key is IP-allowlisted on IPv4; see elefin-client.js
       timeoutMs: 30000,
       minIntervalMs: num(env.ELEFIN_MIN_INTERVAL_MS, 1100), // key quota is 60 req/min
     },

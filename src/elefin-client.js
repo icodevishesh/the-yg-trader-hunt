@@ -14,7 +14,17 @@
  * The throttled wrapper the app uses is src/elefin.js.
  */
 
+const dns = require('dns');
+const net = require('net');
 const { config } = require('./config');
+
+// The Elefin key is IP-allowlisted on our IPv4 address. Node otherwise picks IPv6 when the host has it,
+// which Elefin rejects with 403. This is process-wide: every outbound connection resolves IPv4 first
+// and does not race IPv6 (ELEFIN_IPV4=0 turns it off).
+if (config.elefin.ipv4) {
+  dns.setDefaultResultOrder('ipv4first');
+  net.setDefaultAutoSelectFamily(false);
+}
 
 const ERROR_MESSAGES = {
   400: 'Bad Request - check request parameters.',
@@ -50,7 +60,9 @@ async function rawGet(endpoint, params) {
     if (res.ok) {
       return { success: true, status: res.status, data: body, rateLimitRemaining: Number(res.headers.get('x-ratelimit-remaining')) || null };
     }
-    return { success: false, status: res.status, error: ERROR_MESSAGES[res.status] || `HTTP ${res.status}`, data: body };
+    const generic = ERROR_MESSAGES[res.status] || `HTTP ${res.status}`;
+    const detail = body && typeof body.message === 'string' ? body.message.slice(0, 200) : ''; // e.g. "IP x.x.x.x is not allowed for this API key"
+    return { success: false, status: res.status, error: detail ? `${generic} (${detail})` : generic, data: body };
   } catch (err) {
     const aborted = err.name === 'AbortError';
     return { success: false, status: null, error: aborted ? 'Request timed out.' : String(err.message || err), data: null };
