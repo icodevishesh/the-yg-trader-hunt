@@ -114,6 +114,8 @@
   table.board .num { text-align: right; white-space: nowrap; }
   table.board th.num { text-align: right; }
   table.board td.rk { color: var(--dim); width: 48px; font-weight: 700; }
+  table.board tbody tr.no-trades-row td { opacity: 0.45; }
+  table.board tbody tr.no-trades-row:hover td { opacity: 0.65; }
   .trader { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .trader .tname { font-weight: 600; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tid { display: block; margin-top: 3px; font-size: 11px; color: var(--dim); }
@@ -394,9 +396,11 @@
   function leaderCard(c, b, winner) {
     var on = c.id === state.cat;
     var l = winner || (b && b.leader);
-    var count = b && b.entries ? b.entries.length : 0;
+    var ranked = b && b.entries ? b.entries.length : 0;
+    var entered = b && b.entered ? b.entered.length : 0;
+    var total = ranked + entered;
     return '<button type="button" class="lcard" role="tab" aria-selected="' + on + '" data-cat="' + esc(c.id) + '">' +
-      '<div class="ltop"><span class="lname-cat">' + esc(c.label) + '</span><span class="lcount">' + count + ' ranked</span></div>' +
+      '<div class="ltop"><span class="lname-cat">' + esc(c.label) + '</span><span class="lcount">' + total + ' active</span></div>' +
       (winner ? '<div class="lwin">Winner</div>' : "") +
       '<div class="lleader">' + (l ? esc(l.name) : "—") + "</div>" +
       '<div class="lret ' + (l ? signClass(l.return_pct) : "") + '">' + (l ? pct(l.return_pct) : "—") + "</div>" +
@@ -411,32 +415,37 @@
   function row(e, i) {
     var tags = (e.is_host ? '<span class="tag host">Host</span>' : "") + (e.late_entry ? '<span class="tag">Late entry</span>' : "");
     var country = e.country ? '<span class="tid">' + esc(e.country) + "</span>" : "";
-    return '<tr class="trow" tabindex="0" data-idx="' + i + '" aria-expanded="' + (state.expanded === i) + '">' +
+    var rowClass = "trow" + (e.no_trades ? " no-trades-row" : "");
+    return '<tr class="' + rowClass + '" tabindex="0" data-idx="' + i + '" aria-expanded="' + (state.expanded === i) + '">' +
       '<td class="rk">' + esc(e.rank) + "</td>" +
       '<td><span class="trader"><span class="tname">' + esc(e.name) + "</span>" + tags + "</span>" + country + "</td>" +
-      '<td class="num ' + signClass(e.return_pct) + '">' + pct(e.return_pct) + "</td>" +
-      '<td class="num col-hide ' + signClass(e.pnl) + '">' + usdSigned(e.pnl) + "</td>" +
-      '<td class="num col-hide">' + nf0.format(e.closed_trades || 0) + "</td></tr>";
+      '<td class="num ' + signClass(e.return_pct) + '">' + (e.no_trades ? "" : pct(e.return_pct)) + "</td>" +
+      '<td class="num col-hide ' + signClass(e.pnl) + '">' + (e.no_trades ? "" : usdSigned(e.pnl)) + "</td>" +
+      '<td class="num col-hide">' + (e.no_trades ? "" : nf0.format(e.closed_trades || 0)) + "</td></tr>";
   }
 
   function detailRow(e, d) {
     return '<tr class="drow"><td colspan="5"><div class="detail">' +
       '<div class="dcell"><span class="dlbl">Start capital</span><span class="dval">' + usd(e.start_capital) + "</span></div>" +
       '<div class="dcell"><span class="dlbl">Net capital</span><span class="dval">' + usd(e.net_capital) + "</span></div>" +
-      '<div class="dcell"><span class="dlbl">Closed P/L</span><span class="dval ' + signClass(e.pnl) + '">' + usdSigned(e.pnl) + "</span></div>" +
-      '<div class="dcell"><span class="dlbl">Return</span><span class="dval ' + signClass(e.return_pct) + '">' + pct(e.return_pct) + "</span></div>" +
-      '<div class="dcell"><span class="dlbl">Closed trades</span><span class="dval">' + nf0.format(e.closed_trades || 0) + "</span></div>" +
+      '<div class="dcell"><span class="dlbl">Closed P/L</span><span class="dval ' + signClass(e.pnl) + '">' + (e.no_trades ? "" : usdSigned(e.pnl)) + "</span></div>" +
+      '<div class="dcell"><span class="dlbl">Return</span><span class="dval ' + signClass(e.return_pct) + '">' + (e.no_trades ? "" : pct(e.return_pct)) + "</span></div>" +
+      '<div class="dcell"><span class="dlbl">Closed trades</span><span class="dval">' + (e.no_trades ? "" : nf0.format(e.closed_trades || 0)) + "</span></div>" +
       "</div></td></tr>";
   }
 
-  function table(title, entries, d, emptyMsg) {
+  function table(title, entries, entered, d, emptyMsg) {
+    var all = (entries || []).concat(entered || []);
     var body = "";
-    entries.forEach(function (e, i) {
+    all.forEach(function (e, i) {
       body += row(e, i);
       if (i === state.expanded) body += detailRow(e, d);
     });
-    if (!entries.length) body = '<tr><td colspan="5" class="empty" style="padding:40px 28px;">' + esc(emptyMsg) + "</td></tr>";
-    return '<div class="tbl-head"><span>' + esc(title) + "</span><span>" + entries.length + " ranked</span></div>" +
+    var ranked = (entries || []).length;
+    var active = ranked + (entered || []).length;
+    var countTxt = ranked + " ranked" + (entered && entered.length ? " · " + active + " active" : "");
+    if (!all.length) body = '<tr><td colspan="5" class="empty" style="padding:40px 28px;">' + esc(emptyMsg) + "</td></tr>";
+    return '<div class="tbl-head"><span>' + esc(title) + "</span><span>" + countTxt + "</span></div>" +
       '<div class="tbl-scroll"><table class="board"><thead><tr>' +
       '<th>Rank</th><th>Trader</th><th class="num">Return %</th><th class="num col-hide">Closed P/L</th><th class="num col-hide">Trades</th>' +
       "</tr></thead><tbody>" + body + "</tbody></table></div>";
@@ -464,7 +473,7 @@
       html += '<div class="rules"><b>How it works.</b> One board: the four category winners and Yash Sir, all starting from the same moment. Closed trades only. ' +
         "If a category winner finishes first, their category prize is <b>doubled</b> and they spend a week with Yash Sir. " +
         "If Yash Sir finishes first, everyone keeps their normal prize.</div>";
-      html += table("Beat Yash Sir", state.entries, d, "No one is on the board yet. Results appear after the first scoring run.");
+      html += table("Beat Yash Sir", state.entries, [], d, "No one is on the board yet. Results appear after the first scoring run.");
       el.board.innerHTML = html;
       return;
     }
@@ -478,8 +487,9 @@
     var active = cats.filter(function (c) { return c.id === state.cat; })[0];
     var b = active ? (d.boards || {})[active.id] : null;
     state.entries = b && b.entries ? b.entries : [];
+    var stateEntered = b && b.entered ? b.entered : [];
     html += '<div class="cat-tabs" role="tablist" aria-label="Category">' + cats.map(catTab).join("") + "</div>";
-    html += table(active ? active.label + " standings" : "Standings", state.entries, d, "No traders in this category yet.");
+    html += table(active ? active.label + " standings" : "Standings", state.entries, stateEntered, d, "No traders in this category yet.");
     el.board.innerHTML = html;
   }
 

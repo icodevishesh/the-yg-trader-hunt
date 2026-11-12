@@ -26,6 +26,7 @@ function publicEntry(e) {
     net_capital: e.net_capital,
     closed_trades: e.closed_trades,
     late_entry: e.flags.includes('late_entry'),
+    no_trades: !!e.no_trades,
   };
 }
 
@@ -104,9 +105,10 @@ function createLeaderboardRouter({ store, trigger, cfg, now = Date.now, rounds }
       const boards = {};
       for (const c of scoring.categories) {
         if (want && c.id !== want) continue;
-        const b = cur.categories[c.id] || { entries: [], stats: {} };
+        const b = cur.categories[c.id] || { entries: [], entered: [], stats: {} };
         const entries = b.entries.map(publicEntry);
-        boards[c.id] = { stats: b.stats, leader: entries[0] || null, entries };
+        const entered = (b.entered || []).map(publicEntry);
+        boards[c.id] = { stats: b.stats, leader: entries[0] || null, entries, entered };
       }
 
       res.set('Cache-Control', 'public, max-age=60');

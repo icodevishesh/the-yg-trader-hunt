@@ -142,12 +142,33 @@ async function runScoring({ store, elefin, cfg, nowMs = Date.now(), finalize = f
   await store.saveEntries(cohort, rows);
 
   const ranked = rankByCategory(rows, scoring.categories);
+  const addedByEmail = new Map(traders.map((t) => [t.email, !!t.added_by]));
+  // Reasons an admin-curated entry (added through the panel, not self-registered) is allowed to
+  // override: they were vetted by hand, so the automated anti-gaming checks don't apply to them.
+  // "no_category" / "invalid_net_capital" / blocking flags still stand -- those mean the equity
+  // itself is not usable, which no amount of admin review changes.
+  const ADMIN_OVERRIDABLE_REASONS = new Set(['entered_after_cutoff', 'no_closed_trade']);
   const categories = {};
   for (const c of scoring.categories) {
+    const entered = rows
+      .filter(
+        (r) =>
+          !r.eligible &&
+          r.category === c.id &&
+          r.reasons.length &&
+          r.reasons.every((reason) => ADMIN_OVERRIDABLE_REASONS.has(reason)) &&
+          (addedByEmail.get(r.email) || (r.reasons.length === 1 && r.reasons[0] === 'no_closed_trade')),
+      )
+      // Equity is the only meaningful number for someone with no closed trades, so that is what
+      // orders them; they never outrank an actually-trading entrant (those are in `entries`).
+      .sort((a, b) => b.net_capital - a.net_capital)
+      .map((r, i) => ({ ...r, no_trades: (r.closed_trades || 0) < 1, rank: ranked[c.id].entries.length + i + 1 }));
     categories[c.id] = {
       entries: ranked[c.id].entries,
+      entered,
       stats: {
         ranked: ranked[c.id].entries.length,
+        entered: entered.length,
         flagged: ranked[c.id].entries.filter((e) => e.flags.length).length,
       },
     };
