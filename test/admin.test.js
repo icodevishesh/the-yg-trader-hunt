@@ -88,6 +88,22 @@ test('addTrader: validates, normalises, audits exactly once, rejects duplicates'
   assert.equal(repo.log.length, 1); // failed writes leave no audit row
 });
 
+test('addTrader: manual mode takes the admin\'s own id and skips the Elefin check to activate', async () => {
+  const s = setup();
+  await assert.rejects(s.service.addTrader(s.ctx, { email: 'manual@x.com', manual: true, reason: REASON }), (e) => e.code === 'invalid_field' && e.field === 'wallet_id');
+
+  const t = await s.service.addTrader(s.ctx, { email: 'manual@x.com', wallet_id: 'yg-sir-note-42', name: 'No Elefin Guy', manual: true, reason: REASON });
+  assert.equal(t.account_source, 'manual');
+  assert.equal(t.wallet_id, 'yg-sir-note-42');
+
+  // Elefin check is meaningless for a trader with no Elefin account.
+  await assert.rejects(s.service.checkTrader(s.ctx, 'manual@x.com'), (e) => e.code === 'not_applicable');
+
+  // Activating does not need override_check, unlike an Elefin-sourced trader.
+  const active = await s.service.setStatus(s.ctx, 'manual@x.com', { to: 'active', version: 1, reason: REASON });
+  assert.equal(active.status, 'active');
+});
+
 test('locks: no new traders after the cutoff; nothing writable after finalize', async () => {
   const late = setup({ nowMs: comp.cutoffMs + 1 });
   await assert.rejects(late.service.addTrader(late.ctx, NEW), (e) => e.code === 'entry_closed' && e.status === 409);
@@ -177,6 +193,21 @@ test('setManual: start-line fields after the cutoff need an explicit re-baseline
   const input = { mode: 'fields', fields: { balance_start: 90 }, source: 'organiser', reason: REASON };
   await assert.rejects(s.service.setManual(s.ctx, NEW.wallet_id, input), (e) => e.code === 'rebaseline_required');
   assert.ok(await s.service.setManual(s.ctx, NEW.wallet_id, { ...input, rebaseline: true }));
+});
+
+test('setManual: a manual trader can be added and fully baselined after the entry cutoff, no re-baseline flag needed', async () => {
+  const s = setup({ nowMs: comp.cutoffMs + 1000 });
+  const t = await s.service.addTrader(s.ctx, { email: 'manual2@x.com', wallet_id: 'manual-id-1', manual: true, reason: REASON });
+
+  const fields = { ...FULL, captured_at: iso(comp.cutoffMs + 2000) }; // after cutoff, still inside the competition
+  const d = await s.service.setManual(s.ctx, t.wallet_id, { mode: 'full', fields, source: 'organiser', reason: REASON });
+  assert.equal(d.fields.captured_at, iso(comp.cutoffMs + 2000));
+
+  // Still bounded by the actual competition end, just not the entry cutoff.
+  await assert.rejects(
+    s.service.setManual(s.ctx, t.wallet_id, { mode: 'fields', fields: { captured_at: iso(comp.endMs + 2000) }, source: 'organiser', reason: REASON, version: d.version }),
+    (e) => e.code === 'invalid_field' && e.field === 'captured_at',
+  );
 });
 
 test('preview: full mode is derived without writing; fields mode patches the last score', async () => {

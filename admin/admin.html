@@ -196,11 +196,12 @@
   }
   function rowEl(t) {
     const chk = t.elefin_check;
+    const isManual = t.account_source === 'manual';
     return h('tr', {},
       h('td', {}, t.email), h('td', {}, t.wallet_id || '—'), h('td', {}, t.name || '—'),
       h('td', {}, badge(t.status, t.status === 'active' ? 'ok' : t.status === 'disqualified' ? 'bad' : 'warn')),
       h('td', {}, t.category || '—'),
-      h('td', {}, chk ? [badge(chk.owner_match ? 'owner match' : 'no match', chk.owner_match ? 'ok' : 'bad'), h('div', { class: 'muted' }, when(chk.at))] : '—'),
+      h('td', {}, isManual ? badge('manual', 'warn') : chk ? [badge(chk.owner_match ? 'owner match' : 'no match', chk.owner_match ? 'ok' : 'bad'), h('div', { class: 'muted' }, when(chk.at))] : '—'),
       h('td', {}, (t.flags || []).map((f) => badge(f, /mismatch|unpriceable/.test(f) ? 'bad' : '')), t.manual ? badge('manual: ' + t.manual, 'warn') : ''),
       h('td', {}, h('button', { type: 'button', on: { click: () => openEditor(t) } }, 'Open')));
   }
@@ -213,8 +214,13 @@
     const locked = state.me.finalized;
     const isNew = !t;
     const err = h('div', { class: 'err', id: 'ed-err', role: 'alert' });
+    const isManual = isNew ? false : t.account_source === 'manual';
     const email = h('input', { id: 'f-email', type: 'email', value: t ? t.email : '', disabled: !isNew, required: true });
-    const wallet = h('input', { id: 'f-wallet', inputmode: 'numeric', value: t ? t.wallet_id || '' : '' });
+    const wallet = h('input', { id: 'f-wallet', value: t ? t.wallet_id || '' : '', placeholder: isNew ? 'MT5 login, or any id you choose if manual' : '' });
+    const manualToggle = h('input', { id: 'f-manual', type: 'checkbox', on: { change: () => {
+      manualHint.classList.toggle('hidden', !manualToggle.checked);
+    } } });
+    const manualHint = h('p', { class: 'muted hidden', style: 'grid-column:1/-1;margin:0' }, 'Give him any id you want (it does not need to be a real MT5 login). Enter his numbers in "Manual data" after saving.');
     const name = h('input', { id: 'f-name', value: t ? t.name || '' : '' });
     const notes = h('textarea', { id: 'f-notes', rows: 2 }, t ? t.notes || '' : '');
     const reason = h('input', { id: 'f-reason', placeholder: 'Why? (min 10 characters, goes in the audit log)' });
@@ -224,7 +230,7 @@
     const save = h('button', { type: 'button', class: 'primary', disabled: locked || (isNew && !state.me.entry_open), on: { click: async () => {
       err.textContent = '';
       try {
-        if (isNew) await api('/traders', { method: 'POST', body: { email: email.value, wallet_id: wallet.value, name: name.value, notes: notes.value, reason: reason.value } });
+        if (isNew) await api('/traders', { method: 'POST', body: { email: email.value, wallet_id: wallet.value, manual: manualToggle.checked, name: name.value, notes: notes.value, reason: reason.value } });
         else {
           const cur = await api('/traders?q=' + encodeURIComponent(t.email));
           const fresh = cur.rows.find((r) => r.email === t.email) || t;
@@ -234,7 +240,7 @@
       } catch (e) { err.textContent = e.message; if (e.code === 'stale') loadTraders(); }
     } } }, isNew ? 'Add trader' : 'Save changes');
 
-    const check = h('button', { type: 'button', disabled: isNew, on: { click: async () => {
+    const check = h('button', { type: 'button', disabled: isNew || isManual, on: { click: async () => {
       checkOut.textContent = 'Checking…';
       try {
         const c = await api('/traders/' + encodeURIComponent(t.email) + '/check', { method: 'POST', body: {} });
@@ -253,13 +259,15 @@
     } } }, 'Change status');
 
     const sections = [
-      h('h2', { id: 'e-h' }, isNew ? 'Add trader' : 'Trader: ' + t.email),
-      h('div', { class: 'grid' }, field('Email', email, 'f-email'), field('Wallet id (MT5 login)', wallet, 'f-wallet'), field('Name', name, 'f-name')),
+      h('h2', { id: 'e-h' }, isNew ? 'Add trader' : 'Trader: ' + t.email + (isManual ? ' (manual, no Elefin account)' : '')),
+      h('div', { class: 'grid' }, field('Email', email, 'f-email'), field('Wallet id (MT5 login)', wallet, 'f-wallet'), field('Name', name, 'f-name'),
+        isNew ? field('Manual entry', manualToggle, 'f-manual') : null, isNew ? manualHint : null),
       field('Notes', notes, 'f-notes'),
       field('Reason for this change', reason, 'f-reason'),
       h('div', { class: 'row' }, save, check, field('Status', status, 'f-status'), setStatus, h('button', { type: 'button', on: { click: () => { closeEditor(); } } }, 'Close')),
       checkOut, err,
     ];
+    if (isManual) sections.push(h('p', { class: 'muted' }, 'Manual trader: activating skips the Elefin check. Enter his numbers in "Manual data" below, mode "full", before activating.'));
     if (!isNew && t.wallet_id) sections.push(manualSection(t, reason));
     if (!isNew) sections.push(h('div', {}, h('button', { type: 'button', on: { click: () => openHistory(t.email) } }, 'History')));
     ed.replaceChildren(...sections);

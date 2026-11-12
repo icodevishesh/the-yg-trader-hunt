@@ -468,12 +468,13 @@
     var html = "";
 
     if (state.round === "week2") {
-      var b2 = (d.boards || {}).challenge || { entries: [] };
+      var b2 = (d.boards || {}).challenge || { entries: [], entered: [] };
       state.entries = b2.entries || [];
+      var entered2 = b2.entered || [];
       html += '<div class="rules"><b>How it works.</b> One board: the four category winners and Yash Sir, all starting from the same moment. Closed trades only. ' +
         "If a category winner finishes first, their category prize is <b>doubled</b> and they spend a week with Yash Sir. " +
         "If Yash Sir finishes first, everyone keeps their normal prize.</div>";
-      html += table("Beat Yash Sir", state.entries, [], d, "No one is on the board yet. Results appear after the first scoring run.");
+      html += table("Beat Yash Sir", state.entries, entered2, d, "No one is on the board yet. Results appear after the first scoring run.");
       el.board.innerHTML = html;
       return;
     }

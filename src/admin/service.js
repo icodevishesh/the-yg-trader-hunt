@@ -36,8 +36,13 @@ function rejectUnknown(input, allowed) {
   for (const k of Object.keys(input || {})) if (!allowed.includes(k)) throw bad('unknown_field', `Unknown field: ${k}`, k);
 }
 
-/** Validates the manual input fields. `cfg` supplies the entry window for captured_at. */
-function validateFields(fields, { requireAll, cfg }) {
+/**
+ * Validates the manual input fields. `cfg` supplies the entry window for captured_at.
+ * `allowLate` relaxes the captured_at upper bound to the competition end instead of the entry
+ * cutoff -- for manual traders there is no live Elefin account to protect from backdating, and
+ * admin curation is exactly how they are meant to be added after entry would otherwise be closed.
+ */
+function validateFields(fields, { requireAll, cfg, allowLate = false }) {
   const f = fields && typeof fields === 'object' ? fields : {};
   rejectUnknown(f, OVERRIDABLE);
   const out = {};
@@ -49,8 +54,9 @@ function validateFields(fields, { requireAll, cfg }) {
     }
     if (k === 'captured_at') {
       const t = Date.parse(v);
+      const upper = allowLate ? cfg.competition.endMs : cfg.competition.cutoffMs;
       if (!Number.isFinite(t)) throw bad('invalid_field', 'captured_at must be a valid date.', k);
-      if (t < cfg.competition.startMs || t > cfg.competition.cutoffMs) throw bad('invalid_field', 'captured_at must fall inside the entry window.', k);
+      if (t < cfg.competition.startMs || t > upper) throw bad('invalid_field', 'captured_at must fall inside the entry window.', k);
       out[k] = new Date(t).toISOString();
     } else if (k === 'closed_trades') {
       if (!Number.isInteger(v) || v < 0) throw bad('invalid_field', 'closed_trades must be an integer >= 0.', k);
@@ -129,19 +135,35 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
     },
 
     async addTrader(ctx, input) {
-      rejectUnknown(input, ['email', 'wallet_id', 'name', 'notes', 'client_id', 'reason']);
+      rejectUnknown(input, ['email', 'wallet_id', 'name', 'notes', 'client_id', 'reason', 'manual']);
       await assertNotFinalized();
-      if (now() > cfg.competition.cutoffMs) throw conflict('entry_closed', 'Entry is closed; no new traders can be added.');
+      const manual = !!input.manual;
+      // The entry cutoff exists to stop Elefin-sourced accounts from joining and getting scored
+      // as if they had been trading since day one. A manual trader has no Elefin account to
+      // backdate -- adding one late, on purpose, with hand-entered numbers, is exactly this
+      // feature's point -- so the cutoff does not apply to them.
+      if (!manual && now() > cfg.competition.cutoffMs) throw conflict('entry_closed', 'Entry is closed; no new traders can be added.');
       const reason = requireReason(input);
       const { errors, value } = validateRegistration({ name: input.name || 'x', email: input.email, phone: '00000000', agree: true });
       if (errors.email) throw bad('invalid_field', errors.email, 'email');
-      const wallet = String(input.wallet_id ?? '');
-      if (!WALLET_RE.test(wallet)) throw bad('invalid_field', 'wallet_id must be 6-15 digits.', 'wallet_id');
+      // Manual traders have no Elefin account, so their id does not need to be a real MT5 login --
+      // the admin picks any id to identify him by. Mark the source so scoring (score.js) and the
+      // Elefin-check UI know to skip Elefin for him entirely.
+      let wallet;
+      if (manual) {
+        wallet = String(input.wallet_id ?? '').trim();
+        if (!wallet) throw bad('invalid_field', 'Give this trader an id (any text, does not need to be a real MT5 login).', 'wallet_id');
+        if (wallet.length > 40) throw bad('invalid_field', 'wallet_id must be at most 40 characters.', 'wallet_id');
+      } else {
+        wallet = String(input.wallet_id ?? '');
+        if (!WALLET_RE.test(wallet)) throw bad('invalid_field', 'wallet_id must be 6-15 digits.', 'wallet_id');
+      }
       const row = {
         email: value.email, wallet_id: wallet, client_id: input.client_id != null ? Number(input.client_id) : null,
         name: input.name ? value.name : null, notes: input.notes ? String(input.notes).slice(0, 500) : null,
         status: 'pending', cohort, version: 1, added_at: new Date(now()).toISOString(), added_by: ctx.admin,
         updated_at: null, updated_by: null, elefin_check: null,
+        ...(manual ? { account_source: 'manual' } : {}),
         google_sync: { ok: false, attempts: 0 }, // picked up by the scheduler's sheet mirror
       };
       const res = await repo.insertTrader(cohort, row);
@@ -185,7 +207,9 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
       if (!STATUSES.includes(input.to)) throw bad('invalid_field', `status must be one of ${STATUSES.join(', ')}.`, 'to');
       if (input.to === 'active') {
         if (!t.wallet_id) throw conflict('wallet_required', 'Set a wallet id before activating.');
-        const ok = t.elefin_check && t.elefin_check.ok && t.elefin_check.owner_match;
+        // Manual traders have no Elefin account to match against; their numbers are vetted by
+        // hand through the manual-data form instead, so the automated check does not apply.
+        const ok = t.account_source === 'manual' || (t.elefin_check && t.elefin_check.ok && t.elefin_check.owner_match);
         if (!ok && !input.override_check) throw conflict('check_required', 'Run "Check in Elefin" first (or override with a reason).');
       }
       const set = { status: input.to, updated_at: new Date(now()).toISOString(), updated_by: ctx.admin, version: ver(t) + 1 };
@@ -197,6 +221,7 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
     /** One Elefin lookup: does this wallet id belong to this email's client? */
     async checkTrader(ctx, email) {
       const t = await mustTrader(email);
+      if (t.account_source === 'manual') throw bad('not_applicable', 'This trader has no Elefin account; manual traders skip this check.');
       const last = lastCheck.get(ctx.admin) || 0;
       if (now() - last < 10000) throw new AdminError(429, 'rate_limited', 'Please wait 10 seconds between Elefin checks.');
       lastCheck.set(ctx.admin, now());
@@ -233,8 +258,12 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
       const reason = requireReason(input);
       if (!['fields', 'full'].includes(input.mode)) throw bad('invalid_field', 'mode must be "fields" or "full".', 'mode');
       if (!SOURCES.includes(input.source)) throw bad('invalid_field', `source must be one of ${SOURCES.join(', ')}.`, 'source');
-      const fields = validateFields(input.fields, { requireAll: input.mode === 'full', cfg: sc });
-      if (START_LINE.some((k) => k in fields) && now() > sc.competition.cutoffMs && !input.rebaseline) {
+      const isManual = t.account_source === 'manual';
+      const fields = validateFields(input.fields, { requireAll: input.mode === 'full', cfg: sc, allowLate: isManual });
+      // Re-baseline protection guards against backdating a *real* Elefin account's start line.
+      // A manual trader has no live account to backdate -- the admin's numbers are the baseline --
+      // so this does not apply to them.
+      if (!isManual && START_LINE.some((k) => k in fields) && now() > sc.competition.cutoffMs && !input.rebaseline) {
         throw conflict('rebaseline_required', 'Start-line fields can only change after the entry cutoff with an explicit re-baseline.');
       }
       const before = await repo.getManual(c, String(wallet));
@@ -269,7 +298,7 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
       const { c, sc } = await scopeOf(scope);
       const t = await mustTraderByWallet(wallet, c);
       if (!['fields', 'full'].includes(input.mode)) throw bad('invalid_field', 'mode must be "fields" or "full".', 'mode');
-      const fields = validateFields(input.fields, { requireAll: input.mode === 'full', cfg: sc });
+      const fields = validateFields(input.fields, { requireAll: input.mode === 'full', cfg: sc, allowLate: t.account_source === 'manual' });
       const { competition, scoring } = sc;
       const pick = (row) => ({ category: row.category, return_pct: row.return_pct, pnl: row.pnl, net_capital: row.net_capital, eligible: row.eligible, winner_eligible: row.winner_eligible, reasons: row.reasons, flags: row.flags });
 
