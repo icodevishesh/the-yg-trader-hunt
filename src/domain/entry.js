@@ -64,7 +64,10 @@ function scoreTrader({ trader, baseline, account, summary, flows, overrides = nu
     ? reconcile({ balanceNow: Number(account.balance), balanceStart: baseline.balance_start, depW, wdrW, pnl, toleranceUsd: scoring.pnlToleranceUsd })
     : { diff: null, mismatch: false };
 
-  if (Date.parse(baseline.captured_at) > competition.cutoffMs) reasons.push('entered_after_cutoff');
+  // Manual (no-Elefin-account) traders are validated against the competition end, not the entry
+  // cutoff (admin-plan: there is no live account to protect from backdating), so they must be
+  // exempt here too -- otherwise a late but validly-entered manual trader can never be eligible.
+  if (trader.account_source !== 'manual' && Date.parse(baseline.captured_at) > competition.cutoffMs) reasons.push('entered_after_cutoff');
   if (!baseline.category) reasons.push('no_category');
   if (ret === null) reasons.push('invalid_net_capital');
   if (closedTrades < 1) reasons.push('no_closed_trade');
