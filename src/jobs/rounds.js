@@ -1,6 +1,7 @@
 'use strict';
 
 const { runScoring } = require('./score');
+const { applyPnlFix, compareRows, PNL_FIX_MIN_TRADES } = require('../domain/scoring');
 
 /*
  * Rounds, finalized by an admin with a button.
@@ -131,6 +132,63 @@ function createRounds({ store, elefin, cfg, now = Date.now }) {
     }
   }
 
+  /**
+   * Corrects week-1 rows whose reconstructed pnl doesn't match the account's real balance move
+   * (flag 'pnl_mismatch') by trusting the ledger instead (see applyPnlFix). Only rows with
+   * >= PNL_FIX_MIN_TRADES closed trades are touched. Safe to run after week 1 is finalized --
+   * it never calls Elefin, only edits the already-published board and (if finalized) the
+   * recorded winners/standings; week 1 stays finalized either way.
+   */
+  async function fixPnlMismatch() {
+    const cohort = base;
+    const entriesMap = await store.loadEntries(cohort);
+    const targets = [...entriesMap.values()].filter((r) => (r.flags || []).includes('pnl_mismatch') && (r.closed_trades || 0) >= PNL_FIX_MIN_TRADES);
+    if (!targets.length) return { fixed: 0, changes: [], winners: null, finalized: false };
+
+    const strip = ({ _id, cohort: _c, checked_at: _ca, ...rest }) => rest;
+    const fixedRows = targets.map((r) => applyPnlFix(strip(r)));
+    await store.saveEntries(cohort, fixedRows);
+    const fixedByEmail = new Map(fixedRows.map((r) => [r.email, r]));
+
+    const cur = await store.loadCurrent(cohort);
+    const round = await store.loadRound(cohort, 'week1');
+    const isFinal = !!(round && round.status === 'finalized');
+    const winners = isFinal ? { ...round.winners } : null;
+    const standings = isFinal ? { ...round.standings } : null;
+    const categoriesPatch = {};
+    const touched = new Set(targets.map((r) => r.category));
+
+    for (const catId of touched) {
+      const cat = cur && cur.categories && cur.categories[catId];
+      if (!cat) continue;
+      const merged = cat.entries
+        .map((e) => fixedByEmail.get(e.email) || e)
+        .sort(compareRows)
+        .map((e, i) => ({ ...e, rank: i + 1 }));
+      categoriesPatch[catId] = { entries: merged, stats: { ...cat.stats, flagged: merged.filter((e) => e.flags.length).length } };
+      if (isFinal) {
+        const w = merged.find((e) => e.winner_eligible);
+        winners[catId] = w ? pick(w) : null;
+        standings[catId] = merged.slice(0, 3).map(pick);
+      }
+    }
+
+    if (Object.keys(categoriesPatch).length) await store.patchCurrentCategories(cohort, categoriesPatch);
+    if (isFinal) await store.patchRoundWinners(cohort, 'week1', winners, standings);
+
+    const changes = targets.map((before) => {
+      const after = fixedByEmail.get(before.email);
+      return {
+        email: before.email, name: before.name, category: before.category,
+        pnl: { from: before.pnl, to: after.pnl },
+        return_pct: { from: before.return_pct, to: after.return_pct },
+        winner_eligible: { from: before.winner_eligible, to: after.winner_eligible },
+      };
+    });
+
+    return { fixed: changes.length, changes, finalized: isFinal, winners: isFinal ? Object.fromEntries([...touched].map((c) => [c, winners[c]])) : null };
+  }
+
   /** Validates, claims the round, then finalizes in the background (a full pass takes minutes). */
   async function start(round, admin, { background = true } = {}) {
     check(round);
@@ -151,7 +209,7 @@ function createRounds({ store, elefin, cfg, now = Date.now }) {
     return { started: true };
   }
 
-  return { ROUNDS, RoundError, scoreCfg, state, status, start, run, lockReason, roundCohort: (r) => roundCohort(cfg, r) };
+  return { ROUNDS, RoundError, scoreCfg, state, status, start, run, lockReason, roundCohort: (r) => roundCohort(cfg, r), fixPnlMismatch };
 }
 
 module.exports = { createRounds, RoundError, ROUNDS, roundCohort, challengeResult };

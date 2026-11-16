@@ -71,6 +71,20 @@
       <p id="rounds-err" class="err" role="alert"></p>
     </section>
 
+    <section class="panel" aria-labelledby="pf-h">
+      <h2 id="pf-h">Fix PNL mismatches</h2>
+      <p class="muted">Replaces the reconstructed pnl with the ledger-trusted figure (pnl + reconcile diff) for every trader currently flagged <code>pnl_mismatch</code> with at least 2 closed trades. Re-ranks affected categories and, if week 1 is already finalized, corrects its recorded winners/standings in place.</p>
+      <div class="row" style="margin-bottom:12px">
+        <label style="flex:1;min-width:220px">Reason <input id="pf-reason" placeholder="e.g. Reconstructed pnl ignores commission (min 10 characters)"></label>
+        <button id="pf-run" class="primary" type="button" style="align-self:end">Fix PNL mismatches</button>
+      </div>
+      <div id="pf-out"></div>
+      <p id="pf-err" class="err" role="alert"></p>
+      <h2 style="margin-top:16px">Log</h2>
+      <div id="pf-log"></div>
+      <p id="pf-log-err" class="err" role="alert"></p>
+    </section>
+
     <section id="w2" class="panel hidden" aria-labelledby="w2-h">
       <h2 id="w2-h">Week 2 - Beat YG Sir</h2>
       <p class="muted">One board: the week-1 category winners plus YG Sir. Every entry is added here by an admin. The #1 finisher wins; if it is a category winner their reward is doubled and they spend a week with YG Sir. If YG Sir finishes #1, everyone keeps their normal reward.</p>
@@ -115,7 +129,7 @@
       <div id="counts" class="row" style="margin-bottom:8px"></div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Email</th><th>Wallet id</th><th>Name</th><th>Status</th><th>Category</th><th>Elefin check</th><th>Flags</th><th></th></tr></thead>
+          <thead><tr><th>Email</th><th>Wallet id</th><th>Name</th><th>Status</th><th>Category</th><th>Return %</th><th>Elefin check</th><th>Flags</th><th></th></tr></thead>
           <tbody id="rows"></tbody>
         </table>
       </div>
@@ -201,6 +215,7 @@
       h('td', {}, t.email), h('td', {}, t.wallet_id || '—'), h('td', {}, t.name || '—'),
       h('td', {}, badge(t.status, t.status === 'active' ? 'ok' : t.status === 'disqualified' ? 'bad' : 'warn')),
       h('td', {}, t.category || '—'),
+      h('td', { title: (t.reasons || []).join(', ') || undefined }, t.return_pct == null ? '—' : [t.return_pct.toFixed(2) + '%', t.winner_eligible ? badge('prize-eligible', 'ok') : t.eligible ? badge('flagged', 'warn') : badge('ineligible', 'bad')]),
       h('td', {}, isManual ? badge('manual', 'warn') : chk ? [badge(chk.owner_match ? 'owner match' : 'no match', chk.owner_match ? 'ok' : 'bad'), h('div', { class: 'muted' }, when(chk.at))] : '—'),
       h('td', {}, (t.flags || []).map((f) => badge(f, /mismatch|unpriceable/.test(f) ? 'bad' : '')), t.manual ? badge('manual: ' + t.manual, 'warn') : ''),
       h('td', {}, h('button', { type: 'button', on: { click: () => openEditor(t) } }, 'Open')));
@@ -339,6 +354,50 @@
       box.replaceChildren(h('h2', { id: 'h-h' }, 'History'), all.length ? h('div', { class: 'table-wrap' }, h('table', {}, h('thead', {}, h('tr', {}, ['When', 'Who', 'Action', 'Reason', 'Before → after'].map((x) => h('th', {}, x)))),
         h('tbody', {}, all.map((a) => h('tr', {}, h('td', {}, when(a.at)), h('td', {}, a.admin), h('td', {}, a.action), h('td', {}, a.reason || '—'), h('td', {}, h('pre', {}, JSON.stringify({ before: a.before, after: a.after }, null, 1))))))) ) : h('p', { class: 'muted' }, 'No history yet.'));
     } catch (e) { box.replaceChildren(h('h2', { id: 'h-h' }, 'History'), h('p', { class: 'err' }, e.message)); }
+  }
+
+  // ---------- pnl fix ----------
+  function pnlFixRow(c) {
+    const pnlTxt = (v) => (v == null ? '—' : v);
+    const pctTxt = (v) => (v == null ? '—' : v.toFixed(2) + '%');
+    return h('tr', {}, h('td', {}, c.email), h('td', {}, c.category || '—'),
+      h('td', {}, pnlTxt(c.pnl.from) + ' → ' + pnlTxt(c.pnl.to)),
+      h('td', {}, pctTxt(c.return_pct.from) + ' → ' + pctTxt(c.return_pct.to)),
+      h('td', {}, badge(c.winner_eligible.to ? 'now prize-eligible' : 'still ineligible', c.winner_eligible.to ? 'ok' : 'bad')));
+  }
+  $('pf-run').addEventListener('click', async () => {
+    $('pf-err').textContent = '';
+    const reason = $('pf-reason').value;
+    const msg = 'Fix PNL mismatches for every trader with 2+ closed trades currently flagged pnl_mismatch?\n\nThis edits the published board in place, and the finalized winners/standings too if week 1 is already finalized.';
+    if (!window.confirm(msg)) return;
+    try {
+      const r = await api('/pnl-fix', { method: 'POST', body: { reason } });
+      $('pf-out').replaceChildren(
+        r.fixed === 0
+          ? h('p', { class: 'muted' }, 'Nothing to fix - no trader is currently flagged pnl_mismatch with 2+ closed trades.')
+          : h('div', {},
+              h('p', {}, 'Fixed ' + r.fixed + ' trader(s).' + (r.finalized ? ' Week 1 was finalized - its winners/standings were corrected too.' : '')),
+              h('div', { class: 'table-wrap' }, h('table', {}, h('thead', {}, h('tr', {}, ['Email', 'Category', 'P/L', 'Return %', 'Winner-eligible'].map((x) => h('th', {}, x)))),
+                h('tbody', {}, r.changes.map(pnlFixRow)))),
+              r.winners ? h('p', { class: 'muted', style: 'margin-top:8px' }, 'New winners - ' + Object.entries(r.winners).map(([c, w]) => c + ': ' + (w ? w.name : 'no winner')).join(', ')) : '',
+            ),
+      );
+      toast(r.fixed ? 'Fixed ' + r.fixed + ' trader(s)' : 'Nothing to fix');
+      loadPnlFixLog();
+      loadRounds();
+      loadTraders();
+    } catch (e) { $('pf-err').textContent = e.message; }
+  });
+
+  async function loadPnlFixLog() {
+    $('pf-log-err').textContent = '';
+    try {
+      const rows = await api('/audit?action=' + encodeURIComponent('pnl_fix.run'));
+      $('pf-log').replaceChildren(rows.length
+        ? h('div', { class: 'table-wrap' }, h('table', {}, h('thead', {}, h('tr', {}, ['When', 'Who', 'Fixed', 'Reason'].map((x) => h('th', {}, x)))),
+            h('tbody', {}, rows.map((a) => h('tr', {}, h('td', {}, when(a.at)), h('td', {}, a.admin), h('td', {}, String((a.after && a.after.count) || 0)), h('td', {}, a.reason || '—'))))))
+        : h('p', { class: 'muted' }, 'No fixes run yet.'));
+    } catch (e) { $('pf-log-err').textContent = e.message; }
   }
 
   // ---------- rounds + week 2 ----------
@@ -482,6 +541,7 @@
     try { const pub = await (await fetch('/api/leaderboard')).json(); state.categories = Object.fromEntries((pub.categories || []).map((c) => [c.id, c.reward])); } catch (e) { /* rewards are display-only */ }
     loadRounds();
     loadTraders();
+    loadPnlFixLog();
   }
   boot();
 })();

@@ -95,6 +95,31 @@ function reconcile({ balanceNow, balanceStart, depW, wdrW, pnl, toleranceUsd }) 
   return { diff: round2(diff), mismatch: Math.abs(diff) > toleranceUsd };
 }
 
+/** Min closed trades for a mismatch to be trusted either way (see applyPnlFix). */
+const PNL_FIX_MIN_TRADES = 2;
+
+/**
+ * Replaces a row's reconstructed pnl (per-trade price legs, no commission) with the
+ * ledger-trusted figure. `reconcile_diff` is exactly balanceNow - (balanceStart + depW - wdrW +
+ * pnl), so pnl + reconcile_diff is what pnl would have had to be for the account's real balance
+ * movement -- the number the reconstruction, which skips commission, was never going to land on.
+ * Only call this for rows with >= PNL_FIX_MIN_TRADES closed trades: with fewer, one mis-parsed
+ * leg can swing the number too wildly to trust either version.
+ */
+function applyPnlFix(row) {
+  const pnl = round2((row.pnl || 0) + (row.reconcile_diff || 0));
+  const flags = (row.flags || []).filter((f) => f !== 'pnl_mismatch');
+  const blocking = ['pnl_unpriceable', 'pnl_mismatch', 'flow_mismatch'];
+  return {
+    ...row,
+    pnl,
+    return_pct: returnPct(pnl, row.net_capital),
+    reconcile_diff: 0,
+    flags,
+    winner_eligible: row.eligible && !flags.some((f) => blocking.includes(f)),
+  };
+}
+
 /** Order: return_pct desc, pnl desc, closed trades desc, earlier capture, email. */
 function compareRows(a, b) {
   return (
@@ -121,4 +146,4 @@ function rankByCategory(rows, categories) {
   return out;
 }
 
-module.exports = { round2, categoryFor, netCapital, returnPct, tradePnl, closedPnl, ledgerSum, reconcile, compareRows, rankByCategory };
+module.exports = { round2, categoryFor, netCapital, returnPct, tradePnl, closedPnl, ledgerSum, reconcile, compareRows, rankByCategory, applyPnlFix, PNL_FIX_MIN_TRADES };

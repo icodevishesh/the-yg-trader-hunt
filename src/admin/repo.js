@@ -33,7 +33,7 @@ const mongoRepo = {
       d.collection(C.traders).countDocuments(filter),
       d.collection(C.traders).aggregate([{ $match: { cohort } }, { $group: { _id: '$status', n: { $sum: 1 } } }]).toArray(),
     ]);
-    const entries = await d.collection(C.entries).find({ _id: { $in: rows.map((r) => key(cohort, r.email)) } }, { projection: { category: 1, flags: 1, eligible: 1, manual: 1 } }).toArray();
+    const entries = await d.collection(C.entries).find({ _id: { $in: rows.map((r) => key(cohort, r.email)) } }, { projection: { category: 1, flags: 1, eligible: 1, manual: 1, return_pct: 1, winner_eligible: 1, reasons: 1 } }).toArray();
     const byId = new Map(entries.map((e) => [e._id, e]));
     const manual = await d.collection(C.manual).find({ cohort, enabled: true, wallet_id: { $in: rows.map((r) => r.wallet_id).filter(Boolean) } }, { projection: { wallet_id: 1, mode: 1 } }).toArray();
     const manualBy = new Map(manual.map((m) => [m.wallet_id, m.mode]));
@@ -42,7 +42,10 @@ const mongoRepo = {
       counts: Object.fromEntries(counts.map((c) => [c._id, c.n])),
       rows: rows.map((r) => {
         const e = byId.get(key(cohort, r.email)) || {};
-        return { ...r, _id: undefined, category: e.category || null, flags: e.flags || [], manual: manualBy.get(r.wallet_id) || null };
+        return {
+          ...r, _id: undefined, category: e.category || null, flags: e.flags || [], manual: manualBy.get(r.wallet_id) || null,
+          return_pct: e.return_pct ?? null, eligible: !!e.eligible, winner_eligible: !!e.winner_eligible, reasons: e.reasons || [],
+        };
       }),
     };
   },
@@ -105,9 +108,10 @@ const mongoRepo = {
     await (await connect()).collection(C.audit).insertOne(entry); // append-only: no update/delete path exists
   },
 
-  async listAudit(cohort, { target, page }) {
+  async listAudit(cohort, { target, action, page }) {
     const filter = { cohort };
     if (target) filter.target = target;
+    if (action) filter.action = action;
     return (await connect()).collection(C.audit).find(filter).sort({ at: -1 }).skip((page - 1) * PAGE).limit(PAGE).toArray();
   },
 };

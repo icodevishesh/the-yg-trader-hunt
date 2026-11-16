@@ -428,6 +428,17 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
       return { ...t, ...set };
     },
 
+    /** Trusts the ledger over the per-trade reconstruction for every currently-mismatched row (admin-plan: see rounds.fixPnlMismatch). */
+    async fixPnlMismatch(ctx, input) {
+      rejectUnknown(input, ['reason']);
+      if (!rounds) throw new AdminError(500, 'rounds_unavailable', 'Rounds module not configured.');
+      const reason = requireReason(input);
+      const res = await rounds.fixPnlMismatch();
+      for (const c of res.changes) await audit(ctx, 'pnl_fix.apply', c.email, null, c, reason);
+      await audit(ctx, 'pnl_fix.run', null, null, { count: res.fixed, finalized: res.finalized, winners: res.winners }, reason);
+      return res;
+    },
+
     async rescore(ctx) {
       await audit(ctx, 'rescore', null, null, null, null);
       trigger('admin');
@@ -435,7 +446,7 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
     },
 
     listAudit(query) {
-      return repo.listAudit(cohort, { target: query.target || null, page: Math.max(1, Number(query.page) || 1) });
+      return repo.listAudit(cohort, { target: query.target || null, action: query.action || null, page: Math.max(1, Number(query.page) || 1) });
     },
 
     audit,

@@ -6,7 +6,11 @@
  * `buildConfig(env)` is pure so it can be unit-tested; `config` is the process-wide instance.
  */
 
-require('dotenv').config();
+// override: true -- the .env file must always win. Without it, dotenv refuses to overwrite a
+// same-named var that is already in process.env, so a stale value captured once (e.g. pm2 caches
+// the environment from a process's first `pm2 start` and reuses it on every plain `pm2 restart`
+// after that) silently outlives every later edit to this file.
+require('dotenv').config({ override: true });
 
 const IST_OFFSET_MS = 5.5 * 3600 * 1000;
 
@@ -71,8 +75,10 @@ function buildConfig(env = process.env) {
   for (const [k, v] of [['COMPETITION_START', startMs], ['COMPETITION_END', endMs], ['WINNER_ANNOUNCE', announceMs], ['ENTRY_CUTOFF', cutoffMs]]) {
     if (!Number.isFinite(v)) errors.push(`${k} is missing or not a valid date`);
   }
-  if (!errors.length && !(startMs <= cutoffMs && cutoffMs < endMs && endMs <= announceMs)) {
-    errors.push('dates must satisfy COMPETITION_START <= ENTRY_CUTOFF < COMPETITION_END <= WINNER_ANNOUNCE');
+  // <= on both sides: a contest can legitimately keep entries open right up to the moment
+  // scores stop moving (week 2's scoreCfg does exactly that, setting cutoffMs = endMs).
+  if (!errors.length && !(startMs <= cutoffMs && cutoffMs <= endMs && endMs <= announceMs)) {
+    errors.push('dates must satisfy COMPETITION_START <= ENTRY_CUTOFF <= COMPETITION_END <= WINNER_ANNOUNCE');
   }
   errors.push(...validateCategories(CATEGORIES, minCapitalUsd));
 

@@ -241,6 +241,39 @@ test('rescore triggers the locked run and is audited', async () => {
   assert.equal(s.repo.log[0].action, 'rescore');
 });
 
+test('fixPnlMismatch: validates the reason before delegating, then audits per-trader plus a summary row', async () => {
+  const repo = memRepo();
+  const calls = [];
+  const stubRounds = {
+    fixPnlMismatch: async () => {
+      calls.push('called');
+      return {
+        fixed: 1, finalized: true, winners: { bronze: { email: 'a@x.com' } },
+        changes: [{ email: 'a@x.com', category: 'bronze', pnl: { from: 10, to: 25 }, return_pct: { from: 10, to: 25 }, winner_eligible: { from: false, to: true } }],
+      };
+    },
+  };
+  const service = createAdminService({ repo, elefin: {}, cfg, trigger: () => {}, rounds: stubRounds, now: () => T0 + 1000 });
+  const ctx = { admin: 'vipin', ip: '1.2.3.4' };
+
+  await assert.rejects(service.fixPnlMismatch(ctx, { reason: 'short' }), (e) => e.code === 'reason_required');
+  assert.equal(calls.length, 0); // rejected before it ever reached rounds
+
+  const res = await service.fixPnlMismatch(ctx, { reason: REASON });
+  assert.equal(res.fixed, 1);
+  assert.equal(calls.length, 1);
+  assert.equal(repo.log.filter((l) => l.action === 'pnl_fix.apply').length, 1);
+  assert.equal(repo.log.find((l) => l.action === 'pnl_fix.apply').target, 'a@x.com');
+  const summary = repo.log.find((l) => l.action === 'pnl_fix.run');
+  assert.equal(summary.after.count, 1);
+  assert.equal(summary.after.finalized, true);
+});
+
+test('fixPnlMismatch: fails cleanly when rounds is not configured', async () => {
+  const { service, ctx } = setup(); // setup() never wires a rounds module
+  await assert.rejects(service.fixPnlMismatch(ctx, { reason: REASON }), (e) => e.code === 'rounds_unavailable');
+});
+
 // ---------- scorer precedence ----------
 function scoringStore({ traders, manual }) {
   const s = { published: null, entries: new Map(), baselines: new Map(),

@@ -188,6 +188,29 @@ const mongoStore = {
   async logRun(entry) {
     await (await connect()).collection(C.jobRuns).insertOne(entry);
   },
+
+  /**
+   * Patches one or more categories' ranked entries + stats on the published board in place.
+   * Unlike `publish`, this is allowed after `competition_over` -- it never touches eligibility
+   * or re-derives anything from Elefin, only re-orders rows whose pnl a human just corrected.
+   */
+  async patchCurrentCategories(cohort, patch) {
+    const set = {};
+    for (const [catId, board] of Object.entries(patch)) {
+      set[`categories.${catId}.entries`] = board.entries;
+      set[`categories.${catId}.stats`] = board.stats;
+    }
+    if (!Object.keys(set).length) return;
+    await (await connect()).collection(C.current).updateOne({ _id: cohort }, { $set: set });
+  },
+
+  /** Corrects an already-finalized round's winners/standings after a pnl fix. Never reopens the round. */
+  async patchRoundWinners(cohort, round, winners, standings) {
+    await (await connect()).collection(C.result).updateOne(
+      { _id: `${cohort}:${round}` },
+      { $set: { winners, standings, winners_corrected_at: new Date().toISOString() } },
+    );
+  },
 };
 
 module.exports = { mongoStore };

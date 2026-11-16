@@ -50,6 +50,11 @@ function memStore(traders) {
     finishRound: async (c, r, f) => { Object.assign(s.rounds.get(`${c}:${r}`), f, { status: 'finalized' }); },
     failRound: async (c, r, error) => { Object.assign(s.rounds.get(`${c}:${r}`), { status: 'failed', error }); },
     markWinners: async (c, r, w, at) => { s.wins.push([r, w, at]); },
+    patchCurrentCategories: async (c, patch) => {
+      const cur = s.current.get(c);
+      for (const [catId, board] of Object.entries(patch)) Object.assign(cur.categories[catId], board);
+    },
+    patchRoundWinners: async (c, r, winners, standings) => { Object.assign(s.rounds.get(`${c}:${r}`), { winners, standings, winners_corrected_at: 'now' }); },
     // admin repo surface
     getTrader: async (c, e) => s.traders.get(`${c}:${e}`) || null,
     getTraderByWallet: async (c, w) => [...s.traders.values()].find((t) => t.cohort === c && t.wallet_id === w) || null,
@@ -180,6 +185,82 @@ test('a failed finalize leaves the round retryable and the board open', async ()
   const ok = roundsFor(store, fakeElefin(store, { winners: ['1'], since: T0 + 2000 }), T0 + 31000);
   await ok.start('week1', 'elevana', { background: false });
   assert.equal((await ok.state('week1')).status, 'finalized');
+});
+
+// ---------- fix pnl mismatch ----------
+function entryRow(email, o = {}) {
+  return {
+    email, name: email, client_id: null, wallet_id: email, is_host: false, category: 'bronze', captured_at: iso(T0),
+    start_capital: 100, dep_w: 0, wdr_w: 0, net_capital: 100, pnl: 0, return_pct: 0, closed_trades: 0,
+    reconcile_diff: 0, unpriceable: [], eligible: true, winner_eligible: false, reasons: [], flags: [], manual: null,
+    ...o,
+  };
+}
+
+/** a: mismatched but tradeable (5 closed trades) -- the fix should flip it to prize-eligible and on top.
+ *  b: mismatched but only 1 closed trade -- too thin a sample, the fix must leave it alone.
+ *  c: already clean and winning, pre-fix. */
+function seedPnlFixBoard(store) {
+  const a = entryRow('a@x.com', { pnl: 10, return_pct: 10, closed_trades: 5, reconcile_diff: 15, flags: ['pnl_mismatch'] });
+  const b = entryRow('b@x.com', { pnl: 5, return_pct: 5, closed_trades: 1, reconcile_diff: 50, flags: ['pnl_mismatch'] });
+  const c = entryRow('c@x.com', { pnl: 20, return_pct: 20, closed_trades: 5, winner_eligible: true });
+  for (const r of [a, b, c]) store.entries.set(`ses-2:${r.email}`, { ...r, _id: `ses-2:${r.email}`, cohort: 'ses-2', checked_at: 'x' });
+  store.current.set('ses-2', {
+    cohort: 'ses-2',
+    categories: { bronze: { entries: [{ ...c, rank: 1 }, { ...a, rank: 2 }, { ...b, rank: 3 }], entered: [], stats: { ranked: 3, entered: 0, flagged: 2 } } },
+  });
+  return { a, b, c };
+}
+
+test('fixPnlMismatch: trusts pnl + reconcile_diff for rows with >=2 closed trades, re-ranks the category, leaves thin samples alone', async () => {
+  const store = memStore([]);
+  seedPnlFixBoard(store);
+  const res = await roundsFor(store, {}, T0 + 60000).fixPnlMismatch();
+
+  assert.equal(res.fixed, 1); // b@x.com has only 1 closed trade -- not touched
+  assert.equal(res.changes[0].email, 'a@x.com');
+  assert.equal(res.changes[0].pnl.from, 10);
+  assert.equal(res.changes[0].pnl.to, 25);
+  assert.equal(res.changes[0].winner_eligible.from, false);
+  assert.equal(res.changes[0].winner_eligible.to, true);
+  assert.equal(res.finalized, false);
+  assert.equal(res.winners, null);
+
+  const fixedA = store.entries.get('ses-2:a@x.com');
+  assert.equal(fixedA.pnl, 25);
+  assert.equal(fixedA.return_pct, 25);
+  assert.deepEqual(fixedA.flags, []);
+  assert.deepEqual(store.entries.get('ses-2:b@x.com').flags, ['pnl_mismatch']); // untouched
+
+  const board = store.current.get('ses-2').categories.bronze;
+  assert.deepEqual(board.entries.map((e) => e.email), ['a@x.com', 'c@x.com', 'b@x.com']); // a now outranks c
+  assert.equal(board.stats.flagged, 1); // only b still carries a flag
+});
+
+test('fixPnlMismatch: also corrects an already-finalized round\'s winners/standings without reopening it', async () => {
+  const store = memStore([]);
+  const { a, c } = seedPnlFixBoard(store);
+  store.rounds.set('ses-2:week1', {
+    round: 'week1', status: 'finalized', finalized_by: 'elevana',
+    winners: { bronze: { email: c.email, name: c.name, return_pct: c.return_pct, pnl: c.pnl } },
+    standings: { bronze: [c, a].map((e) => ({ email: e.email, return_pct: e.return_pct, pnl: e.pnl })) },
+  });
+
+  const res = await roundsFor(store, {}, T0 + 60000).fixPnlMismatch();
+  assert.equal(res.finalized, true);
+  assert.equal(res.winners.bronze.email, 'a@x.com');
+  assert.equal(res.winners.bronze.return_pct, 25);
+
+  const round = store.rounds.get('ses-2:week1');
+  assert.equal(round.status, 'finalized'); // never reopened
+  assert.equal(round.winners.bronze.email, 'a@x.com');
+  assert.equal(round.standings.bronze[0].email, 'a@x.com');
+});
+
+test('fixPnlMismatch: no-op when nothing is flagged', async () => {
+  const store = memStore([]);
+  const res = await roundsFor(store, {}, T0 + 60000).fixPnlMismatch();
+  assert.deepEqual(res, { fixed: 0, changes: [], winners: null, finalized: false });
 });
 
 test('finalizeRound (admin service): needs confirmation and a reason, then audits', async () => {

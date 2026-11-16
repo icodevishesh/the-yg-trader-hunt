@@ -98,6 +98,7 @@ function createAdminRouter({ service, admin, now = Date.now, lockout = new auth.
   router.post('/api/week2/preview/:wallet', h((req) => service.preview(req.params.wallet, body(req), 'week2')));
   router.post('/api/week2/entrants/:email/remove', h((req) => service.removeWeek2Entrant(req.ctx, req.params.email, body(req))));
   router.post('/api/rescore', h((req) => service.rescore(req.ctx)));
+  router.post('/api/pnl-fix', h((req) => service.fixPnlMismatch(req.ctx, body(req))));
   router.get('/api/audit', h((req) => service.listAudit(req.query)));
   router.use('/api', (req, res) => res.status(404).json({ error: { code: 'not_found', message: 'Not found.' } }));
 
