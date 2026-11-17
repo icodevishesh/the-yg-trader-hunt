@@ -14,7 +14,8 @@ function ledgerFlows(ledger, baseline, windowEnd) {
 
 /**
  * Applies the start-line overrides (start capital, opening balance, entry time) to a baseline.
- * The category is never typed in: it is always derived from the resulting start capital.
+ * The category is derived from the resulting start capital unless the admin pins one explicitly
+ * (`ov.category`), in which case the pinned band wins -- applied last so it beats the derived value.
  */
 function applyBaselineOverrides(baseline, ov, scoring) {
   if (!ov) return baseline;
@@ -26,6 +27,7 @@ function applyBaselineOverrides(baseline, ov, scoring) {
   }
   if (has(ov.balance_start)) b.balance_start = ov.balance_start;
   if (has(ov.captured_at)) b.captured_at = new Date(ov.captured_at).toISOString();
+  if (has(ov.category)) b.category = ov.category;
   return b;
 }
 
@@ -115,7 +117,7 @@ function scoreManualFull({ trader, doc, competition, scoring }) {
     captured_at: new Date(f.captured_at).toISOString(),
     start_capital_usd: f.start_capital,
     balance_start: f.balance_start,
-    category: categoryFor(f.start_capital, scoring.categories),
+    category: has(f.category) ? f.category : categoryFor(f.start_capital, scoring.categories),
   };
   return scoreTrader({
     trader,

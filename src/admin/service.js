@@ -44,8 +44,15 @@ function rejectUnknown(input, allowed) {
  */
 function validateFields(fields, { requireAll, cfg, allowLate = false }) {
   const f = fields && typeof fields === 'object' ? fields : {};
-  rejectUnknown(f, OVERRIDABLE);
+  rejectUnknown(f, [...OVERRIDABLE, 'category']);
   const out = {};
+  // Category is normally derived from start_capital; an admin may pin a band explicitly. Optional
+  // in both modes (full mode still derives it from start_capital when left blank).
+  if (f.category !== undefined && f.category !== null && f.category !== '') {
+    const ids = cfg.scoring.categories.map((c) => c.id);
+    if (!ids.includes(f.category)) throw bad('invalid_field', `category must be one of ${ids.join(', ')}.`, 'category');
+    out.category = f.category;
+  }
   for (const k of OVERRIDABLE) {
     const v = f[k];
     if (v === undefined || v === null || v === '') {

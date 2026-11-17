@@ -299,6 +299,8 @@
     const mode = h('select', { id: 'm-mode' }, h('option', { value: 'fields' }, 'fields — patch only the listed values'), h('option', { value: 'full' }, 'full — score entirely from our database'));
     const source = h('select', { id: 'm-source' }, ['mt5_statement', 'broker_email', 'organiser', 'other'].map((s) => h('option', { value: s }, s)));
     const ref = h('input', { id: 'm-ref', placeholder: 'e.g. ReportHistorys-12345992151.xlsx' });
+    const cat = h('select', { id: 'm-category' }, h('option', { value: '' }, 'auto — derive from start capital'),
+      (state.categoryList || []).map((cc) => h('option', { value: cc.id }, cc.label)));
     const inputs = {};
     const grid = h('div', { class: 'grid' }, FIELDS.map(([k, label, type]) => { inputs[k] = h('input', { id: 'm-' + k, type, step: type === 'number' ? '0.01' : null }); return field(label, inputs[k], 'm-' + k); }));
     let version = null;
@@ -309,6 +311,7 @@
         const v = inputs[k].value; if (v === '') continue;
         f[k] = type === 'datetime-local' ? new Date(v).toISOString() : Number(v);
       }
+      if (cat.value) f.category = cat.value;
       return f;
     };
     const fill = (doc) => {
@@ -317,6 +320,7 @@
         const v = doc && doc.fields ? doc.fields[k] : undefined;
         inputs[k].value = v == null ? '' : type === 'datetime-local' ? new Date(new Date(v) - new Date(v).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : v;
       }
+      cat.value = doc && doc.fields && doc.fields.category ? doc.fields.category : '';
       if (doc) { mode.value = doc.mode; source.value = doc.source; ref.value = doc.source_ref || ''; }
       out.textContent = doc ? (doc.enabled ? 'Manual entry active — entered by ' + doc.entered_by + ' at ' + when(doc.entered_at) + '. ' + doc.reason : 'Manual entry is switched off.') : 'No manual entry. Scoring uses Elefin data.';
     };
@@ -337,8 +341,8 @@
       fill(d); toast('Back to Elefin data'); loadTraders();
     }) } }, 'Switch off');
 
-    wrap.append(h('h2', {}, 'Manual data'), h('p', { class: 'muted' }, 'Category is always derived from the start capital. Leave a field empty to keep the Elefin value (fields mode). The reason above is required.'),
-      h('div', { class: 'grid' }, field('Mode', mode, 'm-mode'), field('Source', source, 'm-source'), field('Source reference', ref, 'm-ref')), grid,
+    wrap.append(h('h2', {}, 'Manual data'), h('p', { class: 'muted' }, 'Category defaults to the band derived from the start capital; pick one to pin it instead. Leave a field empty to keep the Elefin value (fields mode). The reason above is required.'),
+      h('div', { class: 'grid' }, field('Mode', mode, 'm-mode'), field('Source', source, 'm-source'), field('Source reference', ref, 'm-ref'), field('Category', cat, 'm-category')), grid,
       h('div', { class: 'row', style: 'margin-top:12px' }, preview, save, off), err, out);
     return wrap;
   }
@@ -538,7 +542,7 @@
     b.textContent = state.me.finalized ? 'The competition is finalized: everything is read-only.' : 'Entry is closed: new traders cannot be added. Status changes to withdrawn/disqualified still work.';
     $('add').disabled = state.me.finalized || !state.me.entry_open;
     if ($('status').options.length === 1) STATUSES.forEach((s) => $('status').append(h('option', { value: s }, s)));
-    try { const pub = await (await fetch('/api/leaderboard')).json(); state.categories = Object.fromEntries((pub.categories || []).map((c) => [c.id, c.reward])); } catch (e) { /* rewards are display-only */ }
+    try { const pub = await (await fetch('/api/leaderboard')).json(); state.categoryList = pub.categories || []; state.categories = Object.fromEntries(state.categoryList.map((c) => [c.id, c.reward])); } catch (e) { /* rewards are display-only */ }
     loadRounds();
     loadTraders();
     loadPnlFixLog();

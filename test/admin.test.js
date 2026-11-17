@@ -171,7 +171,7 @@ test('setManual: validation of every field, version handling, disable', async ()
   await rej({ mode: 'fields', fields: { closed_trades: -1 } }, 'invalid_field');
   await rej({ mode: 'fields', fields: { dep_w: -5 } }, 'invalid_field');
   await rej({ mode: 'fields', fields: { captured_at: iso(comp.cutoffMs + 1000) } }, 'invalid_field');
-  await rej({ mode: 'fields', fields: { category: 'gold' } }, 'unknown_field'); // category is never typed in
+  await rej({ mode: 'fields', fields: { category: 'diamond' } }, 'invalid_field'); // category can be pinned, but only to a real band
   await rej({ mode: 'fields', fields: {} }, 'field_required');
   await rej({ mode: 'full', fields: { closed_pnl: 5 } }, 'field_required');
   await rej({ mode: 'fields', fields: { closed_pnl: 5 }, source: 'rumour' }, 'invalid_field');
@@ -221,6 +221,10 @@ test('preview: full mode is derived without writing; fields mode patches the las
   assert.ok(full.flags.includes('manual_full'));
   assert.equal(s.repo.manual.size, 0);
   assert.equal(s.repo.log.length, before);
+
+  // A pinned category overrides the band derived from start capital.
+  const pinned = await s.service.preview(NEW.wallet_id, { mode: 'full', fields: { ...FULL, category: 'gold' } });
+  assert.equal(pinned.category, 'gold');
 
   await assert.rejects(s.service.preview(NEW.wallet_id, { mode: 'fields', fields: { closed_pnl: 5 } }), (e) => e.code === 'no_score_yet');
 
