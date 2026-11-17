@@ -10,7 +10,8 @@
     "import:registry": "node src/scripts/import-registry.js",
     "import:registry:dry": "node src/scripts/import-registry.js --dry",
     "dump": "node scripts/elefin-dump.js",
-    "report": "node scripts/trades-report.js"
+    "report": "node scripts/trades-report.js",
+    "db:cleanup": "node scripts/db-cleanup.js"
   },
   "repository": {
     "type": "git",
