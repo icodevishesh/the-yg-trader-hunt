@@ -69,7 +69,11 @@ function scoreTrader({ trader, baseline, account, summary, flows, overrides = nu
   // Manual (no-Elefin-account) traders are validated against the competition end, not the entry
   // cutoff (admin-plan: there is no live account to protect from backdating), so they must be
   // exempt here too -- otherwise a late but validly-entered manual trader can never be eligible.
-  if (trader.account_source !== 'manual' && Date.parse(baseline.captured_at) > competition.cutoffMs) reasons.push('entered_after_cutoff');
+  // `admin_baseline` is a deliberate re-baseline an admin ran from the panel ("Set baseline"):
+  // its captured_at is "now", so it would otherwise always trip the cutoff. The admin action is
+  // authoritative, so it is exempt exactly as a manual entry is.
+  const adminBaseline = !!baseline.admin_baseline;
+  if (trader.account_source !== 'manual' && !adminBaseline && Date.parse(baseline.captured_at) > competition.cutoffMs) reasons.push('entered_after_cutoff');
   if (!baseline.category) reasons.push('no_category');
   if (ret === null) reasons.push('invalid_net_capital');
   if (closedTrades < 1) reasons.push('no_closed_trade');
@@ -77,7 +81,7 @@ function scoreTrader({ trader, baseline, account, summary, flows, overrides = nu
   if (rec.mismatch) flags.push('pnl_mismatch');
   if (flowMismatch) flags.push('flow_mismatch');
   if (summary.openAtEntry) flags.push('open_at_entry');
-  if (baseline.late_entry) flags.push('late_entry');
+  if (baseline.late_entry && !adminBaseline) flags.push('late_entry');
   if (manual) flags.push(`manual_${manual.mode}`);
 
   const eligible = reasons.length === 0;
@@ -117,7 +121,9 @@ function scoreManualFull({ trader, doc, competition, scoring }) {
     captured_at: new Date(f.captured_at).toISOString(),
     start_capital_usd: f.start_capital,
     balance_start: f.balance_start,
-    category: has(f.category) ? f.category : categoryFor(f.start_capital, scoring.categories),
+    // Pinned category wins: the manual doc's own field first, then the trader-level pin
+    // (set from the trader editor), finally the band derived from start capital.
+    category: has(f.category) ? f.category : has(trader.category_pin) ? trader.category_pin : categoryFor(f.start_capital, scoring.categories),
   };
   return scoreTrader({
     trader,

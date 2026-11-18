@@ -110,7 +110,10 @@ async function runScoring({ store, elefin, cfg, nowMs = Date.now(), finalize = f
     }
     stats.frozen += 1;
     // "fields": the start line may be patched; everything else still comes from Elefin.
-    const overrides = useManual ? manual.fields || {} : null;
+    // A trader-level pinned category (set from the trader editor) is applied last so it wins
+    // over the capital-derived band, whether or not a manual entry is also active.
+    const pin = trader.category_pin ? { category: trader.category_pin } : null;
+    const overrides = useManual || pin ? { ...(useManual ? manual.fields || {} : {}), ...(pin || {}) } : null;
     const baseline = applyBaselineOverrides(decided, overrides, scoring);
 
     // The trades counter only moves when a trade closes, so an unchanged counter means
