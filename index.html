@@ -92,9 +92,9 @@
     <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px; padding: 24px 28px;">
       <div style="display: flex; align-items: center; gap: 12px;">
         <span aria-hidden="true" style="display: inline-block; width: 10px; height: 10px; background: #c6fb3e; animation: ygpulse 1.6s ease-in-out infinite;"></span>
-        <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: #8a968f;">Competition starts in</span>
+        <span id="cd-label" style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: #8a968f;">Competition starts in</span>
       </div>
-      <div role="timer" aria-live="off" style="display: grid; grid-template-columns: repeat(4, minmax(68px, 1fr)); margin-left: auto; width: min(100%, 520px); border: 2px solid #232925;">
+      <div id="cd-timer" role="timer" aria-live="off" style="display: grid; grid-template-columns: repeat(4, minmax(68px, 1fr)); margin-left: auto; width: min(100%, 520px); border: 2px solid #232925;">
         <div style="padding: 16px 8px; text-align: center; border-right: 2px solid #232925;">
           <div id="cd-days" style="font-size: clamp(28px, 4vw, 44px); font-weight: 700; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums;">00</div>
           <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: #8a968f; margin-top: 8px;">Days</div>
@@ -111,6 +111,15 @@
           <div id="cd-secs" style="font-size: clamp(28px, 4vw, 44px); font-weight: 700; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; color: #c6fb3e;">00</div>
           <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: #8a968f; margin-top: 8px;">Seconds</div>
         </div>
+      </div>
+      <div id="cd-live" style="display: none; margin-left: auto; align-items: center; gap: 14px; flex-wrap: wrap;">
+        <span style="display: inline-flex; align-items: center; gap: 8px; background: #c6fb3e; color: #0c0e0d; padding: 12px 24px; font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.14em;">
+          <span style="width: 8px; height: 8px; background: #0c0e0d; animation: ygpulse 1.6s ease-in-out infinite;"></span>
+          LIVE
+        </span>
+        <a href="/leaderboard" style="display: inline-flex; align-items: center; gap: 8px; border: 2px solid #3a423d; color: #edf2ee; padding: 10px 20px; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.12em;" style-hover="background: #c6fb3e; color: #0c0e0d;">
+          View leaderboard →
+        </a>
       </div>
     </div>
   </section>
@@ -440,24 +449,70 @@ class Component extends DCLogic {
 }
 </script>
 <script>
-// Live countdown to the competition deadline: 23 Nov 2026, 00:00 IST. Holds at zero once reached.
+// Countdown and competition phase controller:
+// - Before COMPETITION_START: displays countdown timer.
+// - When the countdown ends (now >= COMPETITION_START): displays LIVE status.
+// - On/after COMPETITION_END: hides the entire #countdown section.
 (function () {
-  var TARGET = new Date('2026-11-23T00:00:00+05:30').getTime();
+  var COMPETITION_START = window.COMPETITION_START ? new Date(window.COMPETITION_START).getTime() : new Date('2026-11-23T00:00:00+05:30').getTime();
+  var COMPETITION_END = window.COMPETITION_END ? new Date(window.COMPETITION_END).getTime() : new Date('2026-11-27T23:59:59+05:30').getTime();
+
+  var timerId = null;
+
   function start() {
+    var sec = document.getElementById('countdown');
+    var lbl = document.getElementById('cd-label');
+    var timer = document.getElementById('cd-timer');
+    var liveEl = document.getElementById('cd-live');
     var d = document.getElementById('cd-days'), h = document.getElementById('cd-hours'),
         m = document.getElementById('cd-mins'), s = document.getElementById('cd-secs');
-    if (!d || !h || !m || !s) { setTimeout(start, 500); return; } // wait for the framework to render
+
+    if (!sec || !d || !h || !m || !s) { setTimeout(start, 250); return; } // wait for framework mount
+
     var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+
     function tick() {
-      var left = Math.max(0, Math.floor((TARGET - Date.now()) / 1000));
+      var now = Date.now();
+
+      // On/after competition_end date: hide the section completely
+      if (now >= COMPETITION_END) {
+        sec.style.display = 'none';
+        if (timerId) { clearInterval(timerId); timerId = null; }
+        return;
+      }
+
+      // When the start time is reached: show LIVE
+      if (now >= COMPETITION_START) {
+        sec.style.display = '';
+        if (lbl) {
+          lbl.textContent = 'Competition is LIVE';
+          lbl.style.color = '#c6fb3e';
+        }
+        if (timer) timer.style.display = 'none';
+        if (liveEl) liveEl.style.display = 'flex';
+        return;
+      }
+
+      // Before competition start: show countdown timer
+      sec.style.display = '';
+      if (lbl) {
+        lbl.textContent = 'Competition starts in';
+        lbl.style.color = '#8a968f';
+      }
+      if (timer) timer.style.display = 'grid';
+      if (liveEl) liveEl.style.display = 'none';
+
+      var left = Math.max(0, Math.floor((COMPETITION_START - now) / 1000));
       d.textContent = pad(Math.floor(left / 86400));
       h.textContent = pad(Math.floor((left % 86400) / 3600));
       m.textContent = pad(Math.floor((left % 3600) / 60));
       s.textContent = pad(left % 60);
     }
+
     tick();
-    setInterval(tick, 1000);
+    timerId = setInterval(tick, 1000);
   }
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();
 })();
