@@ -97,6 +97,9 @@ function createLeaderboardRouter({ store, trigger, cfg, now = Date.now, rounds }
         phase: cfg.errors.length ? 'unconfigured' : phaseOf(now(), comp, over),
         ui_poll_minutes: cfg.uiPollMinutes,
         competition: datesOf(comp),
+        // The week-2 window (from .env WEEK2_START/END) on every response so the page can show the
+        // week-2 tab the moment week 2 begins, independent of which round is being requested.
+        week2_window: cfg.week2 ? { start: cfg.week2.start, end: cfg.week2.end } : null,
         categories: scoring.categories.filter((c) => !want || c.id === want).map(categoryMeta),
       };
 
