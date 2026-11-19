@@ -87,6 +87,34 @@
     </div>
   </section>
 
+  <style>@keyframes ygpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }</style>
+  <section id="countdown" aria-label="Time left in the competition" style="border-bottom: 2px solid #3a423d;">
+    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px; padding: 24px 28px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span aria-hidden="true" style="display: inline-block; width: 10px; height: 10px; background: #c6fb3e; animation: ygpulse 1.6s ease-in-out infinite;"></span>
+        <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: #8a968f;">Competition starts in</span>
+      </div>
+      <div role="timer" aria-live="off" style="display: grid; grid-template-columns: repeat(4, minmax(68px, 1fr)); margin-left: auto; width: min(100%, 520px); border: 2px solid #232925;">
+        <div style="padding: 16px 8px; text-align: center; border-right: 2px solid #232925;">
+          <div id="cd-days" style="font-size: clamp(28px, 4vw, 44px); font-weight: 700; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums;">00</div>
+          <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: #8a968f; margin-top: 8px;">Days</div>
+        </div>
+        <div style="padding: 16px 8px; text-align: center; border-right: 2px solid #232925;">
+          <div id="cd-hours" style="font-size: clamp(28px, 4vw, 44px); font-weight: 700; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums;">00</div>
+          <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: #8a968f; margin-top: 8px;">Hours</div>
+        </div>
+        <div style="padding: 16px 8px; text-align: center; border-right: 2px solid #232925;">
+          <div id="cd-mins" style="font-size: clamp(28px, 4vw, 44px); font-weight: 700; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums;">00</div>
+          <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: #8a968f; margin-top: 8px;">Minutes</div>
+        </div>
+        <div style="padding: 16px 8px; text-align: center;">
+          <div id="cd-secs" style="font-size: clamp(28px, 4vw, 44px); font-weight: 700; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; color: #c6fb3e;">00</div>
+          <div style="font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.14em; color: #8a968f; margin-top: 8px;">Seconds</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section id="prizes" style="border-bottom: 2px solid #3a423d;">
     <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 16px; padding: 28px; border-bottom: 2px solid #232925;">
       <h2 style="margin: 0; font-weight: 700; font-size: clamp(28px, 3.2vw, 42px); letter-spacing: -0.035em;">Categories &amp; rewards</h2>
@@ -410,6 +438,29 @@ class Component extends DCLogic {
     };
   }
 }
+</script>
+<script>
+// Live countdown to the competition deadline: 23 Nov 2026, 00:00 IST. Holds at zero once reached.
+(function () {
+  var TARGET = new Date('2026-11-23T00:00:00+05:30').getTime();
+  function start() {
+    var d = document.getElementById('cd-days'), h = document.getElementById('cd-hours'),
+        m = document.getElementById('cd-mins'), s = document.getElementById('cd-secs');
+    if (!d || !h || !m || !s) { setTimeout(start, 500); return; } // wait for the framework to render
+    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    function tick() {
+      var left = Math.max(0, Math.floor((TARGET - Date.now()) / 1000));
+      d.textContent = pad(Math.floor(left / 86400));
+      h.textContent = pad(Math.floor((left % 86400) / 3600));
+      m.textContent = pad(Math.floor((left % 3600) / 60));
+      s.textContent = pad(left % 60);
+    }
+    tick();
+    setInterval(tick, 1000);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
+})();
 </script>
 </body>
 </html>
