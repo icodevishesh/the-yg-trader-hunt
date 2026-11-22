@@ -163,7 +163,7 @@
         <div style="font-size: 14px; color: #b4bdb8;">Cash prize</div>
       </div>
     </div>
-    <div style="padding: 16px 28px; border-top: 2px solid #232925; font-size: 14px; color: #8a968f;">Your category is set by your account balance when you enter. Entry stays open for the first three days.</div>
+    <div style="padding: 16px 28px; border-top: 2px solid #232925; font-size: 14px; color: #8a968f;">Your category is set by your account balance when you enter. Entry stays open for the first ten days.</div>
   </section>
 
   <section id="winner" style="border-bottom: 2px solid #3a423d;">
@@ -454,8 +454,20 @@ class Component extends DCLogic {
 // - When the countdown ends (now >= COMPETITION_START): displays LIVE status.
 // - On/after COMPETITION_END: hides the entire #countdown section.
 (function () {
+  // Fallbacks match .env (COMPETITION_START / COMPETITION_END). The real values are pulled
+  // from /api/leaderboard below so the home page tracks .env without editing this file.
   var COMPETITION_START = window.COMPETITION_START ? new Date(window.COMPETITION_START).getTime() : new Date('2026-11-23T00:00:00+05:30').getTime();
-  var COMPETITION_END = window.COMPETITION_END ? new Date(window.COMPETITION_END).getTime() : new Date('2026-11-27T23:59:59+05:30').getTime();
+  var COMPETITION_END = window.COMPETITION_END ? new Date(window.COMPETITION_END).getTime() : new Date('2026-12-04T23:59:59+05:30').getTime();
+
+  // tick() reads these closure vars every second, so a late update is reflected on the next tick.
+  fetch('/api/leaderboard').then(function (r) { return r && r.ok ? r.json() : null; }).then(function (d) {
+    var c = d && d.competition;
+    if (!c) return;
+    var s = c.start && new Date(c.start).getTime();
+    var e = c.end && new Date(c.end).getTime();
+    if (s && !isNaN(s)) COMPETITION_START = s;
+    if (e && !isNaN(e)) COMPETITION_END = e;
+  }).catch(function () {});
 
   var timerId = null;
 

@@ -197,7 +197,7 @@
   <div class="round-tabs" id="roundTabs" role="tablist" aria-label="Round"></div>
   <div id="noticeSlot"></div>
   <main id="board"></main>
-  <section id="w1winners" aria-label="Week 1 winners" hidden></section>
+  <section id="w1winners" aria-label="15 Days winners" hidden></section>
 
   <footer class="ft">
     <div class="col a">
@@ -361,12 +361,12 @@
   function renderRounds() {
     var sel1 = state.round === "week1", sel2 = state.round === "week2";
     var html =
-      '<button type="button" class="round-tab" role="tab" data-round="week1" aria-selected="' + sel1 + '">Week 1' +
+      '<button type="button" class="round-tab" role="tab" data-round="week1" aria-selected="' + sel1 + '">15 Days' +
         '<span class="rsub">Four categories, one winner each</span></button>';
-    // Week 2 tab is hidden until its start date; only week 1 shows before then.
+    // Week 3 tab is hidden until its start date; only the 15 Days round shows before then.
     if (week2Started()) {
       html +=
-        '<button type="button" class="round-tab" role="tab" data-round="week2" aria-selected="' + sel2 + '">Week 2 · Beat Yash Sir' +
+        '<button type="button" class="round-tab" role="tab" data-round="week2" aria-selected="' + sel2 + '">Week 3 · Beat Yash Sir' +
           '<span class="rsub">Category winners vs Yash Sir</span></button>';
     }
     el.roundTabs.innerHTML = html;
@@ -481,7 +481,7 @@
 
     if (d.status !== "ok") {
       var msg = d.phase === "locked"
-        ? "Week 2 opens after week 1 is finalized. The four category winners will race Yash Sir here."
+        ? "Week 3 opens after the 15 Days round is finalized. The four category winners will race Yash Sir here."
         : "The competition has not produced any results yet. Standings appear here once trading starts and the first scores are in.";
       el.board.innerHTML = '<div class="empty">' + esc(msg) + "</div>";
       return;
@@ -534,7 +534,7 @@
         '<div class="w1w-ret ' + (win ? signClass(win.return_pct) : "") + '">' + (win ? pct(win.return_pct) : "—") + '</div>' +
         '<div class="w1w-prize">Prize · ' + esc(prize(c.reward)) + '</div></div>';
     }).join("");
-    box.innerHTML = '<div class="w1w-head"><span class="w1w-star">✦</span> Week 1 winners</div>' +
+    box.innerHTML = '<div class="w1w-head"><span class="w1w-star">✦</span> 15 Days winners</div>' +
       '<div class="w1w-grid">' + cards + '</div>';
     box.hidden = false;
   }
