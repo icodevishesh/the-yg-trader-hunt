@@ -415,7 +415,15 @@
     const err = h('div', { class: 'err', role: 'alert' });
     const summary = h('pre', { 'aria-live': 'polite' });
     const tableBox = h('div', { class: 'table-wrap', style: 'max-height:420px;overflow-y:auto;margin-top:8px' });
-    const src = h('p', { class: 'muted' }, 'P/L source: ' + (t.pnl_source === 'balance' ? 'balance (fixed by an admin)' : 'closed trades (default)'));
+    // The label follows the trader's setting and, when that is "trades", the latest scoring run:
+    // the run switches a mismatched row to balance P/L by itself (flag pnl_auto_fixed).
+    const srcLabel = (source, flags) => 'P/L source: ' + (source === 'balance'
+      ? 'balance (fixed by an admin)'
+      : (flags || []).includes('pnl_auto_fixed')
+        ? 'balance (auto-fixed by the last scoring run: trade P/L did not match the balance)'
+        : 'closed trades (default)');
+    let lastFlags = t.flags || [];
+    const src = h('p', { class: 'muted' }, srcLabel(t.pnl_source, lastFlags));
     const from = h('input', { id: 'p-from', type: 'datetime-local' });
     let state2 = { source: t.pnl_source === 'balance' ? 'balance' : 'trades' };
     const STATUS = { counted: ['counted', 'ok'], open_at_start: ['open at start line', 'warn'], unpriceable: ['cannot price', 'bad'] };
@@ -431,7 +439,7 @@
         const fresh = (await freshTrader(t.email)) || t;
         await api('/traders/' + encodeURIComponent(t.email) + '/pnl-source', { method: 'POST', body: { source: to, version: fresh.version || 1, reason: reason.value } });
         state2.source = to; t.pnl_source = to;
-        src.textContent = 'P/L source: ' + (to === 'balance' ? 'balance (fixed by an admin)' : 'closed trades (default)');
+        src.textContent = srcLabel(to, lastFlags);
         refresh(); toast(to === 'balance' ? 'Balance P/L on — re-scoring now' : 'Trade P/L on — re-scoring now'); setTimeout(loadTraders, 4000);
       } catch (e) { err.textContent = e.message; }
     };
@@ -445,6 +453,9 @@
       try {
         const r = await api('/traders/' + encodeURIComponent(t.email) + '/pnl-check', { method: 'POST', body: { from: istIso(from.value) } });
         state2.source = r.pnl_source; refresh();
+        if (r.scored) lastFlags = r.scored.flags || [];
+        src.textContent = srcLabel(r.pnl_source, lastFlags);
+        const autoFixed = lastFlags.includes('pnl_auto_fixed');
         const T = r.totals;
         summary.textContent = [
           'Start line ' + when(r.start_line.captured_at) + ' · balance then ' + usd(r.start_line.balance_start) + ' · balance now ' + usd(r.balance_now) + ' · equity now ' + usd(r.equity_now),
@@ -455,7 +466,8 @@
           'Commission ' + num2(T.commission) + ' · swap ' + num2(T.swap) + ' · unexplained ' + num2(r.residual),
           r.causes.length ? '\nWhy:\n- ' + r.causes.join('\n- ') : null,
           r.scored ? '\nOn the board now: P/L ' + num2(r.scored.pnl) + ', return ' + (r.scored.return_pct == null ? '—' : r.scored.return_pct.toFixed(2) + '%') + (r.scored.flags.length ? ', flags: ' + r.scored.flags.join(', ') : '') : null,
-          r.mismatch && r.pnl_source !== 'balance' ? '\nTo fix: "Use balance P/L" — the board then shows ' + num2(r.balance_pnl) + '.' : null,
+          r.mismatch && r.pnl_source !== 'balance' && autoFixed ? '\nAlready fixed: every scoring run uses the balance P/L (' + num2(r.balance_pnl) + ') for this trader automatically.' : null,
+          r.mismatch && r.pnl_source !== 'balance' && !autoFixed ? '\nTo fix: "Use balance P/L" — the board then shows ' + num2(r.balance_pnl) + '.' : null,
         ].filter(Boolean).join('\n');
         tableBox.replaceChildren(r.trades.length ? h('table', {},
           h('thead', {}, h('tr', {}, ['Closed (your time)', 'Ticket', 'Instrument', 'Type', 'Lots', 'Open → close price', 'Swap', 'Commission', 'P/L', 'In trade P/L?'].map((x) => h('th', {}, x)))),

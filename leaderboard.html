@@ -89,7 +89,6 @@
   .lcard[aria-selected="true"], .lcard:hover { background: var(--surface); }
   .lcard .ltop { display: flex; justify-content: space-between; gap: 12px; width: 100%; }
   .lcard .lname-cat { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; color: var(--lime); }
-  .lcard .lcount { font-size: 12px; color: var(--muted); }
   .lcard .lleader { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-top: 8px; }
   .lcard .lret { font-size: 40px; font-weight: 700; letter-spacing: -0.04em; line-height: 1; font-variant-numeric: tabular-nums; }
   .lcard .lprize { font-size: 13px; color: var(--muted); }
@@ -425,9 +424,8 @@
   function leaderCard(c, b, winner) {
     var on = c.id === state.cat;
     var l = winner || (b && b.leader);
-    var total = boardCounts(b).active;
     return '<button type="button" class="lcard" role="tab" aria-selected="' + on + '" data-cat="' + esc(c.id) + '">' +
-      '<div class="ltop"><span class="lname-cat">' + esc(c.label) + '</span><span class="lcount">' + total + ' active</span></div>' +
+      '<div class="ltop"><span class="lname-cat">' + esc(c.label) + '</span></div>' +
       (winner ? '<div class="lwin">Winner</div>' : "") +
       '<div class="lleader">' + (l ? esc(l.name) : "—") + "</div>" +
       '<div class="lret ' + (l ? signClass(l.return_pct) : "") + '">' + (l ? pct(l.return_pct) : "—") + "</div>" +
@@ -489,7 +487,7 @@
       if (i === state.expanded) body += detailRow(e, d);
     });
     var n = boardCounts(b || { entries: entries, entered: entered });
-    var countTxt = (all.length ? "Top " + all.length + " · " : "") + n.ranked + " ranked" + (n.active > n.ranked ? " · " + n.active + " active" : "");
+    var countTxt = (all.length ? "Top " + all.length + " · " : "") + n.ranked + " ranked";
     if (!all.length) body = '<tr><td colspan="5" class="empty" style="padding:40px 28px;">' + esc(emptyMsg) + "</td></tr>";
     return '<div class="tbl-head"><span>' + esc(title) + "</span><span class=\"tbl-meta\">" + (all.length > 1 ? sortToggle() : "") + "<span>" + countTxt + "</span></span></div>" +
       '<div class="tbl-scroll"><table class="board"><thead><tr>' +
