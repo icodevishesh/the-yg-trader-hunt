@@ -82,6 +82,8 @@ function createAdminRouter({ service, admin, now = Date.now, lockout = new auth.
   router.post('/api/traders', guard(async (req, res) => res.status(201).json(await service.addTrader(req.ctx, body(req)))));
   router.patch('/api/traders/:email', h((req) => service.updateTrader(req.ctx, req.params.email, body(req))));
   router.post('/api/traders/:email/status', h((req) => service.setStatus(req.ctx, req.params.email, body(req))));
+  router.post('/api/traders/:email/category', h((req) => service.setCategory(req.ctx, req.params.email, body(req))));
+  router.post('/api/traders/:email/set-baseline', h((req) => service.snapshotBaseline(req.ctx, req.params.email, body(req))));
   router.post('/api/traders/:email/check', h((req) => service.checkTrader(req.ctx, req.params.email)));
   router.post('/api/traders/:email/identity', h((req) => service.correctIdentity(req.ctx, req.params.email, body(req))));
   router.get('/api/traders/:email/baseline', h((req) => service.getBaseline(req.params.email)));

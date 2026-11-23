@@ -16,7 +16,7 @@
   header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--line); }
   h1 { font-size: 16px; margin: 0; letter-spacing: .08em; text-transform: uppercase; }
   h2 { font-size: 13px; margin: 0 0 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-  main { padding: 16px; max-width: 1100px; margin: 0 auto; display: grid; gap: 20px; }
+  main { padding: 16px; max-width: 1400px; margin: 0 auto; display: grid; gap: 20px; }
   .panel { background: var(--panel); border: 1px solid var(--line); padding: 16px; }
   .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
@@ -241,7 +241,15 @@
     const notes = h('textarea', { id: 'f-notes', rows: 2 }, t ? t.notes || '' : '');
     const reason = h('input', { id: 'f-reason', placeholder: 'Why? (min 10 characters, goes in the audit log)' });
     const status = h('select', { id: 'f-status' }, STATUSES.map((s) => h('option', { value: s, selected: t && t.status === s }, s)));
+    const category = h('select', { id: 'f-category' }, h('option', { value: '' }, 'auto — derive from start capital'),
+      (state.categoryList || []).map((cc) => h('option', { value: cc.id, selected: t && t.category_pin === cc.id }, cc.label)));
     const checkOut = h('div', { class: 'muted', id: 'check-out', 'aria-live': 'polite' });
+
+    // Refetches the trader's current version before a write, so an edit never clobbers a concurrent change.
+    const freshVersion = async () => {
+      const cur = await api('/traders?q=' + encodeURIComponent(t.email));
+      return (cur.rows.find((r) => r.email === t.email) || t).version || 1;
+    };
 
     const save = h('button', { type: 'button', class: 'primary', disabled: locked || (isNew && !state.me.entry_open), on: { click: async () => {
       err.textContent = '';
@@ -267,12 +275,27 @@
     const setStatus = h('button', { type: 'button', disabled: isNew || locked, on: { click: async () => {
       err.textContent = '';
       try {
-        const cur = await api('/traders?q=' + encodeURIComponent(t.email));
-        const fresh = cur.rows.find((r) => r.email === t.email) || t;
-        await api('/traders/' + encodeURIComponent(t.email) + '/status', { method: 'POST', body: { to: status.value, version: fresh.version || 1, reason: reason.value } });
+        await api('/traders/' + encodeURIComponent(t.email) + '/status', { method: 'POST', body: { to: status.value, version: await freshVersion(), reason: reason.value } });
         toast('Status updated'); closeEditor(); loadTraders();
       } catch (e) { err.textContent = e.message + (e.code === 'check_required' ? ' (Use "Check in Elefin" first.)' : ''); }
     } } }, 'Change status');
+
+    const saveCategory = h('button', { type: 'button', disabled: isNew || locked, on: { click: async () => {
+      err.textContent = '';
+      try {
+        await api('/traders/' + encodeURIComponent(t.email) + '/category', { method: 'POST', body: { category: category.value, version: await freshVersion(), reason: reason.value } });
+        toast(category.value ? 'Category pinned — applies on the next scoring run' : 'Category unpinned'); closeEditor(); loadTraders();
+      } catch (e) { err.textContent = e.message; if (e.code === 'stale') loadTraders(); }
+    } } }, 'Save category');
+
+    const setBaseline = h('button', { type: 'button', disabled: isNew || locked || isManual, on: { click: async () => {
+      err.textContent = '';
+      if (!window.confirm('Re-fetch this trader from Elefin and reset their start line to their CURRENT equity?\n\nThis discards any P/L earned before now and re-scores the board. It overwrites the frozen baseline and cannot be undone from this panel.')) return;
+      try {
+        await api('/traders/' + encodeURIComponent(t.email) + '/set-baseline', { method: 'POST', body: { version: await freshVersion(), reason: reason.value } });
+        toast('Baseline set — re-scoring'); closeEditor(); loadTraders();
+      } catch (e) { err.textContent = e.message; }
+    } } }, 'Set baseline (now)');
 
     const sections = [
       h('h2', { id: 'e-h' }, isNew ? 'Add trader' : 'Trader: ' + t.email + (isManual ? ' (manual, no Elefin account)' : '')),
@@ -281,6 +304,8 @@
       field('Notes', notes, 'f-notes'),
       field('Reason for this change', reason, 'f-reason'),
       h('div', { class: 'row' }, save, check, field('Status', status, 'f-status'), setStatus, h('button', { type: 'button', on: { click: () => { closeEditor(); } } }, 'Close')),
+      isNew ? null : h('div', { class: 'row', style: 'margin-top:4px' }, field('Category', category, 'f-category'), saveCategory, setBaseline),
+      isNew ? null : h('p', { class: 'muted', style: 'margin:0' }, '"Save category" pins the band for scoring (it wins over the start capital). "Set baseline (now)" re-fetches live Elefin data and freezes a new start line at the current equity (ignores the entry cutoff); to start from an earlier time or a typed capital, use "Start line" below. The reason above is required for both.'),
       checkOut, err,
     ];
     if (isManual) sections.push(h('p', { class: 'muted' }, 'Manual trader: activating skips the Elefin check. Enter his numbers in "Manual data" below, mode "full", before activating.'));
@@ -288,7 +313,7 @@
     if (!isNew && !isManual && t.wallet_id) sections.push(baselineSection(t, reason));
     if (!isNew && t.wallet_id) sections.push(manualSection(t, reason));
     if (!isNew) sections.push(h('div', {}, h('button', { type: 'button', on: { click: () => openHistory(t.email) } }, 'History')));
-    ed.replaceChildren(...sections);
+    ed.replaceChildren(...sections.filter(Boolean));
     (isNew ? email : name).focus();
   }
   function closeEditor() { $('editor').classList.add('hidden'); $('history').classList.add('hidden'); }
@@ -384,7 +409,7 @@
       out.textContent = 'Saved — applies on the next scoring run\n' + describeBaseline(r); toast('Start line saved'); load(); loadTraders();
     }) } }, 'Save start line');
     wrap.append(h('h2', {}, 'Start line'),
-      h('p', { class: 'muted' }, 'Start time: rebuild the start line at that moment (IST) from Elefin history. Leave it empty to keep the current start time and only change the start capital or category. A start capital you enter sets the category from that amount; pin a category to override. Uses the reason above.'),
+      h('p', { class: 'muted' }, 'Start time: rebuild the start line at that moment (IST) from Elefin history. Leave it empty to keep the current start time and only change the start capital or category. A start capital you enter sets the category from that amount; pick one here to set it on the start line. A category pinned with "Save category" above still wins. Uses the reason above.'),
       cur,
       h('div', { class: 'grid' }, field('Start from (IST, optional)', at, 'b-at'), field('Start capital (USD, optional)', cap, 'b-cap'), field('Category', cat, 'b-cat')),
       h('div', { class: 'row', style: 'margin-top:12px' }, preview, save), err, out);
@@ -400,8 +425,6 @@
     const mode = h('select', { id: 'm-mode' }, h('option', { value: 'fields' }, 'fields — patch only the listed values'), h('option', { value: 'full' }, 'full — score entirely from our database'));
     const source = h('select', { id: 'm-source' }, ['mt5_statement', 'broker_email', 'organiser', 'other'].map((s) => h('option', { value: s }, s)));
     const ref = h('input', { id: 'm-ref', placeholder: 'e.g. ReportHistorys-12345992151.xlsx' });
-    const cat = h('select', { id: 'm-category' }, h('option', { value: '' }, 'auto — derive from start capital'),
-      (state.categoryList || []).map((cc) => h('option', { value: cc.id }, cc.label)));
     const inputs = {};
     const grid = h('div', { class: 'grid' }, FIELDS.map(([k, label, type]) => { inputs[k] = h('input', { id: 'm-' + k, type, step: type === 'number' ? '0.01' : null }); return field(label, inputs[k], 'm-' + k); }));
     let version = null;
@@ -412,7 +435,6 @@
         const v = inputs[k].value; if (v === '') continue;
         f[k] = type === 'datetime-local' ? new Date(v).toISOString() : Number(v);
       }
-      if (cat.value) f.category = cat.value;
       return f;
     };
     const fill = (doc) => {
@@ -421,7 +443,6 @@
         const v = doc && doc.fields ? doc.fields[k] : undefined;
         inputs[k].value = v == null ? '' : type === 'datetime-local' ? new Date(new Date(v) - new Date(v).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : v;
       }
-      cat.value = doc && doc.fields && doc.fields.category ? doc.fields.category : '';
       if (doc) { mode.value = doc.mode; source.value = doc.source; ref.value = doc.source_ref || ''; }
       out.textContent = doc ? (doc.enabled ? 'Manual entry active — entered by ' + doc.entered_by + ' at ' + when(doc.entered_at) + '. ' + doc.reason : 'Manual entry is switched off.') : 'No manual entry. Scoring uses Elefin data.';
     };
@@ -442,8 +463,8 @@
       fill(d); toast('Back to Elefin data'); loadTraders();
     }) } }, 'Switch off');
 
-    wrap.append(h('h2', {}, 'Manual data'), h('p', { class: 'muted' }, 'Category defaults to the band derived from the start capital; pick one to pin it instead. Leave a field empty to keep the Elefin value (fields mode). The reason above is required.'),
-      h('div', { class: 'grid' }, field('Mode', mode, 'm-mode'), field('Source', source, 'm-source'), field('Source reference', ref, 'm-ref'), field('Category', cat, 'm-category')), grid,
+    wrap.append(h('h2', {}, 'Manual data'), h('p', { class: 'muted' }, 'Leave a field empty to keep the Elefin value (fields mode). To pin a category, use the "Category" control in the trader section above. The reason above is required.'),
+      h('div', { class: 'grid' }, field('Mode', mode, 'm-mode'), field('Source', source, 'm-source'), field('Source reference', ref, 'm-ref')), grid,
       h('div', { class: 'row', style: 'margin-top:12px' }, preview, save, off), err, out);
     return wrap;
   }

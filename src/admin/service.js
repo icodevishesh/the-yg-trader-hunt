@@ -3,7 +3,7 @@
 const { validateRegistration, resolveAccount, verifyWallet } = require('../domain/registration');
 const { scoreTrader, scoreManualFull, applyBaselineOverrides, OVERRIDABLE } = require('../domain/entry');
 const { rebuildBaseline, adjustCapital, BaselineError } = require('../domain/baseline');
-const { netCapital, round2 } = require('../domain/scoring');
+const { categoryFor, netCapital, round2 } = require('../domain/scoring');
 
 /*
  * Admin operations (admin-plan §3-§5). One module shared by the HTTP routes and the CLI,
@@ -176,6 +176,11 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
       if (err instanceof BaselineError) throw conflict(err.code, err.message);
       throw err;
     }
+    // A trader-level pin ("Save category") always wins at scoring time; show that here too.
+    if (t.category_pin && !category && plan.doc.category !== t.category_pin) {
+      plan.doc.category = t.category_pin;
+      plan.warnings.push(`Category ${t.category_pin} is pinned on this trader and overrides the band from the start capital.`);
+    }
     if (!plan.doc.category) throw conflict('no_category', `A start capital of $${plan.doc.start_capital_usd} is below the lowest category.`);
 
     const pick = (b) => b && { status: b.status, captured_at: b.captured_at || null, start_capital: b.start_capital_usd ?? null, balance_start: b.balance_start ?? null, category: b.category || null, source: b.source || 'auto' };
@@ -297,6 +302,75 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
       if (!(await repo.updateTrader(cohort, t.email, ver(t), set))) throw conflict('stale', 'Someone else changed this trader. Reload and try again.');
       await audit(ctx, 'trader.status', t.email, { status: t.status }, { status: input.to, override_check: !!input.override_check }, reason);
       return { ...t, ...set };
+    },
+
+    /**
+     * Pins (or clears) a trader's category. First-class trader attribute: scoring applies
+     * `category_pin` over the capital-derived band, independent of any manual entry. Empty/null
+     * clears the pin and reverts to the derived band.
+     */
+    async setCategory(ctx, email, input) {
+      rejectUnknown(input, ['category', 'version', 'reason']);
+      await assertNotFinalized();
+      const t = await mustTrader(email);
+      checkVersion(t, input.version);
+      const reason = requireReason(input);
+      let category = null;
+      if (input.category !== undefined && input.category !== null && input.category !== '') {
+        const ids = cfg.scoring.categories.map((c) => c.id);
+        if (!ids.includes(input.category)) throw bad('invalid_field', `category must be one of ${ids.join(', ')}.`, 'category');
+        category = input.category;
+      }
+      const set = { category_pin: category, updated_at: new Date(now()).toISOString(), updated_by: ctx.admin, version: ver(t) + 1 };
+      if (!(await repo.updateTrader(cohort, t.email, ver(t), set))) throw conflict('stale', 'Someone else changed this trader. Reload and try again.');
+      await audit(ctx, 'trader.category', t.email, { category_pin: t.category_pin ?? null }, { category_pin: category }, reason);
+      return { ...t, ...set };
+    },
+
+    /**
+     * Re-baselines one trader from live Elefin data on demand. Fetches the account, freezes a new
+     * start line at the current equity ("snapshot now"), overwriting any existing frozen baseline,
+     * then triggers a re-score so the trade cache, flows and published board are rebuilt by the
+     * normal pipeline. Marked `admin_baseline` so scoring exempts it from the entry cutoff/late flag.
+     * ("Start line" -- setBaseline below -- is the variant for a chosen past time or a typed capital.)
+     */
+    async snapshotBaseline(ctx, email, input) {
+      rejectUnknown(input, ['version', 'reason']);
+      await assertNotFinalized();
+      const t = await mustTrader(email);
+      checkVersion(t, input.version);
+      const reason = requireReason(input);
+      if (t.account_source === 'manual') throw bad('not_applicable', 'Manual traders have no Elefin account to baseline from; enter their numbers in "Manual data" instead.');
+      if (!t.wallet_id) throw conflict('wallet_required', 'Set a wallet id before setting a baseline.');
+      const acct = await elefin.getAccount(t.wallet_id);
+      if (!acct.ok) throw new AdminError(502, 'elefin_unavailable', `Elefin account lookup failed: ${acct.error}`);
+      const account = acct.account;
+      const ownsAccount = String(account.login) === String(t.wallet_id) && (t.client_id == null || String(account.client_id) === String(t.client_id));
+      if (!ownsAccount) throw conflict('wallet_not_on_client', 'That wallet id does not belong to this trader in Elefin.');
+      const equity = Number(account.equity);
+      const currency = String(account.currency || 'USD').toUpperCase();
+      if (currency !== 'USD') throw bad('unsupported_currency', `Account currency is ${currency}; only USD accounts can be baselined.`, 'currency');
+      if (!Number.isFinite(equity) || equity < cfg.scoring.minCapitalUsd) throw bad('below_min_capital', `Account equity (${Number.isFinite(equity) ? equity : 'n/a'}) is below the ${cfg.scoring.minCapitalUsd} USD minimum.`, 'equity');
+      const nowIso = new Date(now()).toISOString();
+      const before = await repo.getBaseline(cohort, t.email);
+      const doc = {
+        wallet_id: String(account.login), currency, equity_seen: round2(equity), seen_at: nowIso,
+        status: 'frozen', captured_at: nowIso,
+        start_capital: round2(equity), start_capital_usd: round2(equity),
+        balance_start: round2(Number(account.balance)),
+        total_deposit_start: round2(Number(account.total_deposit) || 0),
+        total_withdrawal_start: round2(Number(account.total_withdrawal) || 0),
+        category: t.category_pin || categoryFor(equity, cfg.scoring.categories),
+        late_entry: false, admin_baseline: true, source: 'admin',
+        // Same history/rev bookkeeping as setBaseline, so "Start line" sees this change and can undo it.
+        rev: ((before && before.rev) || 0) + 1,
+        history: before ? [...(before.history || []), (({ _id, history, rev, ...prev }) => prev)(before)].slice(-10) : [],
+        set_by: ctx.admin, set_at: nowIso, set_reason: reason,
+      };
+      await repo.forceSaveBaseline(cohort, t.email, doc);
+      await audit(ctx, 'trader.baseline', t.email, before, doc, reason);
+      trigger('admin');
+      return { baseline: doc, rescore: true };
     },
 
     /** One Elefin lookup: does this wallet id belong to this email's client? */

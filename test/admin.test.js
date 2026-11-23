@@ -44,6 +44,7 @@ function memRepo() {
     },
     setTraderCheck: async (c, email, check) => { r.traders.get(email).elefin_check = check; },
     getBaseline: async (c, email) => r.baselines.get(email) || null,
+    forceSaveBaseline: async (c, email, doc) => { r.baselines.set(email, { ...doc, cohort: c, email }); },
     getEntry: async (c, email) => r.entries.get(email) || null,
     getManual: async (c, w) => r.manual.get(w) || null,
     putManual: async (c, doc, expected) => {
@@ -415,6 +416,83 @@ test('preview: full mode is derived without writing; fields mode patches the las
   assert.equal(patched.flags.includes('pnl_mismatch'), false); // balance 125 = 100 + 25: the statement value reconciles
   const wrong = await s.service.preview(NEW.wallet_id, { mode: 'fields', fields: { closed_pnl: 60 } });
   assert.ok(wrong.flags.includes('pnl_mismatch')); // a wrong manual value is caught by reconciliation
+});
+
+// ---------- category pin ----------
+test('setCategory: pins a valid band, unpins, versions, and rejects unknown bands', async () => {
+  const s = setup();
+  await s.service.addTrader(s.ctx, NEW);
+
+  await assert.rejects(s.service.setCategory(s.ctx, 'amrit@x.com', { category: 'diamond', version: 1, reason: REASON }), (e) => e.code === 'invalid_field' && e.field === 'category');
+  await assert.rejects(s.service.setCategory(s.ctx, 'amrit@x.com', { category: 'gold', version: 7, reason: REASON }), (e) => e.code === 'stale');
+  await assert.rejects(s.service.setCategory(s.ctx, 'amrit@x.com', { category: 'gold', version: 1, reason: 'short' }), (e) => e.code === 'reason_required');
+
+  const pinned = await s.service.setCategory(s.ctx, 'amrit@x.com', { category: 'gold', version: 1, reason: REASON });
+  assert.equal(pinned.category_pin, 'gold');
+  assert.equal(pinned.version, 2);
+  assert.equal(s.repo.traders.get('amrit@x.com').category_pin, 'gold');
+
+  const unpinned = await s.service.setCategory(s.ctx, 'amrit@x.com', { category: '', version: 2, reason: REASON });
+  assert.equal(unpinned.category_pin, null);
+  assert.deepEqual(s.repo.log.filter((a) => a.action === 'trader.category').length, 2);
+
+  s.repo.current = { competition_over: true };
+  await assert.rejects(s.service.setCategory(s.ctx, 'amrit@x.com', { category: 'gold', version: 3, reason: REASON }), (e) => e.code === 'competition_finalized');
+});
+
+// ---------- set baseline ----------
+test('snapshotBaseline: freezes a fresh Elefin snapshot, overwrites a frozen baseline, triggers a re-score', async () => {
+  const account = { login: '12345992151', client_id: 1, currency: 'USD', equity: 640, balance: 620, total_deposit: 500, total_withdrawal: 0 };
+  const s = setup({ elefin: { getAccount: async () => ({ ok: true, account }) } });
+  await s.service.addTrader(s.ctx, { ...NEW, client_id: 1 });
+  s.repo.baselines.set('amrit@x.com', { status: 'frozen', wallet_id: NEW.wallet_id, start_capital_usd: 100, category: 'bronze' });
+  s.setNow(comp.cutoffMs + 100000); // re-baseline deliberately after the entry cutoff
+
+  const r = await s.service.snapshotBaseline(s.ctx, 'amrit@x.com', { version: 1, reason: REASON });
+  assert.equal(r.rescore, true);
+  assert.equal(r.baseline.status, 'frozen');
+  assert.equal(r.baseline.admin_baseline, true);
+  assert.equal(r.baseline.late_entry, false);
+  assert.equal(r.baseline.start_capital_usd, 640);
+  assert.equal(r.baseline.category, 'gold'); // derived from the fresh equity, not the old bronze
+  assert.equal(r.baseline.captured_at, iso(comp.cutoffMs + 100000));
+  assert.equal(s.repo.baselines.get('amrit@x.com').start_capital_usd, 640); // frozen baseline was overwritten
+  assert.deepEqual(s.triggered, ['admin']);
+  assert.equal(s.repo.log.at(-1).action, 'trader.baseline');
+});
+
+test('snapshotBaseline: honours a pinned category, and refuses bad inputs', async () => {
+  const account = { login: '12345992151', client_id: 1, currency: 'USD', equity: 640, balance: 620, total_deposit: 0, total_withdrawal: 0 };
+  const s = setup({ elefin: { getAccount: async () => ({ ok: true, account }) } });
+  await s.service.addTrader(s.ctx, { ...NEW, client_id: 1 });
+
+  s.repo.traders.get('amrit@x.com').category_pin = 'platinum';
+  const pinned = await s.service.snapshotBaseline(s.ctx, 'amrit@x.com', { version: 1, reason: REASON });
+  assert.equal(pinned.baseline.category, 'platinum'); // pin wins over the equity-derived band
+
+  // manual trader has no Elefin account to baseline from
+  await s.service.addTrader(s.ctx, { email: 'm@x.com', wallet_id: 'man-1', manual: true, reason: REASON });
+  await assert.rejects(s.service.snapshotBaseline(s.ctx, 'm@x.com', { version: 1, reason: REASON }), (e) => e.code === 'not_applicable');
+});
+
+test('snapshotBaseline: surfaces Elefin failure, wrong owner, non-USD and sub-minimum equity', async () => {
+  const addOne = async (svc, ctx) => svc.addTrader(ctx, { ...NEW, client_id: 1 });
+
+  const down = setup({ elefin: { getAccount: async () => ({ ok: false, error: 'boom' }) } });
+  await addOne(down.service, down.ctx);
+  await assert.rejects(down.service.snapshotBaseline(down.ctx, 'amrit@x.com', { version: 1, reason: REASON }), (e) => e.status === 502);
+
+  const wrong = setup({ elefin: { getAccount: async () => ({ ok: true, account: { login: '99999', client_id: 1, currency: 'USD', equity: 640 } }) } });
+  await addOne(wrong.service, wrong.ctx);
+  await assert.rejects(wrong.service.snapshotBaseline(wrong.ctx, 'amrit@x.com', { version: 1, reason: REASON }), (e) => e.code === 'wallet_not_on_client');
+
+  const inr = setup({ elefin: { getAccount: async () => ({ ok: true, account: { login: '12345992151', client_id: 1, currency: 'INR', equity: 640 } }) } });
+  await addOne(inr.service, inr.ctx);
+  await assert.rejects(inr.service.snapshotBaseline(inr.ctx, 'amrit@x.com', { version: 1, reason: REASON }), (e) => e.code === 'unsupported_currency');
+
+  const low = setup({ elefin: { getAccount: async () => ({ ok: true, account: { login: '12345992151', client_id: 1, currency: 'USD', equity: 10 } }) } });
+  await addOne(low.service, low.ctx);
+  await assert.rejects(low.service.snapshotBaseline(low.ctx, 'amrit@x.com', { version: 1, reason: REASON }), (e) => e.code === 'below_min_capital');
 });
 
 test('rescore triggers the locked run and is audited', async () => {

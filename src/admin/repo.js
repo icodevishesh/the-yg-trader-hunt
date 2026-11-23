@@ -173,6 +173,21 @@ const mongoRepo = {
     await (await connect()).collection(C.locks).deleteOne({ _id: name });
   },
 
+  /**
+   * Unconditionally writes a baseline, overwriting a frozen one. Used by the admin "Set baseline"
+   * (snapshot now) action, which deliberately re-freezes a start line from fresh Elefin data;
+   * replaceBaseline is the versioned equivalent for "Start line". The scoring pass's
+   * store.saveBaseline always protects a frozen baseline.
+   */
+  async forceSaveBaseline(cohort, email, doc) {
+    const { _id, ...fields } = doc;
+    await (await connect()).collection(C.baseline).replaceOne(
+      { _id: key(cohort, email) },
+      { _id: key(cohort, email), ...fields, cohort, email },
+      { upsert: true },
+    );
+  },
+
   async getEntry(cohort, email) {
     return (await connect()).collection(C.entries).findOne({ _id: key(cohort, email) });
   },

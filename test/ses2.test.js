@@ -232,6 +232,27 @@ test('runScoring: first entry, then a win: frozen at start, categorised, ranked,
   assert.equal(store.published.categories.gold.entries.length, 0);
 });
 
+test('runScoring: an admin re-baseline (captured_at after the cutoff) is exempt from entered_after_cutoff and the late flag', async () => {
+  const captured = iso(comp.cutoffMs + 10000); // deliberately after the entry cutoff
+  const baseline = {
+    status: 'frozen', wallet_id: '1', captured_at: captured,
+    start_capital: 200, start_capital_usd: 200, balance_start: 200,
+    total_deposit_start: 120, total_withdrawal_start: 0, category: 'bronze',
+    late_entry: true, admin_baseline: true,
+  };
+  const store = fakeStore({ traders: [trader(1)], baselines: [{ email: 't1@x.com', ...baseline }] });
+  const win = trade({ trade_ticket_id: 'AB', open_time: iso(comp.cutoffMs + 20000), close_time: iso(comp.cutoffMs + 60000) });
+  const el = fakeElefin({ accounts: { 1: acct({ login: '1', client_id: 1, equity: 210, balance: 210, trades: 1, total_deposit: 120 }) }, trades: { 1: [win] } });
+
+  await runScoring({ store, elefin: el, cfg, nowMs: comp.cutoffMs + 300000 });
+  const row = store.entries.get('t1@x.com');
+  assert.equal(row.eligible, true);
+  assert.equal(row.winner_eligible, true);
+  assert.ok(!row.reasons.includes('entered_after_cutoff'));
+  assert.ok(!row.flags.includes('late_entry'));
+  assert.equal(store.published.categories.bronze.entries.length, 1);
+});
+
 test('runScoring: ledger vs account-aggregate disagreement blocks the prize, not the board', async () => {
   const store = fakeStore({ traders: [trader(1)] });
   await runScoring({ store, elefin: fakeElefin({ accounts: { 1: acct({ login: '1', client_id: 1, equity: 200, balance: 200, total_deposit: 200 }) } }), cfg, nowMs: T0 + 1000 });
