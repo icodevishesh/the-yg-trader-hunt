@@ -1,6 +1,6 @@
 'use strict';
 
-const { round2, categoryFor, netCapital, returnPct, ledgerSum, reconcile } = require('./scoring');
+const { round2, categoryFor, netCapital, returnPct, ledgerSum, reconcile, accountActivity } = require('./scoring');
 
 // Inputs an organiser may override from our own database (admin-plan §3b).
 const OVERRIDABLE = ['start_capital', 'balance_start', 'captured_at', 'dep_w', 'wdr_w', 'closed_pnl', 'closed_trades'];
@@ -63,7 +63,11 @@ function scoreTrader({ trader, baseline, account, summary, flows, overrides = nu
   }
   const pnl = has(ov.closed_pnl) ? ov.closed_pnl : fromBalance ? round2(Number(account.balance) - baseline.balance_start - depW + wdrW) : summary.pnl;
   // Balance P/L includes trades open at the start line and unpriceable ones, so they count as trades too.
-  const closedTrades = has(ov.closed_trades) ? ov.closed_trades : summary.closedTrades + (fromBalance ? (summary.openAtEntry || 0) + (summary.unpricedTrades || 0) : 0);
+  // The feed also misses rows, so the account's own trade counter / last_trade_at is the floor.
+  const feedCount = summary.closedTrades + (fromBalance ? (summary.openAtEntry || 0) + (summary.unpricedTrades || 0) : 0);
+  const activity = fromBalance ? accountActivity(account, baseline) : null;
+  const acctCount = activity ? (activity.since !== null ? activity.since : activity.tradedSince ? 1 : 0) : 0;
+  const closedTrades = has(ov.closed_trades) ? ov.closed_trades : Math.max(feedCount, acctCount);
 
   // Check A (account aggregates since baseline) against check B (ledger). Skipped when the
   // flows themselves were entered by hand, or when there is no live account to compare.
@@ -97,6 +101,11 @@ function scoreTrader({ trader, baseline, account, summary, flows, overrides = nu
   if (rec.mismatch) flags.push('pnl_mismatch');
   if (fromBalance) flags.push('pnl_from_balance'); // informational, never blocks a prize
   if (autoFixed) flags.push('pnl_auto_fixed'); // informational: switched by the auto fix this run
+  // Informational: the trade feed has fewer trades than the account counter says.
+  if (activity && !has(ov.closed_trades) && acctCount > feedCount) flags.push('trade_feed_gap');
+  // The balance moved but the account says no trade closed since the start line: a rebate, bonus or
+  // adjustment, not trading profit. The trader stays unranked (no_closed_trade) until they trade.
+  if (activity && activity.tradedSince === false && feedCount === 0 && Math.abs(pnl) > scoring.pnlToleranceUsd) flags.push('balance_without_trades');
   if (flowMismatch) flags.push('flow_mismatch');
   if (summary.openAtEntry) flags.push('open_at_entry');
   if (baseline.late_entry && !adminBaseline) flags.push('late_entry');

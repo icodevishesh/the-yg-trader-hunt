@@ -136,6 +136,21 @@ function applyPnlFix(row) {
   };
 }
 
+/**
+ * What Elefin's account record (not the trade feed) says about trading since the start line.
+ *   since       closed trades since the start line from the lifetime counter (needs trades_start), else null
+ *   tradedSince true / false from the counter, else from last_trade_at; null when neither is known
+ */
+function accountActivity(account, baseline) {
+  const counter = account && account.trades !== null && account.trades !== undefined && Number.isFinite(Number(account.trades)) ? Number(account.trades) : null;
+  const start = baseline && baseline.trades_start !== null && baseline.trades_start !== undefined && Number.isFinite(Number(baseline.trades_start)) ? Number(baseline.trades_start) : null;
+  const since = counter !== null && start !== null ? Math.max(0, counter - start) : null;
+  const lastMs = account && account.last_trade_at ? Date.parse(account.last_trade_at) : NaN;
+  const startMs = baseline ? Date.parse(baseline.captured_at) : NaN;
+  const tradedSince = since !== null ? since > 0 : Number.isFinite(lastMs) && Number.isFinite(startMs) ? lastMs >= startMs : null;
+  return { counter, tradesStart: start, since, tradedSince, lastTradeAt: Number.isFinite(lastMs) ? new Date(lastMs).toISOString() : null };
+}
+
 /** Order: return_pct desc, pnl desc, closed trades desc, earlier capture, email. */
 function compareRows(a, b) {
   return (
@@ -162,4 +177,4 @@ function rankByCategory(rows, categories) {
   return out;
 }
 
-module.exports = { round2, categoryFor, netCapital, returnPct, tradePnl, closedPnl, ledgerSum, reconcile, compareRows, rankByCategory, applyPnlFix, contractSizeFor };
+module.exports = { round2, categoryFor, netCapital, returnPct, tradePnl, closedPnl, ledgerSum, reconcile, compareRows, rankByCategory, applyPnlFix, contractSizeFor, accountActivity };

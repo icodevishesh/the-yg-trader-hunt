@@ -2,7 +2,7 @@
 
 const { validateRegistration, resolveAccount, verifyWallet } = require('../domain/registration');
 const { scoreTrader, scoreManualFull, applyBaselineOverrides, OVERRIDABLE } = require('../domain/entry');
-const { rebuildBaseline, adjustCapital, BaselineError } = require('../domain/baseline');
+const { rebuildBaseline, adjustCapital, BaselineError, tradesCounter } = require('../domain/baseline');
 const { pnlCheck } = require('../domain/pnlcheck');
 const { categoryFor, netCapital, round2 } = require('../domain/scoring');
 
@@ -375,6 +375,7 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
         balance_start: round2(Number(account.balance)),
         total_deposit_start: round2(Number(account.total_deposit) || 0),
         total_withdrawal_start: round2(Number(account.total_withdrawal) || 0),
+        trades_start: tradesCounter(account),
         category: t.category_pin || categoryFor(equity, cfg.scoring.categories),
         late_entry: false, admin_baseline: true, source: 'admin',
         // Same history/rev bookkeeping as setBaseline, so "Start line" sees this change and can undo it.

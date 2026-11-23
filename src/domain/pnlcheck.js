@@ -1,6 +1,6 @@
 'use strict';
 
-const { round2, tradePnl, ledgerSum } = require('./scoring');
+const { round2, tradePnl, ledgerSum, accountActivity } = require('./scoring');
 
 /*
  * P/L check for one trader (admin "Check closed trades"). Pure.
@@ -83,7 +83,20 @@ function pnlCheck({ account, trades, ledger, startLine, nowMs, contractSize, tol
   if (t.open_at_start.count) causes.push(`${t.open_at_start.count} trade(s) were already open at the start line and closed after it: ${t.open_at_start.pnl >= 0 ? '+' : ''}${t.open_at_start.pnl} is in the balance but not in the trade P/L.`);
   if (t.unpriceable.count) causes.push(`${t.unpriceable.count} trade(s) on ${t.unpriceable.instruments.join(', ')} cannot be priced (no contract size), so the trade P/L misses them.`);
   if (t.commission) causes.push(`Commission on these trades totals ${t.commission}; the trade P/L does not deduct commission.`);
-  if (Math.abs(residual) > toleranceUsd && !t.unpriceable.count) causes.push(`${residual >= 0 ? '+' : ''}${residual} is not explained by the trades (fees, adjustments, or a ledger entry outside the deposit/withdrawal feed).`);
+  // Elefin's account record (counter + last trade time) against the trade feed.
+  const act = accountActivity(account, startLine);
+  const feedCount = t.counted.count + t.open_at_start.count + t.unpriceable.count;
+  const when = act.lastTradeAt ? act.lastTradeAt.replace('T', ' ').replace(/\.\d+Z$|Z$/, ' UTC') : 'unknown';
+  const before = causes.length;
+  if (act.tradedSince === false && feedCount === 0 && Math.abs(balancePnl) > toleranceUsd) {
+    causes.push(`Elefin's account record shows no trade closed since the start line (last trade ${when}). The ${balancePnl >= 0 ? '+' : ''}${balancePnl} balance change is not trading profit -- usually a rebate, bonus or balance adjustment. The trader stays unranked until they close a trade.`);
+  } else if (act.since !== null && act.since > feedCount) {
+    causes.push(`Elefin's account counter shows ${act.since} trade(s) closed since the start line, but the trade feed returned ${feedCount}: the feed is missing ${act.since - feedCount} trade(s). Balance P/L includes them.`);
+  } else if (act.since === null && act.tradedSince === true && feedCount === 0) {
+    causes.push(`Elefin's account record shows a trade at ${when}, after the start line, but the trade feed returned none: the feed is missing trades. Balance P/L includes them.`);
+  }
+  const feedExplained = causes.length > before;
+  if (Math.abs(residual) > toleranceUsd && !t.unpriceable.count && !feedExplained) causes.push(`${residual >= 0 ? '+' : ''}${residual} is not explained by the trades (fees, adjustments, or a ledger entry outside the deposit/withdrawal feed).`);
   if (Math.abs(diff) > toleranceUsd && account && Math.abs(Number(account.equity) - Number(account.balance)) > 0.01) causes.push('The account has open positions now; they are in neither figure until they close.');
 
   const list = listFromMs !== null && listFromMs !== startMs ? tradeBreakdown(trades, { fromMs: listFromMs, toMs: nowMs, contractSize }) : atStart;
@@ -98,6 +111,7 @@ function pnlCheck({ account, trades, ledger, startLine, nowMs, contractSize, tol
     diff,
     mismatch: Math.abs(diff) > toleranceUsd,
     residual,
+    account_activity: { trades_counter: act.counter, trades_start: act.tradesStart, trades_since: act.since, traded_since: act.tradedSince, last_trade_at: act.lastTradeAt, feed_trades: feedCount },
     causes,
     totals: atStart.totals,
     list_from: new Date(listFromMs ?? startMs).toISOString(),

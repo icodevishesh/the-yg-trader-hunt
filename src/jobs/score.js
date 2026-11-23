@@ -4,6 +4,13 @@ const { closedPnl, rankByCategory } =require('../domain/scoring');
 const { decideBaseline } = require('../domain/baseline');
 const { scoreTrader, scoreManualFull, applyBaselineOverrides, ledgerFlows } = require('../domain/entry');
 
+// Bump when closed-trade pricing changes (2: broker-suffixed symbols, unpricedTrades) so every
+// cached summary is rebuilt once instead of waiting for the trader's next trade.
+const TRADE_CACHE_V = 2;
+// The trade feed can lag the account's trade counter; a summary fetched less than this long after
+// the last trade is re-fetched on the next run.
+const FEED_SETTLE_MS = 30 * 60 * 1000;
+
 const emptyRow = (trader, baseline, reasons) => ({
   email: trader.email,
   client_id: trader.client_id ?? null,
@@ -128,9 +135,14 @@ async function runScoring({ store, elefin, cfg, nowMs = Date.now(), finalize = f
 
     // The trades counter only moves when a trade closes, so an unchanged counter means
     // the cached closed-trade summary is still exact. This keeps a run inside the cron interval.
+    // Also re-fetch when the cache came from older pricing code (TRADE_CACHE_V) or was taken soon
+    // after the last trade: Elefin's feed can lag the counter, and a cached gap would stick until
+    // the trader's next trade.
     const cache = prev && prev.trade_cache;
+    const lastTradeMs = account.last_trade_at ? Date.parse(account.last_trade_at) : NaN;
+    const settled = !Number.isFinite(lastTradeMs) || (cache && Date.parse(cache.fetched_at) - lastTradeMs > FEED_SETTLE_MS);
     let summary;
-    if (cache && cache.acct_trades === account.trades && cache.captured_at === baseline.captured_at) {
+    if (cache && cache.v === TRADE_CACHE_V && settled && cache.acct_trades === account.trades && cache.captured_at === baseline.captured_at) {
       summary = cache.summary;
     } else {
       const t = await elefin.getTrades(trader.wallet_id, { from: baseline.captured_at, to: windowEnd });
@@ -144,7 +156,8 @@ async function runScoring({ store, elefin, cfg, nowMs = Date.now(), finalize = f
 
     const flows = ledgerFlows(ledger, baseline, windowEnd);
     const row = scoreTrader({ trader, baseline, account, summary, flows, overrides, manual: useManual ? manual : null, competition: comp, scoring });
-    row.trade_cache = { acct_trades: account.trades, captured_at: baseline.captured_at, summary };
+    const reused = cache && cache.summary === summary;
+    row.trade_cache = { v: TRADE_CACHE_V, acct_trades: account.trades, captured_at: baseline.captured_at, fetched_at: reused ? cache.fetched_at : new Date(nowMs).toISOString(), summary };
     rows.push(row);
   }
 

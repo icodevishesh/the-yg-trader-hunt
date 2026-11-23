@@ -1009,3 +1009,77 @@ test('scorer: with balance P/L, trades on an unpriceable instrument still count 
   assert.ok(!row.reasons.includes('no_closed_trade'));
   assert.equal(row.eligible, true);
 });
+
+// ---------- account record vs trade feed ----------
+describeFeed();
+function describeFeed() {
+  const at = T0 + 1000;
+  const base = { status: 'frozen', wallet_id: '1', captured_at: iso(at), start_capital_usd: 200, start_capital: 200, balance_start: 200, total_deposit_start: 200, total_withdrawal_start: 0, category: 'bronze' };
+  const runOne = async ({ account, rows = [], baseline = base, trader = tr, prev = null }) => {
+    const calls = [];
+    const elefin = { getTransactions: async () => ({ ok: true, rows: [] }), getAccount: async () => ({ ok: true, account }), getTrades: async () => { calls.push('t'); return { ok: true, rows }; } };
+    const store = scoringStore({ traders: [trader], manual: [] });
+    store.baselines.set('t@x.com', { ...baseline });
+    if (prev) store.entries.set('t@x.com', prev);
+    await runScoring({ store, elefin, cfg, nowMs: at + 3 * 3600000 });
+    return { row: store.entries.get('t@x.com'), calls };
+  };
+
+  test('feed gap: the account counter says 3 trades since the start line, the feed returned none -> 3 trades, ranked', async () => {
+    const { row } = await runOne({ account: acct({ balance: 230, equity: 230, trades: 13 }), baseline: { ...base, trades_start: 10 } });
+    assert.equal(row.pnl, 30); // auto fix: balance P/L
+    assert.equal(row.closed_trades, 3);
+    assert.ok(row.flags.includes('trade_feed_gap'));
+    assert.equal(row.eligible, true);
+  });
+
+  test('feed gap without trades_start: last_trade_at after the start line counts as at least one trade', async () => {
+    const { row } = await runOne({ account: acct({ balance: 230, equity: 230, trades: 13, last_trade_at: iso(at + 3600000) }) });
+    assert.equal(row.closed_trades, 1);
+    assert.equal(row.eligible, true);
+  });
+
+  test('balance moved with no trade since the start line (rebate/adjustment) -> flagged, not ranked', async () => {
+    const { row } = await runOne({ account: acct({ balance: 206.17, equity: 206.17, trades: 10, last_trade_at: iso(at - 86400000) }), baseline: { ...base, trades_start: 10 } });
+    assert.equal(row.closed_trades, 0);
+    assert.ok(row.flags.includes('balance_without_trades'));
+    assert.ok(row.reasons.includes('no_closed_trade'));
+    assert.equal(row.eligible, false);
+  });
+
+  test('trade cache: a summary from older pricing code is rebuilt even when the counter is unchanged', async () => {
+    const old = { email: 't@x.com', trade_cache: { acct_trades: 5, captured_at: iso(at), summary: { pnl: 0, closedTrades: 0, openAtEntry: 0, unpriceable: ['XAUUSD.P'] } } };
+    const win = { trade_ticket_id: 'W', instrument: 'XAUUSD.P', type: 'BUY', lots: 0.1, open_time: iso(at + 1000), close_time: iso(at + 6000), open_price: 100, close_price: 101, swap: 0 };
+    const { row, calls } = await runOne({ account: acct({ balance: 210, equity: 210, trades: 5 }), rows: [win], prev: old });
+    assert.deepEqual(calls, ['t']); // re-fetched
+    assert.equal(row.closed_trades, 1);
+    assert.equal(row.pnl, 10);
+    assert.equal(row.trade_cache.v, 2);
+  });
+
+  test('trade cache: a current, settled summary is reused (no feed call)', async () => {
+    const summary = { pnl: 10, closedTrades: 1, openAtEntry: 0, unpriceable: [], unpricedTrades: 0 };
+    const prev = { email: 't@x.com', trade_cache: { v: 2, acct_trades: 5, captured_at: iso(at), fetched_at: iso(at + 7200000), summary } };
+    const { row, calls } = await runOne({ account: acct({ balance: 210, equity: 210, trades: 5, last_trade_at: iso(at + 6000) }), prev });
+    assert.deepEqual(calls, []);
+    assert.equal(row.pnl, 10);
+  });
+}
+
+test('baseline: a live capture stores the account trade counter as trades_start', () => {
+  const { decideBaseline } = require('../src/domain/baseline');
+  const d = decideBaseline({ existing: null, account: acct({ trades: 42, equity: 300, balance: 300 }), nowMs: T0 + 1000, competition: cfg.competition, scoring: cfg.scoring });
+  assert.equal(d.doc.status, 'frozen');
+  assert.equal(d.doc.trades_start, 42);
+});
+
+test('P/L check: explains a balance change with no trade since the start line', () => {
+  const r = pnlCheck({
+    account: acct({ balance: 208.2, equity: 208.2, trades: 10, last_trade_at: iso(T0 - 86400000) }), trades: [], ledger: [],
+    startLine: { captured_at: iso(T0), balance_start: 202.03, trades_start: 10 }, nowMs: T0 + 3600000, contractSize: cfg.scoring.contractSize, toleranceUsd: 1,
+  });
+  assert.equal(r.balance_pnl, 6.17);
+  assert.equal(r.account_activity.trades_since, 0);
+  assert.ok(r.causes.some((c) => /no trade closed since the start line/.test(c)));
+  assert.ok(!r.causes.some((c) => /not explained by the trades/.test(c)));
+});

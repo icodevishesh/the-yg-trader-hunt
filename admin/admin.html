@@ -460,13 +460,16 @@
         summary.textContent = [
           'Start line ' + when(r.start_line.captured_at) + ' · balance then ' + usd(r.start_line.balance_start) + ' · balance now ' + usd(r.balance_now) + ' · equity now ' + usd(r.equity_now),
           'Deposits since ' + usd(r.deposits) + ' · withdrawals since ' + usd(r.withdrawals),
+          r.account_activity ? 'Elefin account record: ' + (r.account_activity.trades_since != null ? r.account_activity.trades_since + ' trade(s) since the start line' : r.account_activity.traded_since === true ? 'traded since the start line' : r.account_activity.traded_since === false ? 'no trade since the start line' : 'trade count unknown') +
+            ' · last trade ' + (r.account_activity.last_trade_at ? when(r.account_activity.last_trade_at) : '—') + ' · trade feed returned ' + r.account_activity.feed_trades : null,
           'Trade P/L ' + num2(r.trade_pnl) + ' (' + T.counted.count + ' trades)  vs  balance P/L ' + num2(r.balance_pnl) + '  →  difference ' + num2(r.diff) + (r.mismatch ? '  ✗ MISMATCH' : '  ✓ matches'),
           T.open_at_start.count ? 'Open at the start line: ' + T.open_at_start.count + ' trade(s), ' + num2(T.open_at_start.pnl) : null,
           T.unpriceable.count ? 'Cannot price: ' + T.unpriceable.count + ' trade(s) on ' + T.unpriceable.instruments.join(', ') : null,
           'Commission ' + num2(T.commission) + ' · swap ' + num2(T.swap) + ' · unexplained ' + num2(r.residual),
           r.causes.length ? '\nWhy:\n- ' + r.causes.join('\n- ') : null,
           r.scored ? '\nOn the board now: P/L ' + num2(r.scored.pnl) + ', return ' + (r.scored.return_pct == null ? '—' : r.scored.return_pct.toFixed(2) + '%') + (r.scored.flags.length ? ', flags: ' + r.scored.flags.join(', ') : '') : null,
-          r.mismatch && r.pnl_source !== 'balance' && autoFixed ? '\nAlready fixed: every scoring run uses the balance P/L (' + num2(r.balance_pnl) + ') for this trader automatically.' : null,
+          lastFlags.includes('balance_without_trades') ? '\nNot ranked: no trade has closed since the start line, so this balance change is not counted as a trading result. The trader is ranked once they close a trade.' : null,
+          r.mismatch && r.pnl_source !== 'balance' && autoFixed && !lastFlags.includes('balance_without_trades') ? '\nAlready fixed: every scoring run uses the balance P/L (' + num2(r.balance_pnl) + ') for this trader automatically.' : null,
           r.mismatch && r.pnl_source !== 'balance' && !autoFixed ? '\nTo fix: "Use balance P/L" — the board then shows ' + num2(r.balance_pnl) + '.' : null,
         ].filter(Boolean).join('\n');
         tableBox.replaceChildren(r.trades.length ? h('table', {},

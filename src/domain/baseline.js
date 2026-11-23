@@ -10,6 +10,12 @@ const { categoryFor, round2, tradePnl, ledgerSum } = require('./scoring');
  *   pending   seen but not yet funded (or before the start line); re-checked each run
  *   excluded  never funded by the cutoff; kept for audit, never scored
  */
+/** Elefin's lifetime closed-trade counter (`trades` on /accounts/{login}), or null when absent. */
+function tradesCounter(account) {
+  const n = account ? Number(account.trades) : NaN;
+  return account && account.trades !== null && account.trades !== undefined && Number.isFinite(n) ? n : null;
+}
+
 function decideBaseline({ existing, account, nowMs, competition, scoring }) {
   if (existing && (existing.status === 'frozen' || existing.status === 'excluded')) {
     return { changed: false, doc: existing };
@@ -49,6 +55,9 @@ function decideBaseline({ existing, account, nowMs, competition, scoring }) {
       balance_start: round2(Number(account.balance)),
       total_deposit_start: round2(Number(account.total_deposit) || 0),
       total_withdrawal_start: round2(Number(account.total_withdrawal) || 0),
+      // Elefin's lifetime closed-trade counter at the start line: trades since = counter now - this.
+      // Cross-checks the trade feed, which is known to miss rows.
+      trades_start: tradesCounter(account),
       category: categoryFor(equity, scoring.categories),
       late_entry: nowMs - competition.startMs > 3600 * 1000,
     },
@@ -95,6 +104,7 @@ function rebuildBaseline({ account, trades, ledger, atMs, nowMs, competition, sc
   const seen = new Set();
   let pnl = 0;
   let straddling = 0;
+  let closedSince = 0;
   const unpriceable = [];
   for (const tr of trades) {
     const id = tr.trade_ticket_id ?? tr.ticket ?? tr.id;
@@ -104,6 +114,7 @@ function rebuildBaseline({ account, trades, ledger, atMs, nowMs, competition, sc
     }
     const closed = ms(tr.close_time);
     if (!(closed >= atMs && closed <= nowMs)) continue;
+    closedSince += 1;
     if (tr.open_time && ms(tr.open_time) < atMs) straddling += 1;
     const p = tradePnl(tr, scoring.contractSize);
     if (p === null) {
@@ -136,6 +147,8 @@ function rebuildBaseline({ account, trades, ledger, atMs, nowMs, competition, sc
     balance_start: balanceStart,
     total_deposit_start: round2((Number(account.total_deposit) || 0) - dep),
     total_withdrawal_start: round2((Number(account.total_withdrawal) || 0) - wdr),
+    // Best estimate from the feed (it may miss rows, so this can only be too high -> undercount).
+    trades_start: tradesCounter(account) === null ? null : Math.max(0, tradesCounter(account) - closedSince),
     category: adminCategory({ pinned: category, startCapital: capital, explicitCapital: explicit, previous, categories: scoring.categories }),
     late_entry: atMs - competition.startMs > 3600 * 1000,
     equity_seen: round2(Number(account.equity)),
@@ -169,4 +182,4 @@ function adjustCapital({ previous, startCapital = null, category = null, scoring
   };
 }
 
-module.exports = { decideBaseline, rebuildBaseline, adjustCapital, BaselineError };
+module.exports = { decideBaseline, rebuildBaseline, adjustCapital, BaselineError, tradesCounter };
