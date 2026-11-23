@@ -976,3 +976,21 @@ test('HTTP: manual entry with a text id (save, switch off, delete) and trader de
     assert.equal(repo.traders.size, 0);
   });
 });
+
+test('contract size: broker suffixes map to the base symbol (XAUUSD.P = XAUUSD); unknown stays unpriced', () => {
+  const { contractSizeFor, tradePnl } = require('../src/domain/scoring');
+  const cs = cfg.scoring.contractSize;
+  for (const s of ['XAUUSD', 'XAUUSD.P', 'xauusd.p', 'XAUUSDm', '#XAUUSD', 'XAUUSD-ECN']) assert.equal(contractSizeFor(s, cs), 100, s);
+  assert.equal(contractSizeFor('BTCUSD.P', cs), 1);
+  assert.equal(contractSizeFor('EURUSD.P', cs), null);
+  assert.equal(contractSizeFor('', cs), null);
+
+  // The three XAUUSD.P trades from the admin P/L check (23 Nov): -21.70 + 65.80 + 110.60.
+  const rows = [
+    { instrument: 'XAUUSD.P', type: 'SELL', lots: 0.05, open_time: 'x', open_price: 3606, close_price: 3610.34, swap: 0 },
+    { instrument: 'XAUUSD.P', type: 'BUY', lots: 0.1, open_time: 'x', open_price: 3613.39, close_price: 3619.97, swap: 0 },
+    { instrument: 'XAUUSD.P', type: 'BUY', lots: 0.1, open_time: 'x', open_price: 3609.48, close_price: 3620.54, swap: 0 },
+  ];
+  const pnls = rows.map((r) => Math.round(tradePnl(r, cs) * 100) / 100);
+  assert.deepEqual(pnls, [-21.7, 65.8, 110.6]);
+});

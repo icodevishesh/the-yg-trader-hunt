@@ -32,8 +32,24 @@ function returnPct(pnl, net) {
  * Rows without open_time are MT5 "out" deals whose `type` is the closing direction.
  * Commission is the IB commission and is NOT deducted. Returns null for an unknown instrument.
  */
+/**
+ * Contract size for a broker symbol. Brokers add account-type tags to the base symbol
+ * ("XAUUSD.P", "XAUUSDm", "#XAUUSD", "XAUUSD-ECN"): exact match first, then the longest known
+ * base symbol the cleaned name starts with. Unknown instruments still return null (never guessed).
+ */
+function contractSizeFor(instrument, contractSize) {
+  const sym = String(instrument || '').toUpperCase().trim();
+  if (!sym) return null;
+  if (Number.isFinite(contractSize[sym])) return contractSize[sym];
+  const clean = sym.replace(/^[^A-Z0-9]+/, '');
+  const base = Object.keys(contractSize)
+    .filter((k) => clean.startsWith(k.toUpperCase()))
+    .sort((a, b) => b.length - a.length)[0];
+  return base && Number.isFinite(contractSize[base]) ? contractSize[base] : null;
+}
+
 function tradePnl(t, contractSize) {
-  const size = contractSize[String(t.instrument || '').toUpperCase()];
+  const size = contractSizeFor(t.instrument, contractSize);
   if (!Number.isFinite(size)) return null;
   const dir = (String(t.type).toUpperCase() === 'BUY' ? 1 : -1) * (t.open_time ? 1 : -1);
   return dir * (toNum(t.close_price) - toNum(t.open_price)) * toNum(t.lots) * size + toNum(t.swap);
@@ -143,4 +159,4 @@ function rankByCategory(rows, categories) {
   return out;
 }
 
-module.exports = { round2, categoryFor, netCapital, returnPct, tradePnl, closedPnl, ledgerSum, reconcile, compareRows, rankByCategory, applyPnlFix };
+module.exports = { round2, categoryFor, netCapital, returnPct, tradePnl, closedPnl, ledgerSum, reconcile, compareRows, rankByCategory, applyPnlFix, contractSizeFor };
