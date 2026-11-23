@@ -85,6 +85,8 @@ function createAdminRouter({ service, admin, now = Date.now, lockout = new auth.
   router.post('/api/traders/:email/category', h((req) => service.setCategory(req.ctx, req.params.email, body(req))));
   router.post('/api/traders/:email/set-baseline', h((req) => service.snapshotBaseline(req.ctx, req.params.email, body(req))));
   router.post('/api/traders/:email/check', h((req) => service.checkTrader(req.ctx, req.params.email)));
+  router.post('/api/traders/:email/pnl-check', h((req) => service.checkPnl(req.params.email, body(req))));
+  router.post('/api/traders/:email/pnl-source', h((req) => service.setPnlSource(req.ctx, req.params.email, body(req))));
   router.post('/api/traders/:email/delete', h((req) => service.deleteTrader(req.ctx, req.params.email, body(req))));
   router.post('/api/manual/:wallet/delete', h((req) => service.deleteManual(req.ctx, req.params.wallet, body(req))));
   router.post('/api/week2/manual/:wallet/delete', h((req) => service.deleteManual(req.ctx, req.params.wallet, body(req), 'week2')));

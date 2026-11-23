@@ -624,6 +624,101 @@ test('fixPnlMismatch: validates the reason before delegating, then audits per-tr
   assert.equal(summary.after.finalized, true);
 });
 
+test('fixPnlMismatch: switches the fixed traders to balance P/L so the next run keeps the fix', async () => {
+  const repo = memRepo();
+  repo.traders.set('a@x.com', { email: 'a@x.com', wallet_id: '1', version: 2 });
+  const stubRounds = { fixPnlMismatch: async () => ({ fixed: 1, finalized: false, winners: null, changes: [{ email: 'a@x.com' }, { email: 'gone@x.com' }] }) };
+  const service = createAdminService({ repo, elefin: {}, cfg, trigger: () => {}, rounds: stubRounds, now: () => T0 + 1000 });
+  const res = await service.fixPnlMismatch({ admin: 'vipin' }, { reason: REASON });
+  assert.equal(res.persisted, 1);
+  assert.equal(repo.traders.get('a@x.com').pnl_source, 'balance');
+  assert.equal(repo.traders.get('a@x.com').version, 3);
+});
+
+// ---------- P/L check ----------
+const { pnlCheck } = require('../src/domain/pnlcheck');
+
+test('pnlCheck: lists closed trades since the start line and explains the gap to the balance', () => {
+  const S = T0 + 86400000; // start line
+  const N = S + 86400000;
+  const xau = (o) => ({ instrument: 'XAUUSD', type: 'BUY', lots: 0.1, swap: 0, broker_commission: 0, ...o });
+  const trades = [
+    xau({ trade_ticket_id: 'a', open_time: iso(S + 1000), close_time: iso(S + 5000), open_price: 100, close_price: 102 }), // +20 counted
+    xau({ trade_ticket_id: 'b', open_time: iso(S - 9000), close_time: iso(S + 7000), open_price: 100, close_price: 97 }), // -30 open at start
+    { trade_ticket_id: 'c', instrument: 'EURUSD', type: 'BUY', lots: 1, open_time: iso(S + 1000), close_time: iso(S + 8000), open_price: 1, close_price: 1.1 }, // unpriceable
+    xau({ trade_ticket_id: 'd', open_time: iso(S - 9000), close_time: iso(S - 1000), open_price: 100, close_price: 200 }), // closed before: not listed
+  ];
+  const ledger = [{ login: '9', type: 'deposit', amount: 100, created_at: iso(S + 2000) }];
+  const account = { login: '9', balance: 600, equity: 600 };
+  const r = pnlCheck({ account, trades, ledger, startLine: { captured_at: iso(S), balance_start: 500 }, nowMs: N, contractSize: cfg.scoring.contractSize, toleranceUsd: 1 });
+  assert.equal(r.trades.length, 3);
+  assert.deepEqual(r.trades.map((x) => x.status), ['counted', 'open_at_start', 'unpriceable']);
+  assert.equal(r.trade_pnl, 20);
+  assert.equal(r.balance_pnl, 0); // 600 - 500 - 100
+  assert.equal(r.diff, -20);
+  assert.equal(r.mismatch, true);
+  assert.equal(r.totals.open_at_start.pnl, -30);
+  assert.equal(r.residual, 10); // -20 - (-30): the unpriceable EURUSD trade
+  assert.ok(r.causes.some((c) => /already open at the start line/.test(c)));
+  assert.ok(r.causes.some((c) => /EURUSD/.test(c)));
+});
+
+test('scorer: pnl_source "balance" takes P/L from the balance, clears pnl_mismatch and keeps it every run', async () => {
+  const at = T0 + 1000;
+  const straddle = { trade_ticket_id: 'S', instrument: 'XAUUSD', type: 'BUY', lots: 0.1, open_time: iso(at - 60000), close_time: iso(at + 5000), open_price: 100, close_price: 105, swap: 0 }; // +50, open at start
+  const win = { trade_ticket_id: 'W', instrument: 'XAUUSD', type: 'BUY', lots: 0.1, open_time: iso(at + 1000), close_time: iso(at + 6000), open_price: 100, close_price: 101, swap: 0 }; // +10
+  const baseline = { status: 'frozen', wallet_id: '1', captured_at: iso(at), start_capital_usd: 200, start_capital: 200, balance_start: 200, total_deposit_start: 200, total_withdrawal_start: 0, category: 'bronze' };
+  const elefin = { getTransactions: async () => ({ ok: true, rows: [] }), getAccount: async () => ({ ok: true, account: acct({ balance: 260, equity: 260, trades: 2 }) }), getTrades: async () => ({ ok: true, rows: [straddle, win] }) };
+  const run = async (trader) => {
+    const store = scoringStore({ traders: [trader], manual: [] });
+    store.baselines.set('t@x.com', { ...baseline });
+    await runScoring({ store, elefin, cfg, nowMs: at + 20000 });
+    return store.entries.get('t@x.com');
+  };
+  const before = await run(tr);
+  assert.equal(before.pnl, 10);
+  assert.ok(before.flags.includes('pnl_mismatch'));
+  assert.equal(before.winner_eligible, false);
+
+  const after = await run({ ...tr, pnl_source: 'balance' });
+  assert.equal(after.pnl, 60); // 260 - 200: includes the trade open at the start line
+  assert.equal(after.closed_trades, 2);
+  assert.ok(!after.flags.includes('pnl_mismatch'));
+  assert.ok(after.flags.includes('pnl_from_balance'));
+  assert.equal(after.return_pct, 30);
+  assert.equal(after.winner_eligible, true);
+});
+
+test('checkPnl / setPnlSource: service flow', async () => {
+  const S = T0 + 86400000;
+  const s = setup({
+    nowMs: S + 86400000,
+    elefin: {
+      getAccount: async () => ({ ok: true, account: { login: '12345992151', balance: 520, equity: 520 } }),
+      getTrades: async () => ({ ok: true, rows: [{ trade_ticket_id: 'a', instrument: 'XAUUSD', type: 'BUY', lots: 0.1, open_time: iso(S + 1000), close_time: iso(S + 5000), open_price: 100, close_price: 101, swap: 0 }] }),
+      getTransactions: async () => ({ ok: true, rows: [] }),
+    },
+  });
+  s.repo.traders.set('amrit@x.com', { email: 'amrit@x.com', wallet_id: '12345992151', status: 'active', version: 1 });
+  await assert.rejects(s.service.checkPnl('amrit@x.com'), (e) => e.code === 'no_start_line');
+  s.repo.baselines.set('amrit@x.com', { status: 'frozen', captured_at: iso(S), balance_start: 500, start_capital_usd: 500 });
+
+  const r = await s.service.checkPnl('amrit@x.com');
+  assert.equal(r.trade_pnl, 10);
+  assert.equal(r.balance_pnl, 20);
+  assert.equal(r.mismatch, true);
+  assert.equal(r.pnl_source, 'trades');
+  assert.equal(r.trades.length, 1);
+
+  await assert.rejects(s.service.setPnlSource(s.ctx, 'amrit@x.com', { source: 'ledger', version: 1 }), (e) => e.code === 'invalid_field');
+  const u = await s.service.setPnlSource(s.ctx, 'amrit@x.com', { source: 'balance', version: 1 }); // reason optional
+  assert.equal(u.pnl_source, 'balance');
+  assert.deepEqual(s.triggered, ['admin']);
+  await assert.rejects(s.service.setPnlSource(s.ctx, 'amrit@x.com', { source: 'balance', version: 2 }), (e) => e.code === 'nothing_to_change');
+  assert.equal((await s.service.checkPnl('amrit@x.com')).pnl_source, 'balance');
+  assert.equal(s.repo.log.at(-1).action, 'trader.pnl_source');
+});
+
 test('fixPnlMismatch: fails cleanly when rounds is not configured', async () => {
   const { service, ctx } = setup(); // setup() never wires a rounds module
   await assert.rejects(service.fixPnlMismatch(ctx, { reason: REASON }), (e) => e.code === 'rounds_unavailable');

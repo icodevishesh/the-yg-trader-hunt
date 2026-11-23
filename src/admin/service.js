@@ -3,6 +3,7 @@
 const { validateRegistration, resolveAccount, verifyWallet } = require('../domain/registration');
 const { scoreTrader, scoreManualFull, applyBaselineOverrides, OVERRIDABLE } = require('../domain/entry');
 const { rebuildBaseline, adjustCapital, BaselineError } = require('../domain/baseline');
+const { pnlCheck } = require('../domain/pnlcheck');
 const { categoryFor, netCapital, round2 } = require('../domain/scoring');
 
 /*
@@ -385,6 +386,77 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
       await audit(ctx, 'trader.baseline', t.email, before, doc, reason);
       trigger('admin');
       return { baseline: doc, rescore: true };
+    },
+
+    // ---------- P/L check: explain and fix pnl_mismatch per trader ----------
+
+    /**
+     * Lists every trade closed since the trader's start line (or `from`) with its P/L, and
+     * reconciles the trade P/L with the balance movement, naming the causes of any gap. Read-only.
+     */
+    async checkPnl(email, input = {}) {
+      rejectUnknown(input, ['from']);
+      const t = await mustTrader(email);
+      if (t.account_source === 'manual') throw bad('not_applicable', 'This trader has no Elefin account; their P/L is what you entered in Manual data.');
+      const manual = await repo.getManual(cohort, String(t.wallet_id));
+      if (manual && manual.enabled && manual.mode === 'full') throw bad('not_applicable', 'This trader is scored entirely from Manual data (mode full), so there are no Elefin trades to check.');
+      const b = await repo.getBaseline(cohort, t.email);
+      const mf = manual && manual.enabled && manual.mode === 'fields' ? manual.fields || {} : {};
+      const hasTypedStart = ['captured_at', 'balance_start'].every((k) => mf[k] !== undefined && mf[k] !== null);
+      if (!(b && b.status === 'frozen') && !hasTypedStart) throw conflict('no_start_line', 'This trader has no start line yet. Set one first ("Start line" or "Set baseline").');
+      const startLine = applyBaselineOverrides(b && b.status === 'frozen' ? b : {}, mf, cfg.scoring);
+
+      const nowMs = Math.min(now(), cfg.competition.endMs);
+      let listFromMs = null;
+      if (input.from) {
+        listFromMs = Date.parse(input.from);
+        if (!Number.isFinite(listFromMs) || listFromMs > nowMs) throw bad('invalid_field', '"From" must be a valid date in the past.', 'from');
+      }
+      const startMs = Date.parse(startLine.captured_at);
+      const earliest = Math.min(startMs, listFromMs ?? startMs);
+      const nowIso = new Date(nowMs).toISOString();
+
+      const acct = await elefin.getAccount(t.wallet_id);
+      if (!acct.ok) throw new AdminError(502, 'elefin_unavailable', `Elefin account lookup failed: ${acct.error}`);
+      // From well before the start: a position opened before it and closed after it still counts in the balance.
+      const tr = await elefin.getTrades(t.wallet_id, { from: new Date(earliest - 30 * 86400000).toISOString(), to: nowIso });
+      if (!tr.ok) throw new AdminError(502, 'elefin_unavailable', `Elefin trades lookup failed: ${tr.error}`);
+      const ledger = [];
+      for (const type of ['deposit', 'withdrawal']) {
+        const r = await elefin.getTransactions(type, { from: new Date(startMs).toISOString(), to: nowIso });
+        if (!r.ok) throw new AdminError(502, 'elefin_unavailable', `Elefin ${type} lookup failed: ${r.error}`);
+        ledger.push(...r.rows);
+      }
+      const res = pnlCheck({ account: acct.account, trades: tr.rows, ledger, startLine, nowMs, contractSize: cfg.scoring.contractSize, toleranceUsd: cfg.scoring.pnlToleranceUsd, listFromMs });
+      const entry = await repo.getEntry(cohort, t.email);
+      return {
+        ...res,
+        wallet_id: t.wallet_id,
+        pnl_source: t.pnl_source === 'balance' ? 'balance' : 'trades',
+        version: ver(t),
+        scored: entry ? { pnl: entry.pnl ?? null, return_pct: entry.return_pct ?? null, flags: entry.flags || [], reconcile_diff: entry.reconcile_diff ?? null } : null,
+      };
+    },
+
+    /**
+     * Chooses where a trader's P/L comes from on every scoring run:
+     *   trades   rebuilt from closed trades (default)
+     *   balance  the real balance movement since the start line (fixes a pnl_mismatch for good)
+     */
+    async setPnlSource(ctx, email, input) {
+      rejectUnknown(input, ['source', 'version', 'reason']);
+      await assertNotFinalized();
+      const t = await mustTrader(email);
+      checkVersion(t, input.version);
+      if (!['trades', 'balance'].includes(input.source)) throw bad('invalid_field', 'source must be "trades" or "balance".', 'source');
+      if (t.account_source === 'manual') throw bad('not_applicable', 'This trader has no Elefin account; their P/L is what you entered in Manual data.');
+      const before = t.pnl_source === 'balance' ? 'balance' : 'trades';
+      if (before === input.source) throw bad('nothing_to_change', `P/L already comes from ${input.source}.`);
+      const set = { pnl_source: input.source, updated_at: new Date(now()).toISOString(), updated_by: ctx.admin, version: ver(t) + 1 };
+      if (!(await repo.updateTrader(cohort, t.email, ver(t), set))) throw conflict('stale', 'Someone else changed this trader. Reload and try again.');
+      await audit(ctx, 'trader.pnl_source', t.email, { pnl_source: before }, { pnl_source: input.source }, optionalReason(input));
+      rescore();
+      return { ...t, ...set };
     },
 
     /** One Elefin lookup: does this wallet id belong to this email's client? */
@@ -774,6 +846,19 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
       const reason = requireReason(input);
       const res = await rounds.fixPnlMismatch();
       for (const c of res.changes) await audit(ctx, 'pnl_fix.apply', c.email, null, c, reason);
+      // The patch above is overwritten by the next scoring run; switching these traders to balance
+      // P/L makes the same figure come out of every later run, so the fix sticks.
+      let persisted = 0;
+      for (const c of res.changes) {
+        const t = await repo.getTrader(cohort, c.email);
+        if (!t || t.pnl_source === 'balance' || t.account_source === 'manual') continue;
+        const ok = await repo.updateTrader(cohort, t.email, ver(t), { pnl_source: 'balance', updated_at: new Date(now()).toISOString(), updated_by: ctx.admin, version: ver(t) + 1 });
+        if (ok === true) {
+          persisted += 1;
+          await audit(ctx, 'trader.pnl_source', t.email, { pnl_source: 'trades' }, { pnl_source: 'balance' }, reason);
+        }
+      }
+      res.persisted = persisted;
       await audit(ctx, 'pnl_fix.run', null, null, { count: res.fixed, finalized: res.finalized, winners: res.winners }, reason);
       return res;
     },

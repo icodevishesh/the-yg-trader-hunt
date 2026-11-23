@@ -73,7 +73,7 @@
 
     <section class="panel" aria-labelledby="pf-h">
       <h2 id="pf-h">Fix PNL mismatches</h2>
-      <p class="muted">Replaces the reconstructed pnl with the ledger-trusted figure (pnl + reconcile diff) for every trader currently flagged <code>pnl_mismatch</code> with at least 2 closed trades. Re-ranks affected categories and, if week 1 is already finalized, corrects its recorded winners/standings in place.</p>
+      <p class="muted">For every trader currently flagged <code>pnl_mismatch</code> with at least 2 closed trades: replaces the trade-rebuilt P/L with the balance figure, re-ranks the affected categories (and corrects week-1 winners if it is already finalized), and switches those traders to <b>balance P/L</b> so later scoring runs keep the fix. To look at one trader's closed trades first, open the trader and use "P/L check".</p>
       <div class="row" style="margin-bottom:12px">
         <label style="flex:1;min-width:220px">Reason <input id="pf-reason" placeholder="e.g. Reconstructed pnl ignores commission (min 10 characters)"></label>
         <button id="pf-run" class="primary" type="button" style="align-self:end">Fix PNL mismatches</button>
@@ -323,7 +323,7 @@
     ];
     if (isManual) sections.push(h('p', { class: 'muted' }, 'Manual trader: activating skips the Elefin check. Enter his numbers in "Manual data" below, mode "full", before activating.'));
     if (!isNew) sections.push(identitySection(t, reason));
-    if (!isNew && !isManual && t.wallet_id) sections.push(baselineSection(t, reason));
+    if (!isNew && !isManual && t.wallet_id) sections.push(baselineSection(t, reason), pnlSection(t, reason));
     if (!isNew && t.wallet_id) sections.push(manualSection(t, reason));
     if (!isNew) {
       const delErr = h('div', { class: 'err', role: 'alert' });
@@ -405,6 +405,75 @@
         isManual ? null : field('Set start line too', doBase, 'c-rebase'), isManual ? null : field('Start line from (IST)', at, 'c-at'),
         isManual ? null : field('Start capital (USD, optional)', cap, 'c-cap'), isManual ? null : field('Category', cat, 'c-cat')),
       h('div', { class: 'row', style: 'margin-top:12px' }, apply), err, out);
+    return wrap;
+  }
+
+  // ---------- P/L check: closed trades since the start line, and the per-trader P/L source ----------
+  function pnlSection(t, reason) {
+    const locked = !!state.me.finalized;
+    const wrap = sectionWrap();
+    const err = h('div', { class: 'err', role: 'alert' });
+    const summary = h('pre', { 'aria-live': 'polite' });
+    const tableBox = h('div', { class: 'table-wrap', style: 'max-height:420px;overflow-y:auto;margin-top:8px' });
+    const src = h('p', { class: 'muted' }, 'P/L source: ' + (t.pnl_source === 'balance' ? 'balance (fixed by an admin)' : 'closed trades (default)'));
+    const from = h('input', { id: 'p-from', type: 'datetime-local' });
+    let state2 = { source: t.pnl_source === 'balance' ? 'balance' : 'trades' };
+    const STATUS = { counted: ['counted', 'ok'], open_at_start: ['open at start line', 'warn'], unpriceable: ['cannot price', 'bad'] };
+    const num2 = (n) => (n == null ? '—' : (n >= 0 ? '+' : '') + Number(n).toFixed(2));
+
+    const setSource = (to) => async () => {
+      err.textContent = '';
+      const msg = to === 'balance'
+        ? 'Use the balance P/L for this trader from now on?\n\nEvery scoring run will take P/L = balance now − balance at start − deposits + withdrawals. This clears pnl_mismatch for good and includes trades that were open at the start line, unpriceable instruments and commission.'
+        : 'Go back to the P/L rebuilt from closed trades (the default)?';
+      if (!window.confirm(msg)) return;
+      try {
+        const fresh = (await freshTrader(t.email)) || t;
+        await api('/traders/' + encodeURIComponent(t.email) + '/pnl-source', { method: 'POST', body: { source: to, version: fresh.version || 1, reason: reason.value } });
+        state2.source = to; t.pnl_source = to;
+        src.textContent = 'P/L source: ' + (to === 'balance' ? 'balance (fixed by an admin)' : 'closed trades (default)');
+        refresh(); toast(to === 'balance' ? 'Balance P/L on — re-scoring now' : 'Trade P/L on — re-scoring now'); setTimeout(loadTraders, 4000);
+      } catch (e) { err.textContent = e.message; }
+    };
+    const useBalance = h('button', { type: 'button', class: 'primary', on: { click: setSource('balance') } }, 'Use balance P/L (fix mismatch)');
+    const useTrades = h('button', { type: 'button', on: { click: setSource('trades') } }, 'Use trade P/L');
+    const refresh = () => { useBalance.disabled = locked || state2.source === 'balance'; useTrades.disabled = locked || state2.source === 'trades'; };
+    refresh();
+
+    const check = h('button', { type: 'button', on: { click: async () => {
+      err.textContent = ''; summary.textContent = 'Fetching closed trades from Elefin…'; tableBox.replaceChildren(); check.disabled = true;
+      try {
+        const r = await api('/traders/' + encodeURIComponent(t.email) + '/pnl-check', { method: 'POST', body: { from: istIso(from.value) } });
+        state2.source = r.pnl_source; refresh();
+        const T = r.totals;
+        summary.textContent = [
+          'Start line ' + when(r.start_line.captured_at) + ' · balance then ' + usd(r.start_line.balance_start) + ' · balance now ' + usd(r.balance_now) + ' · equity now ' + usd(r.equity_now),
+          'Deposits since ' + usd(r.deposits) + ' · withdrawals since ' + usd(r.withdrawals),
+          'Trade P/L ' + num2(r.trade_pnl) + ' (' + T.counted.count + ' trades)  vs  balance P/L ' + num2(r.balance_pnl) + '  →  difference ' + num2(r.diff) + (r.mismatch ? '  ✗ MISMATCH' : '  ✓ matches'),
+          T.open_at_start.count ? 'Open at the start line: ' + T.open_at_start.count + ' trade(s), ' + num2(T.open_at_start.pnl) : null,
+          T.unpriceable.count ? 'Cannot price: ' + T.unpriceable.count + ' trade(s) on ' + T.unpriceable.instruments.join(', ') : null,
+          'Commission ' + num2(T.commission) + ' · swap ' + num2(T.swap) + ' · unexplained ' + num2(r.residual),
+          r.causes.length ? '\nWhy:\n- ' + r.causes.join('\n- ') : null,
+          r.scored ? '\nOn the board now: P/L ' + num2(r.scored.pnl) + ', return ' + (r.scored.return_pct == null ? '—' : r.scored.return_pct.toFixed(2) + '%') + (r.scored.flags.length ? ', flags: ' + r.scored.flags.join(', ') : '') : null,
+          r.mismatch && r.pnl_source !== 'balance' ? '\nTo fix: "Use balance P/L" — the board then shows ' + num2(r.balance_pnl) + '.' : null,
+        ].filter(Boolean).join('\n');
+        tableBox.replaceChildren(r.trades.length ? h('table', {},
+          h('thead', {}, h('tr', {}, ['Closed (your time)', 'Ticket', 'Instrument', 'Type', 'Lots', 'Open → close price', 'Swap', 'Commission', 'P/L', 'In trade P/L?'].map((x) => h('th', {}, x)))),
+          h('tbody', {}, r.trades.map((x) => h('tr', {},
+            h('td', {}, when(x.close_time)), h('td', {}, x.ticket || '—'), h('td', {}, x.instrument || '—'), h('td', {}, x.type || '—'), h('td', {}, String(x.lots)),
+            h('td', {}, (x.open_price ?? '—') + ' → ' + (x.close_price ?? '—') + (x.open_time ? '' : ' (out deal)')),
+            h('td', {}, num2(x.swap)), h('td', {}, num2(x.commission)), h('td', {}, num2(x.pnl)),
+            h('td', {}, badge(STATUS[x.status][0], STATUS[x.status][1]))))))
+          : h('p', { class: 'muted' }, 'No trades closed since ' + when(r.list_from) + '.'));
+      } catch (e) { summary.textContent = ''; err.textContent = e.message; }
+      finally { check.disabled = false; }
+    } } }, 'Check closed trades');
+
+    wrap.append(h('h2', {}, 'P/L check'),
+      h('p', { class: 'muted' }, 'Lists every trade closed since the start line (or "From") with its P/L and compares the trade P/L with the real balance movement. A mismatch usually means trades were already open at the start line, an instrument cannot be priced, or commission. "Use balance P/L" fixes it for this trader on every future scoring run; "Use trade P/L" undoes it.'),
+      src,
+      h('div', { class: 'grid' }, field('From (IST, optional — default the start line)', from, 'p-from')),
+      h('div', { class: 'row', style: 'margin-top:12px' }, check, useBalance, useTrades), err, summary, tableBox);
     return wrap;
   }
 

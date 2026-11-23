@@ -48,8 +48,13 @@ function scoreTrader({ trader, baseline, account, summary, flows, overrides = nu
 
   const depW = has(ov.dep_w) ? ov.dep_w : flows.depW;
   const wdrW = has(ov.wdr_w) ? ov.wdr_w : flows.wdrW;
-  const pnl = has(ov.closed_pnl) ? ov.closed_pnl : summary.pnl;
-  const closedTrades = has(ov.closed_trades) ? ov.closed_trades : summary.closedTrades;
+  // P/L source. Default: rebuilt from closed trades. "balance" (set per trader by an admin to fix a
+  // pnl_mismatch): the account's real balance movement since the start line, net of deposits and
+  // withdrawals -- closed trades only (the balance ignores open positions), including trades that
+  // were open at the start line, unpriceable instruments and commission. Re-derived every run.
+  const fromBalance = !has(ov.closed_pnl) && trader.pnl_source === 'balance' && !!account && has(baseline.balance_start);
+  const pnl = has(ov.closed_pnl) ? ov.closed_pnl : fromBalance ? round2(Number(account.balance) - baseline.balance_start - depW + wdrW) : summary.pnl;
+  const closedTrades = has(ov.closed_trades) ? ov.closed_trades : summary.closedTrades + (fromBalance ? summary.openAtEntry : 0);
 
   // Check A (account aggregates since baseline) against check B (ledger). Skipped when the
   // flows themselves were entered by hand, or when there is no live account to compare.
@@ -79,8 +84,9 @@ function scoreTrader({ trader, baseline, account, summary, flows, overrides = nu
   if (!baseline.category) reasons.push('no_category');
   if (ret === null) reasons.push('invalid_net_capital');
   if (closedTrades < 1) reasons.push('no_closed_trade');
-  if (summary.unpriceable.length && !has(ov.closed_pnl)) flags.push('pnl_unpriceable');
+  if (summary.unpriceable.length && !has(ov.closed_pnl) && !fromBalance) flags.push('pnl_unpriceable');
   if (rec.mismatch) flags.push('pnl_mismatch');
+  if (fromBalance) flags.push('pnl_from_balance'); // informational, never blocks a prize
   if (flowMismatch) flags.push('flow_mismatch');
   if (summary.openAtEntry) flags.push('open_at_entry');
   if (baseline.late_entry && !adminBaseline) flags.push('late_entry');
