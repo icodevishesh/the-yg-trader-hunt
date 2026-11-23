@@ -15,6 +15,9 @@ async function postRegistration(row, endpoint = config.googleFormEndpoint) {
     capital: row.declared_capital == null ? 'N/A' : String(row.declared_capital),
     timestamp: row.registered_at || row.added_at || '',
   });
+  // After an admin corrects the email/account, the sheet updates the old row instead of appending.
+  const prev = row.google_sync && row.google_sync.previous_email;
+  if (prev) body.set('previous_email', prev);
   try {
     const res = await fetch(endpoint, { method: 'POST', body, redirect: 'follow', signal: AbortSignal.timeout(15000) });
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };

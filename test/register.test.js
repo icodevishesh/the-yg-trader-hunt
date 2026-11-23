@@ -147,6 +147,9 @@ test('syncGoogle: marks success, stops quietly when no endpoint is configured', 
 });
 
 // ---------- API ----------
+// Inside the entry window, so these tests do not depend on today's date.
+const OPEN = () => comp.startMs + 1000;
+
 async function withApp({ store, google, now, cfg: c = cfg, limiter }, fn) {
   const app = createApp({ store, trigger: async () => {}, cfg: c, google, limiter, now });
   const server = await new Promise((res) => { const s = app.listen(0, () => res(s)); });
@@ -178,7 +181,7 @@ test('POST /api/register: stores once, mirrors to Google once, identical respons
   const store = regStore();
   const sent = [];
   const google = { postRegistration: async (row) => { sent.push(row.email); return { ok: true }; } };
-  await withApp({ store, google, limiter: (q, r, n) => n() }, async (url) => {
+  await withApp({ store, google, now: OPEN, limiter: (q, r, n) => n() }, async (url) => {
     const a = await post(url, good);
     const b = await post(url, good);
     assert.equal(a.status, 201);
@@ -195,7 +198,7 @@ test('POST /api/register: stores once, mirrors to Google once, identical respons
 test('POST /api/register: validation errors -> 400, honeypot stores nothing, bad Google never fails the request', async () => {
   const store = regStore();
   const google = { postRegistration: async () => { throw new Error('google down'); } };
-  await withApp({ store, google, limiter: (q, r, n) => n() }, async (url) => {
+  await withApp({ store, google, now: OPEN, limiter: (q, r, n) => n() }, async (url) => {
     const bad = await post(url, { ...good, email: 'nope' });
     assert.equal(bad.status, 400);
     assert.ok((await bad.json()).errors.email);
@@ -210,7 +213,7 @@ test('POST /api/register: stores the wallet id, mirrors it to Google, refuses an
   const store = regStore();
   const sent = [];
   const google = { postRegistration: async (row) => { sent.push(row.wallet_id); return { ok: true }; } };
-  await withApp({ store, google, limiter: (q, r, n) => n() }, async (url) => {
+  await withApp({ store, google, now: OPEN, limiter: (q, r, n) => n() }, async (url) => {
     assert.equal((await post(url, good)).status, 201);
     const dup = await post(url, { ...good, email: 'other@example.com' });
     assert.equal(dup.status, 409);

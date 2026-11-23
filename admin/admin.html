@@ -231,7 +231,8 @@
     const err = h('div', { class: 'err', id: 'ed-err', role: 'alert' });
     const isManual = isNew ? false : t.account_source === 'manual';
     const email = h('input', { id: 'f-email', type: 'email', value: t ? t.email : '', disabled: !isNew, required: true });
-    const wallet = h('input', { id: 'f-wallet', value: t ? t.wallet_id || '' : '', placeholder: isNew ? 'MT5 login, or any id you choose if manual' : '' });
+    // An Elefin trader's account ID only changes through "Correct email / account ID", which verifies it.
+    const wallet = h('input', { id: 'f-wallet', value: t ? t.wallet_id || '' : '', placeholder: isNew ? 'MT5 login, or any id you choose if manual' : '', disabled: !isNew && !isManual, title: !isNew && !isManual ? 'Use "Correct email / account ID" below' : null });
     const manualToggle = h('input', { id: 'f-manual', type: 'checkbox', on: { change: () => {
       manualHint.classList.toggle('hidden', !manualToggle.checked);
     } } });
@@ -283,12 +284,112 @@
       checkOut, err,
     ];
     if (isManual) sections.push(h('p', { class: 'muted' }, 'Manual trader: activating skips the Elefin check. Enter his numbers in "Manual data" below, mode "full", before activating.'));
+    if (!isNew) sections.push(identitySection(t, reason));
+    if (!isNew && !isManual && t.wallet_id) sections.push(baselineSection(t, reason));
     if (!isNew && t.wallet_id) sections.push(manualSection(t, reason));
     if (!isNew) sections.push(h('div', {}, h('button', { type: 'button', on: { click: () => openHistory(t.email) } }, 'History')));
     ed.replaceChildren(...sections);
     (isNew ? email : name).focus();
   }
   function closeEditor() { $('editor').classList.add('hidden'); $('history').classList.add('hidden'); }
+
+  // ---------- corrections: email / account ID, start line ----------
+  // Start times are typed in IST whatever the browser's time zone is.
+  const DEFAULT_REBASELINE = '2026-11-23T00:00';
+  const istIso = (v) => (v ? new Date(v + ':00+05:30').toISOString() : '');
+  const usd = (n) => (n == null ? '—' : '$' + Number(n).toFixed(2));
+  const sectionWrap = () => h('div', { style: 'margin-top:20px;border-top:1px solid var(--line);padding-top:16px' });
+  const categorySelect = (id, emptyLabel) => h('select', { id }, h('option', { value: '' }, emptyLabel),
+    (state.categoryList || []).map((cc) => h('option', { value: cc.id }, cc.label)));
+  async function freshTrader(email) {
+    const cur = await api('/traders?q=' + encodeURIComponent(email));
+    return cur.rows.find((r) => r.email === email) || null;
+  }
+  function describeBaseline(r) {
+    const b = r.baseline;
+    const p = r.previous;
+    const lines = [
+      'New start line: ' + when(b.captured_at) + ' · start capital ' + usd(b.start_capital_usd) + ' · balance ' + usd(b.balance_start) + ' · category ' + b.category,
+      p ? 'Was: ' + (p.status === 'frozen' ? when(p.captured_at) + ' · start capital ' + usd(p.start_capital) + ' · category ' + (p.category || '—') : p.status) : 'Was: no start line',
+    ];
+    if (r.rebuilt) lines.push('Rebuilt from: balance now ' + usd(r.rebuilt.balance_now) + ', deposits since ' + usd(r.rebuilt.deposits_since) + ', withdrawals since ' + usd(r.rebuilt.withdrawals_since) + ', closed P/L since ' + usd(r.rebuilt.closed_pnl_since));
+    if (r.category_changed) lines.push('Category changes from ' + p.category + ' to ' + b.category + '.');
+    return lines.concat(r.warnings || []).join('\n');
+  }
+
+  function identitySection(t, reason) {
+    const locked = !!state.me.finalized;
+    const isManual = t.account_source === 'manual';
+    const wrap = sectionWrap();
+    const err = h('div', { class: 'err', role: 'alert' });
+    const out = h('pre', { 'aria-live': 'polite' });
+    const newEmail = h('input', { id: 'c-email', type: 'email', value: t.email });
+    const newWallet = h('input', { id: 'c-wallet', value: t.wallet_id || '', inputmode: isManual ? null : 'numeric' });
+    const doBase = h('input', { id: 'c-rebase', type: 'checkbox', checked: !isManual });
+    const at = h('input', { id: 'c-at', type: 'datetime-local', value: DEFAULT_REBASELINE });
+    const cap = h('input', { id: 'c-cap', type: 'number', step: '0.01', min: '0', placeholder: 'leave empty = rebuilt balance' });
+    const cat = categorySelect('c-cat', 'keep current band');
+    const apply = h('button', { type: 'button', class: 'primary', disabled: locked, on: { click: async () => {
+      err.textContent = ''; out.textContent = 'Checking in Elefin…'; apply.disabled = true;
+      try {
+        const fresh = (await freshTrader(t.email)) || t;
+        const r = await api('/traders/' + encodeURIComponent(t.email) + '/identity', { method: 'POST', body: { version: fresh.version || 1, new_email: newEmail.value, new_wallet_id: newWallet.value, reason: reason.value } });
+        const msg = ['Corrected: ' + r.trader.email + ' · account ' + r.trader.wallet_id + ' · status ' + r.trader.status];
+        if (!isManual && (doBase.checked || r.needs_baseline)) {
+          try {
+            const cur = await api('/traders/' + encodeURIComponent(r.trader.email) + '/baseline');
+            const b = await api('/traders/' + encodeURIComponent(r.trader.email) + '/baseline', { method: 'PUT', body: { at: istIso(at.value), start_capital: cap.value, category: cat.value, rev: cur.rev, reason: reason.value } });
+            msg.push(describeBaseline(b));
+          } catch (e) {
+            msg.push('Start line NOT set: ' + e.message + '\nOpen the trader again and use "Start line".');
+          }
+        } else if (r.needs_baseline) msg.push('The account changed: set a new start line before the next scoring run.');
+        out.textContent = msg.join('\n'); toast('Details corrected'); loadTraders();
+      } catch (e) { out.textContent = ''; err.textContent = e.message; }
+      finally { apply.disabled = locked; }
+    } } }, 'Verify & apply');
+    wrap.append(h('h2', {}, 'Correct email / account ID'),
+      h('p', { class: 'muted' }, isManual ? 'Manual trader: no Elefin check.' : 'The new account must belong to the new email in Elefin, otherwise nothing changes. If the account changes, the old start line is retired and a new one is set from the time below. Uses the reason above.'),
+      h('div', { class: 'grid' }, field('Correct email', newEmail, 'c-email'), field('Correct account ID', newWallet, 'c-wallet'),
+        isManual ? null : field('Set start line too', doBase, 'c-rebase'), isManual ? null : field('Start line from (IST)', at, 'c-at'),
+        isManual ? null : field('Start capital (USD, optional)', cap, 'c-cap'), isManual ? null : field('Category', cat, 'c-cat')),
+      h('div', { class: 'row', style: 'margin-top:12px' }, apply), err, out);
+    return wrap;
+  }
+
+  function baselineSection(t, reason) {
+    const locked = !!state.me.finalized;
+    const wrap = sectionWrap();
+    const err = h('div', { class: 'err', role: 'alert' });
+    const out = h('pre', { 'aria-live': 'polite' });
+    const cur = h('p', { class: 'muted' }, 'Loading start line…');
+    const at = h('input', { id: 'b-at', type: 'datetime-local' });
+    const cap = h('input', { id: 'b-cap', type: 'number', step: '0.01', min: '0', placeholder: 'e.g. 500' });
+    const cat = categorySelect('b-cat', 'auto — from capital, else keep');
+    let rev = 0;
+    const load = () => api('/traders/' + encodeURIComponent(t.email) + '/baseline').then((d) => {
+      rev = d.rev; const b = d.baseline;
+      cur.textContent = !b ? 'No start line yet.' : b.status !== 'frozen' ? 'Start line: ' + b.status + (b.reason ? ' (' + b.reason + ')' : '') + '.'
+        : 'Current: from ' + when(b.captured_at) + ' · start capital ' + usd(b.start_capital_usd) + ' · balance ' + usd(b.balance_start) + ' · category ' + (b.category || '—') + ' · ' + (b.source === 'admin' ? 'set by ' + (b.set_by || 'admin') : 'automatic');
+    }).catch((e) => { cur.textContent = e.message; });
+    load();
+    const body = () => ({ at: istIso(at.value), start_capital: cap.value, category: cat.value });
+    const run = (fn) => async () => { err.textContent = ''; try { await fn(); } catch (e) { err.textContent = e.message; if (e.code === 'stale') load(); } };
+    const preview = h('button', { type: 'button', on: { click: run(async () => {
+      out.textContent = at.value ? 'Rebuilding from Elefin…' : '';
+      out.textContent = 'Preview\n' + describeBaseline(await api('/traders/' + encodeURIComponent(t.email) + '/baseline/preview', { method: 'POST', body: body() }));
+    }) } }, 'Preview');
+    const save = h('button', { type: 'button', class: 'primary', disabled: locked, on: { click: run(async () => {
+      const r = await api('/traders/' + encodeURIComponent(t.email) + '/baseline', { method: 'PUT', body: { ...body(), rev, reason: reason.value } });
+      out.textContent = 'Saved — applies on the next scoring run\n' + describeBaseline(r); toast('Start line saved'); load(); loadTraders();
+    }) } }, 'Save start line');
+    wrap.append(h('h2', {}, 'Start line'),
+      h('p', { class: 'muted' }, 'Start time: rebuild the start line at that moment (IST) from Elefin history. Leave it empty to keep the current start time and only change the start capital or category. A start capital you enter sets the category from that amount; pin a category to override. Uses the reason above.'),
+      cur,
+      h('div', { class: 'grid' }, field('Start from (IST, optional)', at, 'b-at'), field('Start capital (USD, optional)', cap, 'b-cap'), field('Category', cat, 'b-cat')),
+      h('div', { class: 'row', style: 'margin-top:12px' }, preview, save), err, out);
+    return wrap;
+  }
 
   function manualSection(t, reason, scope) {
     const P = scope === 'week2' ? '/week2' : '';

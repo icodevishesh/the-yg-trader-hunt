@@ -2,6 +2,8 @@
 
 const { validateRegistration, resolveAccount, verifyWallet } = require('../domain/registration');
 const { scoreTrader, scoreManualFull, applyBaselineOverrides, OVERRIDABLE } = require('../domain/entry');
+const { rebuildBaseline, adjustCapital, BaselineError } = require('../domain/baseline');
+const { netCapital, round2 } = require('../domain/scoring');
 
 /*
  * Admin operations (admin-plan §3-§5). One module shared by the HTTP routes and the CLI,
@@ -123,6 +125,76 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
     return t;
   }
 
+  /** Validates a start-line change and computes the new baseline. Writes nothing. */
+  async function planBaseline(email, input) {
+    rejectUnknown(input, ['at', 'start_capital', 'category', 'rev', 'reason']);
+    const t = await mustTrader(email);
+    if (t.account_source === 'manual') throw bad('not_applicable', 'Manual traders have no Elefin account; set their numbers in Manual data.');
+    if (!t.wallet_id) throw conflict('wallet_required', 'Set an account ID first.');
+    const filled = (v) => v !== undefined && v !== null && v !== '';
+
+    let startCapital = null;
+    if (filled(input.start_capital)) {
+      startCapital = Number(input.start_capital);
+      if (!isMoney(startCapital) || startCapital <= 0) throw bad('invalid_field', 'Start capital must be a positive amount with at most 2 decimals.', 'start_capital');
+    }
+    let category = null;
+    if (filled(input.category)) {
+      const ids = cfg.scoring.categories.map((c) => c.id);
+      if (!ids.includes(input.category)) throw bad('invalid_field', `category must be one of ${ids.join(', ')}.`, 'category');
+      category = input.category;
+    }
+
+    const previous = await repo.getBaseline(cohort, t.email);
+    const nowMs = now();
+    const { competition: comp, scoring } = cfg;
+    let plan;
+    try {
+      if (filled(input.at)) {
+        const atMs = Date.parse(input.at);
+        if (!Number.isFinite(atMs)) throw bad('invalid_field', 'Start time must be a valid date.', 'at');
+        if (atMs < comp.startMs) throw bad('invalid_field', `Start time cannot be before the competition start (${comp.start}).`, 'at');
+        if (atMs > Math.min(nowMs, comp.endMs)) throw bad('invalid_field', `Start time must be in the past and before the competition end (${comp.end}).`, 'at');
+        const acct = await elefin.getAccount(t.wallet_id);
+        if (!acct.ok) throw new AdminError(502, 'elefin_unavailable', `Elefin account lookup failed: ${acct.error}`);
+        if (String(acct.account.login) !== String(t.wallet_id)) throw conflict('account_not_found', 'Elefin returned a different account.');
+        const nowIso = new Date(nowMs).toISOString();
+        // Trades from well before T: a position opened before T and closed after it still moved the balance.
+        const trades = await elefin.getTrades(t.wallet_id, { from: new Date(comp.startMs - 30 * 86400000).toISOString(), to: nowIso });
+        if (!trades.ok) throw new AdminError(502, 'elefin_unavailable', `Elefin trades lookup failed: ${trades.error}`);
+        const ledger = [];
+        for (const type of ['deposit', 'withdrawal']) {
+          const r = await elefin.getTransactions(type, { from: new Date(atMs).toISOString(), to: nowIso });
+          if (!r.ok) throw new AdminError(502, 'elefin_unavailable', `Elefin ${type} lookup failed: ${r.error}`);
+          ledger.push(...r.rows);
+        }
+        plan = rebuildBaseline({ account: acct.account, trades: trades.rows, ledger, atMs, nowMs, competition: comp, scoring, startCapital, category, previous });
+      } else {
+        plan = adjustCapital({ previous, startCapital, category, scoring, nowMs });
+      }
+    } catch (err) {
+      if (err instanceof BaselineError) throw conflict(err.code, err.message);
+      throw err;
+    }
+    if (!plan.doc.category) throw conflict('no_category', `A start capital of $${plan.doc.start_capital_usd} is below the lowest category.`);
+
+    const pick = (b) => b && { status: b.status, captured_at: b.captured_at || null, start_capital: b.start_capital_usd ?? null, balance_start: b.balance_start ?? null, category: b.category || null, source: b.source || 'auto' };
+    return {
+      t,
+      previous,
+      plan: {
+        baseline: { ...plan.doc, wallet_id: String(t.wallet_id) },
+        previous: pick(previous),
+        rebuilt: plan.rebuilt,
+        category_changed: !!(previous && previous.category && previous.category !== plan.doc.category),
+        // Net capital before any deposits after the start line; deposits/withdrawals are added by scoring.
+        net_capital_from: round2(netCapital({ startCapital: plan.doc.start_capital_usd, depW: 0, wdrW: 0 })),
+        warnings: plan.warnings,
+        rev: (previous && previous.rev) || 0,
+      },
+    };
+  }
+
   const ver = (t) => t.version || 1;
   const checkVersion = (t, v) => {
     if (v !== ver(t)) throw conflict('stale', 'Someone else changed this trader. Reload and try again.');
@@ -189,6 +261,8 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
       if (input.name !== undefined) set.name = String(input.name).trim().slice(0, 100) || null;
       if (input.notes !== undefined) set.notes = String(input.notes).slice(0, 500) || null;
       if (input.wallet_id !== undefined && String(input.wallet_id) !== t.wallet_id) {
+        // A real account must be verified against the email in Elefin; that lives in correctIdentity.
+        if (t.account_source !== 'manual') throw conflict('use_correct_details', 'Change the account ID with "Correct email / account ID"; it checks the account in Elefin first.');
         const wallet = String(input.wallet_id);
         if (!WALLET_RE.test(wallet)) throw bad('invalid_field', 'wallet_id must be 6-15 digits.', 'wallet_id');
         const b = await repo.getBaseline(cohort, t.email);
@@ -247,6 +321,120 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
       await repo.setTraderCheck(cohort, t.email, check);
       await audit(ctx, 'elefin.check', t.email, null, check, null);
       return check;
+    },
+
+    // ---------- corrections: email / account ID, start line ----------
+
+    /**
+     * Corrects a trader's email and/or account ID. The new account must belong to the (new) email
+     * in Elefin -- a mismatch is refused, never overridden. Everything keyed by email moves with
+     * the trader; a changed account supersedes the old start line, so the trader then needs a new
+     * one (setBaseline) before they are scored again.
+     */
+    async correctIdentity(ctx, email, input) {
+      rejectUnknown(input, ['version', 'new_email', 'new_wallet_id', 'reason']);
+      await assertNotFinalized();
+      const t = await mustTrader(email);
+      checkVersion(t, input.version);
+      const reason = requireReason(input);
+      const isManual = t.account_source === 'manual';
+
+      let newEmail = t.email;
+      if (input.new_email !== undefined && String(input.new_email).trim() !== '') {
+        const { errors, value } = validateRegistration({ name: 'x', email: input.new_email, phone: '00000000', agree: true });
+        if (errors.email) throw bad('invalid_field', errors.email, 'new_email');
+        newEmail = value.email;
+      }
+      let newWallet = t.wallet_id;
+      if (input.new_wallet_id !== undefined && String(input.new_wallet_id).trim() !== '') {
+        newWallet = String(input.new_wallet_id).trim();
+        if (isManual ? newWallet.length > 40 : !WALLET_RE.test(newWallet)) throw bad('invalid_field', isManual ? 'Account ID must be at most 40 characters.' : 'Account ID must be 6-15 digits.', 'new_wallet_id');
+      }
+      const emailChanged = newEmail !== t.email;
+      const walletChanged = newWallet !== t.wallet_id;
+      if (!emailChanged && !walletChanged) throw bad('nothing_to_change', 'The new email and account ID are the same as the current ones.');
+      if (emailChanged && (await repo.getTrader(cohort, newEmail))) throw conflict('duplicate_email', 'That email is already registered.');
+      if (walletChanged) {
+        const other = await repo.getTraderByWallet(cohort, newWallet);
+        if (other && other.email !== t.email) throw conflict('duplicate_wallet', `That account ID belongs to ${other.email}.`);
+      }
+
+      const at = new Date(now()).toISOString();
+      const set = {};
+      if (!isManual) {
+        const r = await elefin.lookupClient(newEmail);
+        if (!r.ok) throw new AdminError(502, 'elefin_unavailable', `Elefin lookup failed: ${r.error}`);
+        if (!r.data) throw conflict('elefin_no_client', `No Elefin client has the email ${newEmail}.`);
+        const v = verifyWallet(r.data, newWallet);
+        const logins = ((r.data.accounts && r.data.accounts.logins) || ((r.data.accounts && r.data.accounts.items) || []).map((i) => i.login)).map(String);
+        if (v.status !== 'active') throw conflict('wallet_not_on_client', `Account ${newWallet} does not belong to ${newEmail} in Elefin.${logins.length ? ` Their accounts: ${logins.join(', ')}.` : ''}`);
+        Object.assign(set, {
+          client_id: v.client_id ?? null,
+          country: v.country || t.country || null,
+          elefin_check: { at, ok: true, logins, owner_match: true, equity: null, suggested: null, message: 'Verified while correcting details.' },
+        });
+        // A verified correction is what was missing; withdrawn/disqualified stay as they are.
+        if (['pending', 'needs_account'].includes(t.status)) Object.assign(set, { status: 'active', reason: null });
+      }
+
+      const { _id, ...rest } = t;
+      const doc = {
+        ...rest, ...set, email: newEmail, wallet_id: newWallet, version: ver(t) + 1, updated_at: at, updated_by: ctx.admin,
+        identity_history: [...(t.identity_history || []), { email: t.email, wallet_id: t.wallet_id, at, by: ctx.admin, reason }].slice(-10),
+        // Re-send to the sheet; previous_email lets the Apps Script update the old row in place.
+        google_sync: { ok: false, attempts: 0, previous_email: t.email },
+      };
+
+      const lock = `score:${cohort}`;
+      if (!(await repo.acquireLock(lock))) throw conflict('scoring_running', 'A scoring run is in progress. Try again in a minute.');
+      let res;
+      try {
+        res = await repo.moveTrader(cohort, t.email, ver(t), doc, { walletChanged, oldWallet: t.wallet_id, admin: ctx.admin, at });
+      } finally {
+        await repo.releaseLock(lock).catch(() => {});
+      }
+      if (res === 'email') throw conflict('duplicate_email', 'That email is already registered.');
+      if (res === 'wallet') throw conflict('duplicate_wallet', 'That account ID belongs to another trader.');
+      if (res !== true) throw conflict('stale', 'Someone else changed this trader. Reload and try again.');
+
+      const before = { email: t.email, wallet_id: t.wallet_id, status: t.status, client_id: t.client_id ?? null };
+      const after = { email: newEmail, wallet_id: newWallet, status: doc.status, client_id: doc.client_id ?? null, baseline: walletChanged ? 'superseded' : 'kept' };
+      await audit(ctx, 'trader.identity', t.email, before, after, reason);
+      if (emailChanged) await audit(ctx, 'trader.identity', newEmail, before, after, reason); // findable under both emails
+      return { trader: doc, needs_baseline: walletChanged && !isManual };
+    },
+
+    /** Current start line of a trader, with the rev the admin must send back to change it. */
+    async getBaseline(email) {
+      const t = await mustTrader(email);
+      const b = await repo.getBaseline(cohort, t.email);
+      return { baseline: b, rev: (b && b.rev) || 0 };
+    },
+
+    /** Dry run of setBaseline: the start line that would be saved, and what it does to net capital. */
+    async previewBaseline(email, input) {
+      const { t, plan } = await planBaseline(email, input);
+      return { ...plan, wallet_id: t.wallet_id };
+    },
+
+    /**
+     * Sets a trader's start line by hand:
+     *   at (+ optional start_capital / category)  rebuild it at that moment from Elefin history
+     *   start_capital and/or category alone        keep the start time, change capital / band
+     * Category: a pinned one wins; an explicit capital derives the band; otherwise the old band stays.
+     */
+    async setBaseline(ctx, email, input) {
+      const reason = requireReason(input);
+      await assertNotFinalized();
+      const { t, plan, previous } = await planBaseline(email, input);
+      const expected = Number(input.rev ?? -1);
+      const prevRev = (previous && previous.rev) || 0;
+      if (expected !== prevRev) throw conflict('stale', 'The start line changed since you opened it. Reload and try again.');
+      const { _id, history, rev, ...prev } = previous || {};
+      const doc = { ...plan.baseline, rev: prevRev + 1, history: previous ? [...(history || []), prev].slice(-10) : [], set_by: ctx.admin, set_at: new Date(now()).toISOString(), set_reason: reason };
+      if (!(await repo.replaceBaseline(cohort, t.email, doc, prevRev))) throw conflict('stale', 'The start line changed since you opened it. Reload and try again.');
+      await audit(ctx, 'baseline.set', t.email, previous ? prev : null, plan.baseline, reason);
+      return { ...plan, baseline: doc };
     },
 
     // ---------- manual data (week 1 by default; week 2 entrants use scope "week2") ----------

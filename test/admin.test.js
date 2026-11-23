@@ -54,6 +54,36 @@ function memRepo() {
     },
     audit: async (e) => { r.log.push(e); },
     listAudit: async (c, { target }) => r.log.filter((a) => !target || a.target === target),
+    replaceBaseline: async (c, email, doc, expected) => {
+      const cur = r.baselines.get(email);
+      if (((cur && cur.rev) || 0) !== expected) return false;
+      r.baselines.set(email, { ...doc });
+      return true;
+    },
+    moveTrader: async (c, oldEmail, expected, doc, { walletChanged, oldWallet, admin, at }) => {
+      const t = r.traders.get(oldEmail);
+      if (!t || (t.version || 1) !== expected) return 'stale';
+      if (doc.email !== oldEmail && r.traders.has(doc.email)) return 'email';
+      if ([...r.traders.values()].some((x) => x !== t && x.wallet_id === doc.wallet_id)) return 'wallet';
+      r.traders.delete(oldEmail);
+      r.traders.set(doc.email, { ...doc });
+      const b = r.baselines.get(oldEmail);
+      if (b) {
+        r.baselines.delete(oldEmail);
+        const { history, ...prev } = b;
+        r.baselines.set(doc.email, walletChanged
+          ? { email: doc.email, wallet_id: doc.wallet_id, status: 'superseded', rev: (b.rev || 0) + 1, history: [...(history || []), prev], superseded_at: at, superseded_by: admin }
+          : { ...prev, email: doc.email, history: history || [] });
+      }
+      r.entries.delete(oldEmail);
+      const m = r.manual.get(oldWallet);
+      if (m && walletChanged && m.enabled) Object.assign(m, { enabled: false, version: m.version + 1 });
+      if (m && !walletChanged) m.email = doc.email;
+      return true;
+    },
+    locks: new Set(),
+    acquireLock: async (n) => (r.locks.has(n) ? false : (r.locks.add(n), true)),
+    releaseLock: async (n) => { r.locks.delete(n); },
   };
   return r;
 }
@@ -133,11 +163,160 @@ test('updateTrader/setStatus: optimistic version, activation needs an Elefin che
   assert.equal(w.status, 'withdrawn');
 });
 
-test('updateTrader: wallet cannot change once the baseline is frozen', async () => {
+test('updateTrader: an Elefin trader\'s wallet only changes through correctIdentity (verified)', async () => {
   const s = setup();
   await s.service.addTrader(s.ctx, NEW);
-  s.repo.baselines.set('amrit@x.com', { status: 'frozen' });
-  await assert.rejects(s.service.updateTrader(s.ctx, 'amrit@x.com', { version: 1, wallet_id: '999999999', reason: REASON }), (e) => e.code === 'baseline_frozen');
+  await assert.rejects(s.service.updateTrader(s.ctx, 'amrit@x.com', { version: 1, wallet_id: '999999999', reason: REASON }), (e) => e.code === 'use_correct_details');
+});
+
+// ---------- corrections: email / account ID ----------
+const client = (logins, id = 7) => ({ ok: true, data: { client_id: id, country: 'IN', accounts: { logins, items: logins.map((l) => ({ login: l, equity: 300 })) } } });
+
+test('correctIdentity: verified email + wallet change moves the trader, retires the old start line and manual data', async () => {
+  const lookups = [];
+  const s = setup({ nowMs: comp.cutoffMs + 60000, elefin: { lookupClient: async (e) => { lookups.push(e); return client(['55555555']); } } });
+  s.repo.traders.set('amrit@x.com', { email: 'amrit@x.com', wallet_id: '12345992151', status: 'needs_account', version: 3, cohort: comp.cohort, google_sync: { ok: true } });
+  s.repo.baselines.set('amrit@x.com', { status: 'frozen', category: 'bronze', start_capital_usd: 150, captured_at: iso(T0 + 5000) });
+  s.repo.entries.set('amrit@x.com', { email: 'amrit@x.com' });
+  s.repo.manual.set('12345992151', { wallet_id: '12345992151', enabled: true, version: 1 });
+
+  const r = await s.service.correctIdentity(s.ctx, 'amrit@x.com', { version: 3, new_email: 'Amrit.Real@X.com', new_wallet_id: '55555555', reason: REASON });
+  assert.deepEqual(lookups, ['amrit.real@x.com']);
+  assert.equal(r.needs_baseline, true);
+  assert.equal(s.repo.traders.has('amrit@x.com'), false);
+  const t = s.repo.traders.get('amrit.real@x.com');
+  assert.equal(t.wallet_id, '55555555');
+  assert.equal(t.status, 'active'); // verified -> no longer needs_account
+  assert.equal(t.client_id, 7);
+  assert.equal(t.version, 4);
+  assert.deepEqual(t.google_sync, { ok: false, attempts: 0, previous_email: 'amrit@x.com' });
+  assert.equal(t.identity_history[0].wallet_id, '12345992151');
+  const b = s.repo.baselines.get('amrit.real@x.com');
+  assert.equal(b.status, 'superseded');
+  assert.equal(b.history[0].start_capital_usd, 150);
+  assert.equal(s.repo.entries.size, 0);
+  assert.equal(s.repo.manual.get('12345992151').enabled, false);
+  assert.equal(s.repo.log.filter((a) => a.action === 'trader.identity').length, 2); // under old and new email
+  assert.equal(s.repo.locks.size, 0);
+});
+
+test('correctIdentity: email-only fix keeps the frozen start line', async () => {
+  const s = setup({ elefin: { lookupClient: async () => client(['12345992151']) } });
+  await s.service.addTrader(s.ctx, NEW);
+  s.repo.baselines.set('amrit@x.com', { status: 'frozen', category: 'silver', start_capital_usd: 350 });
+  const r = await s.service.correctIdentity(s.ctx, 'amrit@x.com', { version: 1, new_email: 'right@x.com', reason: REASON });
+  assert.equal(r.needs_baseline, false);
+  assert.equal(s.repo.baselines.get('right@x.com').status, 'frozen');
+  assert.equal(s.repo.baselines.get('right@x.com').start_capital_usd, 350);
+});
+
+test('correctIdentity: wallet not on the email\'s Elefin client is blocked and nothing moves', async () => {
+  let reply = client(['11111111']);
+  const s = setup({ elefin: { lookupClient: async () => reply } });
+  await s.service.addTrader(s.ctx, NEW);
+  await s.service.addTrader(s.ctx, { ...NEW, email: 'other@x.com', wallet_id: '22222222' });
+  const fix = (body) => s.service.correctIdentity(s.ctx, 'amrit@x.com', { version: 1, reason: REASON, ...body });
+
+  await assert.rejects(fix({ new_wallet_id: '99999999' }), (e) => e.code === 'wallet_not_on_client' && /11111111/.test(e.message));
+  reply = { ok: true, data: null };
+  await assert.rejects(fix({ new_wallet_id: '99999999' }), (e) => e.code === 'elefin_no_client');
+  await assert.rejects(fix({ new_wallet_id: '22222222' }), (e) => e.code === 'duplicate_wallet');
+  await assert.rejects(fix({ new_email: 'other@x.com' }), (e) => e.code === 'duplicate_email');
+  await assert.rejects(fix({ new_email: 'amrit@x.com' }), (e) => e.code === 'nothing_to_change');
+  await assert.rejects(fix({ new_wallet_id: '12ab' }), (e) => e.code === 'invalid_field');
+  await assert.rejects(fix({ version: 9, new_wallet_id: '99999999' }), (e) => e.code === 'stale');
+  assert.equal(s.repo.traders.get('amrit@x.com').wallet_id, '12345992151');
+});
+
+test('correctIdentity: refuses while a scoring run holds the lock', async () => {
+  const s = setup({ elefin: { lookupClient: async () => client(['55555555']) } });
+  await s.service.addTrader(s.ctx, NEW);
+  s.repo.locks.add(`score:${comp.cohort}`);
+  await assert.rejects(s.service.correctIdentity(s.ctx, 'amrit@x.com', { version: 1, new_wallet_id: '55555555', reason: REASON }), (e) => e.code === 'scoring_running');
+  assert.ok(s.repo.traders.has('amrit@x.com'));
+});
+
+// ---------- corrections: start line ----------
+const { rebuildBaseline } = require('../src/domain/baseline');
+const AT = T0 + 3 * 86400000; // re-baseline 3 days in
+const NOW = AT + 2 * 86400000;
+const trade = (o) => ({ instrument: 'XAUUSD', type: 'BUY', lots: 0.01, swap: 0, ...o });
+
+test('rebuildBaseline: balance at T = balance now - net flows since T - P/L of every trade closed since T', () => {
+  const account = { login: '55555555', currency: 'USD', balance: 520, equity: 520, total_deposit: 700, total_withdrawal: 50 };
+  const trades = [
+    trade({ trade_ticket_id: 'before', open_time: iso(AT - 9000), close_time: iso(AT - 5000), open_price: 100, close_price: 200 }), // closed before T: ignored
+    trade({ trade_ticket_id: 'after', open_time: iso(AT + 1000), close_time: iso(AT + 5000), open_price: 100, close_price: 130 }), // +30
+    trade({ trade_ticket_id: 'straddle', open_time: iso(AT - 1000), close_time: iso(AT + 9000), open_price: 100, close_price: 90 }), // -10, open at T
+  ];
+  const ledger = [
+    { login: '55555555', type: 'deposit', amount: 100, created_at: iso(AT + 2000) },
+    { login: '55555555', type: 'withdrawal', amount: 50, created_at: iso(AT + 3000) },
+    { login: '55555555', type: 'deposit', amount: 999, created_at: iso(AT - 2000) }, // before T
+    { login: '99', type: 'deposit', amount: 999, created_at: iso(AT + 2000) }, // someone else
+  ];
+  const { doc, rebuilt, warnings } = rebuildBaseline({ account, trades, ledger, atMs: AT, nowMs: NOW, competition: comp, scoring: cfg.scoring });
+  assert.deepEqual(rebuilt, { balance_now: 520, deposits_since: 100, withdrawals_since: 50, closed_pnl_since: 20 });
+  assert.equal(doc.balance_start, 450); // 520 - 100 + 50 - 20
+  assert.equal(doc.start_capital_usd, 450);
+  assert.equal(doc.category, 'silver');
+  assert.equal(doc.total_deposit_start, 600);
+  assert.equal(doc.total_withdrawal_start, 0);
+  assert.equal(doc.captured_at, iso(AT));
+  assert.equal(doc.source, 'admin');
+  assert.equal(doc.status, 'frozen');
+  assert.match(warnings[0], /1 trade/);
+});
+
+function baselineSetup(previous) {
+  const account = { login: '12345992151', currency: 'USD', balance: 380, equity: 380, total_deposit: 500, total_withdrawal: 0 };
+  const s = setup({
+    nowMs: NOW,
+    elefin: { getAccount: async () => ({ ok: true, account }), getTrades: async () => ({ ok: true, rows: [] }), getTransactions: async () => ({ ok: true, rows: [] }) },
+  });
+  s.repo.traders.set('amrit@x.com', { email: 'amrit@x.com', wallet_id: '12345992151', status: 'active', version: 1 });
+  if (previous) s.repo.baselines.set('amrit@x.com', previous);
+  return s;
+}
+
+test('setBaseline: re-baseline at a date keeps the old category unless a capital is given', async () => {
+  const s = baselineSetup({ status: 'frozen', category: 'gold', start_capital_usd: 520, balance_start: 520, captured_at: iso(T0 + 5000) });
+  const kept = await s.service.previewBaseline('amrit@x.com', { at: iso(AT) });
+  assert.equal(kept.baseline.start_capital_usd, 380);
+  assert.equal(kept.baseline.category, 'gold'); // kept, although 380 is silver
+  assert.equal(kept.category_changed, false);
+
+  const r = await s.service.setBaseline(s.ctx, 'amrit@x.com', { at: iso(AT), start_capital: 500, rev: 0, reason: REASON });
+  assert.equal(r.baseline.start_capital_usd, 500);
+  assert.equal(r.baseline.balance_start, 380); // reconciliation still uses the real balance
+  assert.equal(r.baseline.category, 'gold'); // 500 -> gold, from the capital
+  assert.equal(r.baseline.rev, 1);
+  assert.equal(r.baseline.history[0].start_capital_usd, 520);
+  assert.equal(s.repo.log.at(-1).action, 'baseline.set');
+  await assert.rejects(s.service.setBaseline(s.ctx, 'amrit@x.com', { start_capital: 600, rev: 0, reason: REASON }), (e) => e.code === 'stale');
+});
+
+test('setBaseline: capital-only change on a frozen start line, with category derived or pinned', async () => {
+  const s = baselineSetup({ status: 'frozen', category: 'silver', start_capital_usd: 380, balance_start: 380, captured_at: iso(T0 + 5000) });
+  const r = await s.service.setBaseline(s.ctx, 'amrit@x.com', { start_capital: 500, rev: 0, reason: REASON });
+  assert.equal(r.baseline.category, 'gold');
+  assert.equal(r.baseline.captured_at, iso(T0 + 5000)); // start time unchanged
+  assert.equal(r.baseline.balance_start, 380);
+  const pinned = await s.service.previewBaseline('amrit@x.com', { start_capital: 500, category: 'silver' });
+  assert.equal(pinned.baseline.category, 'silver');
+});
+
+test('setBaseline: validation', async () => {
+  const none = baselineSetup(null);
+  await assert.rejects(none.service.previewBaseline('amrit@x.com', { start_capital: 500 }), (e) => e.code === 'no_baseline');
+  await assert.rejects(none.service.previewBaseline('amrit@x.com', { at: iso(T0 - 1000) }), (e) => e.code === 'invalid_field');
+  await assert.rejects(none.service.previewBaseline('amrit@x.com', { at: iso(NOW + 1000) }), (e) => e.code === 'invalid_field');
+  await assert.rejects(none.service.previewBaseline('amrit@x.com', { at: iso(AT), start_capital: -5 }), (e) => e.code === 'invalid_field');
+  await assert.rejects(none.service.previewBaseline('amrit@x.com', { at: iso(AT), start_capital: 20 }), (e) => e.code === 'no_category');
+  await assert.rejects(none.service.previewBaseline('amrit@x.com', { at: iso(AT), category: 'diamond' }), (e) => e.code === 'invalid_field');
+  await assert.rejects(none.service.setBaseline(none.ctx, 'amrit@x.com', { at: iso(AT), rev: 0, reason: 'short' }), (e) => e.code === 'reason_required');
+  const built = await none.service.setBaseline(none.ctx, 'amrit@x.com', { at: iso(AT), rev: 0, reason: REASON });
+  assert.equal(built.baseline.category, 'silver'); // no previous band: derived from the rebuilt 380
 });
 
 test('checkTrader: owner match, mismatch, unknown client, and the 10 s rate limit', async () => {
@@ -469,4 +648,19 @@ test('admin panel is not mounted without users or with a weak secret; its page i
     const res = await fetch(`http://127.0.0.1:${server.address().port}/ops-test/api/me`);
     assert.match(res.headers.get('content-type'), /html/); // falls through to the public landing page, never the admin API
   } finally { server.close(); }
+});
+
+test('scorer: an admin-set start line after the cutoff is not a late entry and is flagged admin_baseline', async () => {
+  const at = comp.cutoffMs + 1000;
+  const store = scoringStore({ traders: [tr], manual: [] });
+  store.baselines.set('t@x.com', { status: 'frozen', source: 'admin', wallet_id: '1', captured_at: iso(at), start_capital_usd: 200, start_capital: 200, balance_start: 200, total_deposit_start: 200, total_withdrawal_start: 0, category: 'bronze' });
+  const win = { trade_ticket_id: 'W', instrument: 'XAUUSD', type: 'BUY', lots: 0.1, open_time: iso(at + 1000), close_time: iso(at + 5000), open_price: 100, close_price: 101, swap: 0 };
+  const elefin = { getTransactions: async () => ({ ok: true, rows: [] }), getAccount: async () => ({ ok: true, account: acct({ balance: 210, equity: 210, trades: 1 }) }), getTrades: async () => ({ ok: true, rows: [win] }) };
+  await runScoring({ store, elefin, cfg, nowMs: at + 20000 });
+  const row = store.entries.get('t@x.com');
+  assert.deepEqual(row.reasons, []);
+  assert.ok(row.flags.includes('admin_baseline'));
+  assert.equal(row.winner_eligible, true);
+  assert.equal(row.return_pct, 5);
+  assert.equal(store.baselines.get('t@x.com').source, 'admin'); // the scorer never replaces it
 });

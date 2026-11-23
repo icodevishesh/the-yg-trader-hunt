@@ -1,6 +1,6 @@
 'use strict';
 
-const { connect, COLLECTIONS: C } = require('../db');
+const { connect, getClient, COLLECTIONS: C } = require('../db');
 
 const key = (cohort, email) => `${cohort}:${email}`;
 const PAGE = 50;
@@ -79,6 +79,98 @@ const mongoRepo = {
 
   async getBaseline(cohort, email) {
     return (await connect()).collection(C.baseline).findOne({ _id: key(cohort, email) });
+  },
+
+  /**
+   * Replaces a trader's baseline with an admin-set one. `expectedRev` is the rev the admin saw
+   * (0 = no baseline, or one never set by an admin). false = someone changed it meanwhile.
+   * The scorer never overwrites a frozen baseline, so this cannot be undone by a racing run.
+   */
+  async replaceBaseline(cohort, email, doc, expectedRev) {
+    const col = (await connect()).collection(C.baseline);
+    const _id = key(cohort, email);
+    const filter = expectedRev === 0 ? { _id, $or: [{ rev: { $exists: false } }, { rev: 0 }] } : { _id, rev: expectedRev };
+    try {
+      const r = await col.replaceOne(filter, { _id, ...doc, cohort, email }, { upsert: expectedRev === 0 });
+      return r.matchedCount === 1 || r.upsertedCount === 1;
+    } catch (err) {
+      if (err.code === 11000) return false; // a baseline with a rev appeared meanwhile
+      throw err;
+    }
+  },
+
+  /**
+   * Moves a trader to a corrected email and/or wallet id in one transaction:
+   * trader row, baseline (archived as "superseded" when the wallet changes), score row, manual data.
+   * Returns true | 'stale' | 'email' | 'wallet'.
+   */
+  async moveTrader(cohort, oldEmail, expectedVersion, newDoc, { walletChanged, oldWallet, admin, at }) {
+    const d = await connect();
+    const client = await getClient();
+    const oldId = key(cohort, oldEmail);
+    const newId = key(cohort, newDoc.email);
+    const versionMatch = expectedVersion === 1 ? { $or: [{ version: 1 }, { version: { $exists: false } }] } : { version: expectedVersion };
+
+    const ops = async (session) => {
+      const o = session ? { session } : {};
+      const del = await d.collection(C.traders).deleteOne({ _id: oldId, ...versionMatch }, o);
+      if (del.deletedCount !== 1) return 'stale';
+      if (newId !== oldId && (await d.collection(C.traders).findOne({ _id: newId }, o))) return 'email';
+      if (await d.collection(C.traders).findOne({ cohort, wallet_id: newDoc.wallet_id }, o)) return 'wallet';
+      await d.collection(C.traders).insertOne({ _id: newId, ...newDoc }, o);
+
+      const b = await d.collection(C.baseline).findOne({ _id: oldId }, o);
+      if (b) {
+        await d.collection(C.baseline).deleteOne({ _id: oldId }, o);
+        const { _id, history, ...prev } = b;
+        const moved = walletChanged
+          ? { cohort, email: newDoc.email, wallet_id: newDoc.wallet_id, status: 'superseded', reason: 'wallet_changed', rev: (b.rev || 0) + 1, history: [...(history || []), prev].slice(-10), superseded_at: at, superseded_by: admin }
+          : { ...prev, email: newDoc.email, history: history || [] };
+        await d.collection(C.baseline).insertOne({ _id: newId, ...moved }, o);
+      }
+      await d.collection(C.entries).deleteOne({ _id: oldId }, o); // the next scoring run writes it fresh
+
+      const manualId = `${cohort}:${oldWallet}`;
+      if (walletChanged) {
+        await d.collection(C.manual).updateOne({ _id: manualId, enabled: true }, { $set: { enabled: false, disabled_by: admin, disabled_at: at, disabled_reason: 'wallet_changed' }, $inc: { version: 1 } }, o);
+      } else {
+        await d.collection(C.manual).updateOne({ _id: manualId }, { $set: { email: newDoc.email } }, o);
+      }
+      return true;
+    };
+
+    const session = client.startSession();
+    const ABORT = new Error('abort');
+    let result;
+    try {
+      await session.withTransaction(async () => {
+        result = await ops(session);
+        if (result !== true) throw ABORT; // rolls back the delete
+      });
+      return result;
+    } catch (err) {
+      if (err === ABORT) return result;
+      if (err.code === 11000) return /wallet_id/.test(err.message) ? 'wallet' : 'email';
+      // Standalone MongoDB (local dev) has no transactions; Atlas always does.
+      if (err.code === 20 || /Transaction numbers are only allowed|replica set/i.test(err.message)) return ops(null);
+      throw err;
+    } finally {
+      await session.endSession();
+    }
+  },
+
+  async acquireLock(name) {
+    try {
+      await (await connect()).collection(C.locks).insertOne({ _id: name, acquired_at: new Date() });
+      return true;
+    } catch (err) {
+      if (err.code === 11000) return false;
+      throw err;
+    }
+  },
+
+  async releaseLock(name) {
+    await (await connect()).collection(C.locks).deleteOne({ _id: name });
   },
 
   async getEntry(cohort, email) {

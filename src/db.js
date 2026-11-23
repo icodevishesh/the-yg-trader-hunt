@@ -60,4 +60,10 @@ async function close() {
   db = undefined;
 }
 
-module.exports = { connect, ensureIndexes, close, COLLECTIONS };
+/** The connected MongoClient (for multi-document transactions). */
+async function getClient() {
+  await connect();
+  return client;
+}
+
+module.exports = { connect, ensureIndexes, close, getClient, COLLECTIONS };
