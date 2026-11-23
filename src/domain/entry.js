@@ -62,7 +62,8 @@ function scoreTrader({ trader, baseline, account, summary, flows, overrides = nu
     if (probe.mismatch) fromBalance = autoFixed = true;
   }
   const pnl = has(ov.closed_pnl) ? ov.closed_pnl : fromBalance ? round2(Number(account.balance) - baseline.balance_start - depW + wdrW) : summary.pnl;
-  const closedTrades = has(ov.closed_trades) ? ov.closed_trades : summary.closedTrades + (fromBalance ? summary.openAtEntry : 0);
+  // Balance P/L includes trades open at the start line and unpriceable ones, so they count as trades too.
+  const closedTrades = has(ov.closed_trades) ? ov.closed_trades : summary.closedTrades + (fromBalance ? (summary.openAtEntry || 0) + (summary.unpricedTrades || 0) : 0);
 
   // Check A (account aggregates since baseline) against check B (ledger). Skipped when the
   // flows themselves were entered by hand, or when there is no live account to compare.

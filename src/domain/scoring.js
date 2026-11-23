@@ -64,7 +64,9 @@ function closedPnl(trades, { from, to, contractSize }) {
   const f = ms(from);
   const t = ms(to);
   const seen = new Set();
-  const out = { pnl: 0, closedTrades: 0, openAtEntry: 0, unpriceable: [] };
+  // unpricedTrades: closed in the window but no contract size -- not in pnl/closedTrades, but they
+  // did close, so balance P/L (which includes them) counts them as trades.
+  const out = { pnl: 0, closedTrades: 0, openAtEntry: 0, unpriceable: [], unpricedTrades: 0 };
   for (const tr of trades) {
     const id = tr.trade_ticket_id ?? tr.ticket ?? tr.id;
     if (id !== undefined) {
@@ -81,6 +83,7 @@ function closedPnl(trades, { from, to, contractSize }) {
     if (p === null) {
       const inst = String(tr.instrument || 'unknown').toUpperCase();
       if (!out.unpriceable.includes(inst)) out.unpriceable.push(inst);
+      out.unpricedTrades += 1;
       continue;
     }
     out.pnl += p;

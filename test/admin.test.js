@@ -994,3 +994,18 @@ test('contract size: broker suffixes map to the base symbol (XAUUSD.P = XAUUSD);
   const pnls = rows.map((r) => Math.round(tradePnl(r, cs) * 100) / 100);
   assert.deepEqual(pnls, [-21.7, 65.8, 110.6]);
 });
+
+test('scorer: with balance P/L, trades on an unpriceable instrument still count as closed trades (no false no_closed_trade)', async () => {
+  const at = T0 + 1000;
+  const odd = (id, h) => ({ trade_ticket_id: id, instrument: 'EURUSD.P', type: 'BUY', lots: 0.1, open_time: iso(at + h), close_time: iso(at + h + 1000), open_price: 1.1, close_price: 1.2, swap: 0 });
+  const baseline = { status: 'frozen', wallet_id: '1', captured_at: iso(at), start_capital_usd: 500, start_capital: 500, balance_start: 500, total_deposit_start: 500, total_withdrawal_start: 0, category: 'gold' };
+  const elefin = { getTransactions: async () => ({ ok: true, rows: [] }), getAccount: async () => ({ ok: true, account: acct({ balance: 600, equity: 600, trades: 2 }) }), getTrades: async () => ({ ok: true, rows: [odd('A', 1000), odd('B', 3000)] }) };
+  const store = scoringStore({ traders: [{ ...tr, pnl_source: 'balance' }], manual: [] });
+  store.baselines.set('t@x.com', { ...baseline });
+  await runScoring({ store, elefin, cfg, nowMs: at + 20000 });
+  const row = store.entries.get('t@x.com');
+  assert.equal(row.pnl, 100);
+  assert.equal(row.closed_trades, 2);
+  assert.ok(!row.reasons.includes('no_closed_trade'));
+  assert.equal(row.eligible, true);
+});
