@@ -52,7 +52,15 @@ function scoreTrader({ trader, baseline, account, summary, flows, overrides = nu
   // pnl_mismatch): the account's real balance movement since the start line, net of deposits and
   // withdrawals -- closed trades only (the balance ignores open positions), including trades that
   // were open at the start line, unpriceable instruments and commission. Re-derived every run.
-  const fromBalance = !has(ov.closed_pnl) && trader.pnl_source === 'balance' && !!account && has(baseline.balance_start);
+  // Auto fix (scoring.autoPnlFix): if the trade-rebuilt figure does not reconcile with the balance,
+  // switch this row to balance P/L for this run. Checked fresh every run; flagged pnl_auto_fixed.
+  const canBalance = !has(ov.closed_pnl) && !!account && has(baseline.balance_start);
+  let fromBalance = canBalance && trader.pnl_source === 'balance';
+  let autoFixed = false;
+  if (canBalance && !fromBalance && scoring.autoPnlFix) {
+    const probe = reconcile({ balanceNow: Number(account.balance), balanceStart: baseline.balance_start, depW, wdrW, pnl: summary.pnl, toleranceUsd: scoring.pnlToleranceUsd });
+    if (probe.mismatch) fromBalance = autoFixed = true;
+  }
   const pnl = has(ov.closed_pnl) ? ov.closed_pnl : fromBalance ? round2(Number(account.balance) - baseline.balance_start - depW + wdrW) : summary.pnl;
   const closedTrades = has(ov.closed_trades) ? ov.closed_trades : summary.closedTrades + (fromBalance ? summary.openAtEntry : 0);
 
@@ -87,6 +95,7 @@ function scoreTrader({ trader, baseline, account, summary, flows, overrides = nu
   if (summary.unpriceable.length && !has(ov.closed_pnl) && !fromBalance) flags.push('pnl_unpriceable');
   if (rec.mismatch) flags.push('pnl_mismatch');
   if (fromBalance) flags.push('pnl_from_balance'); // informational, never blocks a prize
+  if (autoFixed) flags.push('pnl_auto_fixed'); // informational: switched by the auto fix this run
   if (flowMismatch) flags.push('flow_mismatch');
   if (summary.openAtEntry) flags.push('open_at_entry');
   if (baseline.late_entry && !adminBaseline) flags.push('late_entry');

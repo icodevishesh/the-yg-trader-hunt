@@ -671,10 +671,11 @@ test('scorer: pnl_source "balance" takes P/L from the balance, clears pnl_mismat
   const win = { trade_ticket_id: 'W', instrument: 'XAUUSD', type: 'BUY', lots: 0.1, open_time: iso(at + 1000), close_time: iso(at + 6000), open_price: 100, close_price: 101, swap: 0 }; // +10
   const baseline = { status: 'frozen', wallet_id: '1', captured_at: iso(at), start_capital_usd: 200, start_capital: 200, balance_start: 200, total_deposit_start: 200, total_withdrawal_start: 0, category: 'bronze' };
   const elefin = { getTransactions: async () => ({ ok: true, rows: [] }), getAccount: async () => ({ ok: true, account: acct({ balance: 260, equity: 260, trades: 2 }) }), getTrades: async () => ({ ok: true, rows: [straddle, win] }) };
-  const run = async (trader) => {
+  const cfgOff = buildConfig({ ...ENV, AUTO_PNL_FIX: '0' });
+  const run = async (trader, c = cfgOff) => {
     const store = scoringStore({ traders: [trader], manual: [] });
     store.baselines.set('t@x.com', { ...baseline });
-    await runScoring({ store, elefin, cfg, nowMs: at + 20000 });
+    await runScoring({ store, elefin, cfg: c, nowMs: at + 20000 });
     return store.entries.get('t@x.com');
   };
   const before = await run(tr);
@@ -689,6 +690,27 @@ test('scorer: pnl_source "balance" takes P/L from the balance, clears pnl_mismat
   assert.ok(after.flags.includes('pnl_from_balance'));
   assert.equal(after.return_pct, 30);
   assert.equal(after.winner_eligible, true);
+  assert.ok(!after.flags.includes('pnl_auto_fixed'));
+
+  // Auto fix on (the default): the mismatched trader is switched to balance P/L by the run itself.
+  const auto = await run(tr, cfg);
+  assert.equal(auto.pnl, 60);
+  assert.ok(!auto.flags.includes('pnl_mismatch'));
+  assert.ok(auto.flags.includes('pnl_from_balance') && auto.flags.includes('pnl_auto_fixed'));
+  assert.equal(auto.winner_eligible, true);
+});
+
+test('scorer: auto fix leaves a trader whose trades already match the balance alone', async () => {
+  const at = T0 + 1000;
+  const win = { trade_ticket_id: 'W', instrument: 'XAUUSD', type: 'BUY', lots: 0.1, open_time: iso(at + 1000), close_time: iso(at + 6000), open_price: 100, close_price: 101, swap: 0 }; // +10
+  const baseline = { status: 'frozen', wallet_id: '1', captured_at: iso(at), start_capital_usd: 200, start_capital: 200, balance_start: 200, total_deposit_start: 200, total_withdrawal_start: 0, category: 'bronze' };
+  const elefin = { getTransactions: async () => ({ ok: true, rows: [] }), getAccount: async () => ({ ok: true, account: acct({ balance: 210, equity: 210, trades: 1 }) }), getTrades: async () => ({ ok: true, rows: [win] }) };
+  const store = scoringStore({ traders: [tr], manual: [] });
+  store.baselines.set('t@x.com', { ...baseline });
+  await runScoring({ store, elefin, cfg, nowMs: at + 20000 });
+  const row = store.entries.get('t@x.com');
+  assert.equal(row.pnl, 10);
+  assert.ok(!row.flags.includes('pnl_from_balance') && !row.flags.includes('pnl_auto_fixed') && !row.flags.includes('pnl_mismatch'));
 });
 
 test('checkPnl / setPnlSource: service flow', async () => {

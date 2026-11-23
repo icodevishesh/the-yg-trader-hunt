@@ -126,6 +126,9 @@ function buildConfig(env = process.env) {
       minCapitalUsd,
       flowToleranceUsd: num(env.FLOW_TOLERANCE_USD, 1),
       pnlToleranceUsd: num(env.PNL_TOLERANCE_USD, 1),
+      // Every scoring run: when the trade-rebuilt P/L does not match the account balance, use the
+      // balance figure instead (see entry.js). AUTO_PNL_FIX=0 turns it off.
+      autoPnlFix: str(env.AUTO_PNL_FIX, '1') !== '0',
       maxFailedFraction: num(env.MAX_FAILED_FRACTION, 0.2),
       categories: CATEGORIES,
       contractSize: CONTRACT_SIZE,
