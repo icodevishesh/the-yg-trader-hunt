@@ -34,6 +34,12 @@ function requireReason(input) {
   return reason;
 }
 
+/** Manual-data edits: a reason is welcome but not required (who/when/before/after are always logged). */
+function optionalReason(input) {
+  const reason = String((input && input.reason) || '').trim();
+  return reason ? reason.slice(0, 500) : null;
+}
+
 function rejectUnknown(input, allowed) {
   for (const k of Object.keys(input || {})) if (!allowed.includes(k)) throw bad('unknown_field', `Unknown field: ${k}`, k);
 }
@@ -201,6 +207,14 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
   }
 
   const ver = (t) => t.version || 1;
+  // Re-score right after an admin change so the board shows it now, not at the next cron tick.
+  // Best effort: the scoring lock makes an overlapping run a no-op.
+  const rescore = () => {
+    try {
+      const p = trigger && trigger('admin');
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    } catch { /* a failed trigger never fails the admin action */ }
+  };
   const checkVersion = (t, v) => {
     if (v !== ver(t)) throw conflict('stale', 'Someone else changed this trader. Reload and try again.');
   };
@@ -475,6 +489,7 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
       const after = { email: newEmail, wallet_id: newWallet, status: doc.status, client_id: doc.client_id ?? null, baseline: walletChanged ? 'superseded' : 'kept' };
       await audit(ctx, 'trader.identity', t.email, before, after, reason);
       if (emailChanged) await audit(ctx, 'trader.identity', newEmail, before, after, reason); // findable under both emails
+      if (!(walletChanged && !isManual)) rescore(); // a changed account waits for its new start line
       return { trader: doc, needs_baseline: walletChanged && !isManual };
     },
 
@@ -508,6 +523,7 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
       const doc = { ...plan.baseline, rev: prevRev + 1, history: previous ? [...(history || []), prev].slice(-10) : [], set_by: ctx.admin, set_at: new Date(now()).toISOString(), set_reason: reason };
       if (!(await repo.replaceBaseline(cohort, t.email, doc, prevRev))) throw conflict('stale', 'The start line changed since you opened it. Reload and try again.');
       await audit(ctx, 'baseline.set', t.email, previous ? prev : null, plan.baseline, reason);
+      rescore();
       return { ...plan, baseline: doc };
     },
 
@@ -524,16 +540,27 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
       const { c, sc } = await scopeOf(scope);
       await assertWritable(scope);
       const t = await mustTraderByWallet(wallet, c);
-      const reason = requireReason(input);
+      const reason = optionalReason(input);
       if (!['fields', 'full'].includes(input.mode)) throw bad('invalid_field', 'mode must be "fields" or "full".', 'mode');
       if (!SOURCES.includes(input.source)) throw bad('invalid_field', `source must be one of ${SOURCES.join(', ')}.`, 'source');
       const isManual = t.account_source === 'manual';
-      const fields = validateFields(input.fields, { requireAll: input.mode === 'full', cfg: sc, allowLate: isManual });
+      // rebaseline = the admin deliberately sets the start line (like "Start line" / "Set baseline"),
+      // so it may fall after the entry cutoff and is scored as an admin start line.
+      const rebaseline = !!input.rebaseline;
+      const fields = validateFields(input.fields, { requireAll: input.mode === 'full', cfg: sc, allowLate: isManual || rebaseline });
       // Re-baseline protection guards against backdating a *real* Elefin account's start line.
       // A manual trader has no live account to backdate -- the admin's numbers are the baseline --
       // so this does not apply to them.
       if (!isManual && START_LINE.some((k) => k in fields) && now() > sc.competition.cutoffMs && !input.rebaseline) {
         throw conflict('rebaseline_required', 'Start-line fields can only change after the entry cutoff with an explicit re-baseline.');
+      }
+      // A manual trader has no Elefin data to patch: only "full" can score him.
+      if (isManual && input.mode === 'fields') throw bad('full_required', 'This trader has no Elefin account, so use mode "full" and fill every field.', 'mode');
+      // "fields" patches an existing start line. Without one (after the cutoff it can no longer
+      // freeze by itself) the values would be ignored, unless they include a whole new start line.
+      if (!isManual && input.mode === 'fields' && scope !== 'week2' && now() > sc.competition.cutoffMs && !START_LINE.every((k) => k in fields)) {
+        const b = await repo.getBaseline(c, t.email);
+        if (!b || b.status !== 'frozen') throw conflict('no_start_line', 'This trader has no start line yet, so these values would be ignored. Also fill Start capital, Balance at start and Entered at, or use mode "full".');
       }
       const before = await repo.getManual(c, String(wallet));
       if ((before ? before.version : null) !== (input.version ?? null)) throw conflict('stale', 'Someone else changed this manual entry. Reload and try again.');
@@ -541,9 +568,11 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
         _id: `${c}:${wallet}`, cohort: c, email: t.email, wallet_id: String(wallet), mode: input.mode, enabled: true, fields,
         source: input.source, source_ref: input.source_ref ? String(input.source_ref).slice(0, 200) : null,
         reason, entered_by: ctx.admin, entered_at: new Date(now()).toISOString(), version: (before ? before.version : 0) + 1,
+        rebaseline: rebaseline && START_LINE.some((k) => k in fields),
       };
       if (!(await repo.putManual(c, doc, before ? before.version : null))) throw conflict('stale', 'Someone else changed this manual entry. Reload and try again.');
       await audit(ctx, 'manual.set', String(wallet), before, doc, reason, c);
+      rescore();
       return doc;
     },
 
@@ -552,26 +581,67 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
       const { c } = await scopeOf(scope);
       await assertWritable(scope);
       await mustTraderByWallet(wallet, c);
-      const reason = requireReason(input);
+      const reason = optionalReason(input);
       const before = await repo.getManual(c, String(wallet));
       if (!before || !before.enabled) throw conflict('not_enabled', 'No active manual entry for this wallet.');
       const after = { ...before, enabled: false, version: before.version + 1, disabled_by: ctx.admin, disabled_at: new Date(now()).toISOString() };
       if (!(await repo.putManual(c, after, before.version))) throw conflict('stale', 'Someone else changed this manual entry. Reload and try again.');
       await audit(ctx, 'manual.disable', String(wallet), before, after, reason, c);
+      rescore();
       return after;
+    },
+
+    /** Removes a manual entry completely (Switch off keeps it). The audit log keeps a copy. */
+    async deleteManual(ctx, wallet, input, scope = 'week1') {
+      rejectUnknown(input || {}, ['reason']);
+      const { c } = await scopeOf(scope);
+      await assertWritable(scope);
+      await mustTraderByWallet(wallet, c);
+      const before = await repo.getManual(c, String(wallet));
+      if (!before) throw new AdminError(404, 'not_found', 'This trader has no manual entry.');
+      await repo.deleteManual(c, String(wallet));
+      await audit(ctx, 'manual.delete', String(wallet), before, null, optionalReason(input), c);
+      rescore();
+      return { deleted: true };
+    },
+
+    /**
+     * Removes a trader from the competition: registry row, start line, score row and manual data.
+     * The audit log keeps a full copy (so it can be restored by hand). Refused for a recorded winner
+     * or a week-2 entrant, and the admin must type the trader's email to confirm.
+     */
+    async deleteTrader(ctx, email, input) {
+      rejectUnknown(input || {}, ['confirm_email', 'reason']);
+      await assertNotFinalized();
+      const t = await mustTrader(email);
+      if (String((input && input.confirm_email) || '').trim().toLowerCase() !== t.email) throw bad('confirm_required', `Type the trader's email (${t.email}) to confirm.`, 'confirm_email');
+      if (t.wins && t.wins.length) throw conflict('is_winner', 'This trader is a recorded winner and cannot be deleted. Set the status to disqualified instead.');
+      if (await repo.getTrader(cohort2, t.email)) throw conflict('in_week2', 'This trader is a week-2 entrant. Remove them from week 2 first.');
+      const lock = `score:${cohort}`;
+      if (!(await repo.acquireLock(lock))) throw conflict('scoring_running', 'A scoring run is in progress. Try again in a minute.');
+      let snapshot;
+      try {
+        snapshot = await repo.deleteTrader(cohort, t.email, t.wallet_id);
+      } finally {
+        await repo.releaseLock(lock).catch(() => {});
+      }
+      await audit(ctx, 'trader.delete', t.email, snapshot, null, optionalReason(input));
+      rescore();
+      return { deleted: true, email: t.email };
     },
 
     /** Dry run: what this trader would score with the given manual input. Writes nothing. */
     async preview(wallet, input, scope = 'week1') {
-      rejectUnknown(input, ['mode', 'fields']);
+      rejectUnknown(input, ['mode', 'fields', 'rebaseline']);
       const { c, sc } = await scopeOf(scope);
       const t = await mustTraderByWallet(wallet, c);
       if (!['fields', 'full'].includes(input.mode)) throw bad('invalid_field', 'mode must be "fields" or "full".', 'mode');
-      const fields = validateFields(input.fields, { requireAll: input.mode === 'full', cfg: sc, allowLate: t.account_source === 'manual' });
+      const rebaseline = !!input.rebaseline;
+      const fields = validateFields(input.fields, { requireAll: input.mode === 'full', cfg: sc, allowLate: t.account_source === 'manual' || rebaseline });
       const { competition, scoring } = sc;
       const pick = (row) => ({ category: row.category, return_pct: row.return_pct, pnl: row.pnl, net_capital: row.net_capital, eligible: row.eligible, winner_eligible: row.winner_eligible, reasons: row.reasons, flags: row.flags });
 
-      if (input.mode === 'full') return { ...pick(scoreManualFull({ trader: t, doc: { mode: 'full', fields }, competition, scoring })), warnings: [] };
+      if (input.mode === 'full') return { ...pick(scoreManualFull({ trader: t, doc: { mode: 'full', fields, rebaseline: rebaseline && START_LINE.some((k) => k in fields) }, competition, scoring })), warnings: [] };
 
       const [entry, baseline] = [await repo.getEntry(c, t.email), await repo.getBaseline(c, t.email)];
       if (!baseline || baseline.status !== 'frozen' || !entry || !entry.trade_cache) throw conflict('no_score_yet', 'This trader has no scored baseline yet, so there is nothing to patch.');

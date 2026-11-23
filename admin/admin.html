@@ -230,7 +230,8 @@
     const isNew = !t;
     const err = h('div', { class: 'err', id: 'ed-err', role: 'alert' });
     const isManual = isNew ? false : t.account_source === 'manual';
-    const email = h('input', { id: 'f-email', type: 'email', value: t ? t.email : '', disabled: !isNew, required: true });
+    // Editable for existing traders too: "Save changes" with a new email runs the verified correction.
+    const email = h('input', { id: 'f-email', type: 'email', value: t ? t.email : '', required: true });
     // An Elefin trader's account ID only changes through "Correct email / account ID", which verifies it.
     const wallet = h('input', { id: 'f-wallet', value: t ? t.wallet_id || '' : '', placeholder: isNew ? 'MT5 login, or any id you choose if manual' : '', disabled: !isNew && !isManual, title: !isNew && !isManual ? 'Use "Correct email / account ID" below' : null });
     const manualToggle = h('input', { id: 'f-manual', type: 'checkbox', on: { change: () => {
@@ -257,8 +258,20 @@
         if (isNew) await api('/traders', { method: 'POST', body: { email: email.value, wallet_id: wallet.value, manual: manualToggle.checked, name: name.value, notes: notes.value, reason: reason.value } });
         else {
           const cur = await api('/traders?q=' + encodeURIComponent(t.email));
-          const fresh = cur.rows.find((r) => r.email === t.email) || t;
-          await api('/traders/' + encodeURIComponent(t.email), { method: 'PATCH', body: { version: fresh.version || 1, name: name.value, notes: notes.value, wallet_id: wallet.value, reason: reason.value } });
+          let fresh = cur.rows.find((r) => r.email === t.email) || t;
+          const newEmail = email.value.trim().toLowerCase();
+          const walletChanged = isManual && wallet.value.trim() !== (t.wallet_id || '');
+          // A new email (or a manual trader's new id) goes through the verified correction:
+          // the trader's records move to the new email, Elefin traders are checked first.
+          if (newEmail !== t.email || walletChanged) {
+            const r = await api('/traders/' + encodeURIComponent(t.email) + '/identity', { method: 'POST', body: { version: fresh.version || 1, new_email: newEmail, new_wallet_id: walletChanged ? wallet.value.trim() : '', reason: reason.value } });
+            fresh = r.trader;
+          }
+          if (name.value !== (t.name || '') || notes.value !== (t.notes || '')) {
+            await api('/traders/' + encodeURIComponent(fresh.email), { method: 'PATCH', body: { version: fresh.version || 1, name: name.value, notes: notes.value, reason: reason.value } });
+          } else if (fresh === (cur.rows.find((r) => r.email === t.email) || t)) {
+            throw new Error('Nothing changed.');
+          }
         }
         toast('Saved'); closeEditor(); loadTraders();
       } catch (e) { err.textContent = e.message; if (e.code === 'stale') loadTraders(); }
@@ -312,7 +325,20 @@
     if (!isNew) sections.push(identitySection(t, reason));
     if (!isNew && !isManual && t.wallet_id) sections.push(baselineSection(t, reason));
     if (!isNew && t.wallet_id) sections.push(manualSection(t, reason));
-    if (!isNew) sections.push(h('div', {}, h('button', { type: 'button', on: { click: () => openHistory(t.email) } }, 'History')));
+    if (!isNew) {
+      const delErr = h('div', { class: 'err', role: 'alert' });
+      const delTrader = h('button', { type: 'button', class: 'danger', disabled: locked, on: { click: async () => {
+        delErr.textContent = '';
+        const typed = window.prompt('Delete ' + t.email + ' from the competition?\n\nThis removes the trader, their start line, score and manual data. History keeps a copy.\n\nType the email to confirm:');
+        if (typed === null) return;
+        try {
+          await api('/traders/' + encodeURIComponent(t.email) + '/delete', { method: 'POST', body: { confirm_email: typed, reason: reason.value } });
+          toast('Trader deleted — re-scoring now'); closeEditor(); setTimeout(loadTraders, 300);
+        } catch (e) { delErr.textContent = e.message; }
+      } } }, 'Delete trader');
+      sections.push(h('div', { class: 'row', style: 'margin-top:20px;border-top:1px solid var(--line);padding-top:16px' },
+        h('button', { type: 'button', on: { click: () => openHistory(t.email) } }, 'History'), delTrader), delErr);
+    }
     ed.replaceChildren(...sections.filter(Boolean));
     (isNew ? email : name).focus();
   }
@@ -418,16 +444,22 @@
 
   function manualSection(t, reason, scope) {
     const P = scope === 'week2' ? '/week2' : '';
+    const W = encodeURIComponent(t.wallet_id); // manual traders may use any text as their id
     const locked = scope === 'week2' ? !!state.w2closed : !!state.me.finalized;
+    const isManual = t.account_source === 'manual';
     const wrap = h('div', { style: 'margin-top:20px;border-top:1px solid var(--line);padding-top:16px' });
     const err = h('div', { class: 'err', role: 'alert' });
     const out = h('pre', { 'aria-live': 'polite' });
-    const mode = h('select', { id: 'm-mode' }, h('option', { value: 'fields' }, 'fields — patch only the listed values'), h('option', { value: 'full' }, 'full — score entirely from our database'));
+    // A manual trader has no Elefin data to patch, so only "full" can score him.
+    const mode = h('select', { id: 'm-mode', disabled: isManual },
+      h('option', { value: 'fields', disabled: isManual }, 'fields — change only the values you fill in'),
+      h('option', { value: 'full', selected: isManual }, 'full — score entirely from these numbers'));
     const source = h('select', { id: 'm-source' }, ['mt5_statement', 'broker_email', 'organiser', 'other'].map((s) => h('option', { value: s }, s)));
     const ref = h('input', { id: 'm-ref', placeholder: 'e.g. ReportHistorys-12345992151.xlsx' });
     const inputs = {};
     const grid = h('div', { class: 'grid' }, FIELDS.map(([k, label, type]) => { inputs[k] = h('input', { id: 'm-' + k, type, step: type === 'number' ? '0.01' : null }); return field(label, inputs[k], 'm-' + k); }));
     let version = null;
+    let current = null;
 
     const collect = () => {
       const f = {};
@@ -437,35 +469,57 @@
       }
       return f;
     };
-    const fill = (doc) => {
+    // Typing a start capital / balance / entry time here is a deliberate admin start line, so it is
+    // allowed after the entry cutoff (same as "Start line" and "Set baseline").
+    const rebaseline = (f) => ['start_capital', 'balance_start', 'captured_at'].some((k) => k in f);
+    // "full" needs every field: name all the empty ones at once instead of one error per click.
+    const missing = (f) => (mode.value === 'full' ? FIELDS.filter(([k]) => !(k in f)).map(([, label]) => label) : []);
+    const fullGuard = (f) => { const gaps = missing(f); if (gaps.length) throw new Error('Mode full needs every field. Fill: ' + gaps.join(', ') + '.'); };
+
+    const run = (fn) => async () => { err.textContent = ''; try { await fn(); } catch (e) { err.textContent = e.message; if (e.code === 'stale') reload(); } };
+    const preview = h('button', { type: 'button', on: { click: run(async () => {
+      const f = collect(); fullGuard(f);
+      const r = await api(P + '/preview/' + W, { method: 'POST', body: { mode: mode.value, fields: f, rebaseline: rebaseline(f) } });
+      out.textContent = 'Preview — category ' + (r.category || '—') + ', return ' + (r.return_pct == null ? '—' : r.return_pct.toFixed(2) + '%') + ', P/L ' + r.pnl + ', net capital ' + r.net_capital +
+        '\neligible: ' + r.eligible + ', prize-eligible: ' + r.winner_eligible + (r.reasons.length ? '\nreasons: ' + r.reasons.join(', ') : '') + (r.flags.length ? '\nflags: ' + r.flags.join(', ') : '') + (r.warnings.length ? '\n' + r.warnings.join('\n') : '');
+    }) } }, 'Preview');
+    const save = h('button', { type: 'button', class: 'primary', disabled: locked, on: { click: run(async () => {
+      const f = collect(); fullGuard(f);
+      const d = await api(P + '/manual/' + W, { method: 'PUT', body: { mode: mode.value, fields: f, rebaseline: rebaseline(f), source: source.value, source_ref: ref.value, reason: reason.value, version } });
+      fill(d); toast('Manual entry saved — re-scoring now'); setTimeout(loadTraders, 4000);
+    }) } }, 'Save manual entry');
+    const off = h('button', { type: 'button', disabled: true, on: { click: run(async () => {
+      const d = await api(P + '/manual/' + W + '/disable', { method: 'POST', body: { reason: reason.value } });
+      fill(d); toast(isManual ? 'Switched off — this trader is not scored until you save again' : 'Switched off — back to Elefin data'); setTimeout(loadTraders, 4000);
+    }) } }, 'Switch off');
+    const del = h('button', { type: 'button', class: 'danger', disabled: true, on: { click: run(async () => {
+      if (!window.confirm('Delete this manual entry completely?\n\nThe numbers are removed (History keeps a copy). ' + (isManual ? 'This trader is not scored until you enter numbers again.' : 'Scoring goes back to Elefin data.'))) return;
+      await api(P + '/manual/' + W + '/delete', { method: 'POST', body: { reason: reason.value } });
+      fill(null); toast('Manual entry deleted — re-scoring now'); setTimeout(loadTraders, 4000);
+    }) } }, 'Delete entry');
+
+    function fill(doc) {
+      current = doc || null;
       version = doc ? doc.version : null;
       for (const [k, , type] of FIELDS) {
         const v = doc && doc.fields ? doc.fields[k] : undefined;
         inputs[k].value = v == null ? '' : type === 'datetime-local' ? new Date(new Date(v) - new Date(v).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : v;
       }
-      if (doc) { mode.value = doc.mode; source.value = doc.source; ref.value = doc.source_ref || ''; }
-      out.textContent = doc ? (doc.enabled ? 'Manual entry active — entered by ' + doc.entered_by + ' at ' + when(doc.entered_at) + '. ' + doc.reason : 'Manual entry is switched off.') : 'No manual entry. Scoring uses Elefin data.';
-    };
-    api(P + '/manual/' + t.wallet_id).then((d) => fill(d.current)).catch((e) => { out.textContent = e.message; });
+      if (doc) { mode.value = isManual ? 'full' : doc.mode; source.value = doc.source; ref.value = doc.source_ref || ''; }
+      out.textContent = !doc ? (isManual ? 'No numbers yet. Fill every field and save.' : 'No manual entry. Scoring uses Elefin data.')
+        : doc.enabled ? 'Manual entry active (' + doc.mode + ') — saved by ' + doc.entered_by + ' at ' + when(doc.entered_at) + '.' + (doc.reason ? ' ' + doc.reason : '')
+        : 'Manual entry is switched off (kept, not used). Save to use it again, or delete it.';
+      off.disabled = locked || !(current && current.enabled);
+      del.disabled = locked || !current;
+    }
+    function reload() { return api(P + '/manual/' + W).then((d) => fill(d.current)).catch((e) => { out.textContent = e.message; }); }
+    reload();
 
-    const run = (fn) => async () => { err.textContent = ''; try { await fn(); } catch (e) { err.textContent = e.message; if (e.code === 'stale') api(P + '/manual/' + t.wallet_id).then((d) => fill(d.current)); } };
-    const preview = h('button', { type: 'button', on: { click: run(async () => {
-      const r = await api(P + '/preview/' + t.wallet_id, { method: 'POST', body: { mode: mode.value, fields: collect() } });
-      out.textContent = 'Preview — category ' + (r.category || '—') + ', return ' + (r.return_pct == null ? '—' : r.return_pct.toFixed(2) + '%') + ', P/L ' + r.pnl + ', net capital ' + r.net_capital +
-        '\neligible: ' + r.eligible + ', prize-eligible: ' + r.winner_eligible + (r.reasons.length ? '\nreasons: ' + r.reasons.join(', ') : '') + (r.flags.length ? '\nflags: ' + r.flags.join(', ') : '') + (r.warnings.length ? '\n' + r.warnings.join('\n') : '');
-    }) } }, 'Preview');
-    const save = h('button', { type: 'button', class: 'primary', disabled: locked, on: { click: run(async () => {
-      const d = await api(P + '/manual/' + t.wallet_id, { method: 'PUT', body: { mode: mode.value, fields: collect(), source: source.value, source_ref: ref.value, reason: reason.value, version } });
-      fill(d); toast('Manual entry saved — applies on the next scoring run'); loadTraders();
-    }) } }, 'Save manual entry');
-    const off = h('button', { type: 'button', class: 'danger', disabled: locked, on: { click: run(async () => {
-      const d = await api(P + '/manual/' + t.wallet_id + '/disable', { method: 'POST', body: { reason: reason.value } });
-      fill(d); toast('Back to Elefin data'); loadTraders();
-    }) } }, 'Switch off');
-
-    wrap.append(h('h2', {}, 'Manual data'), h('p', { class: 'muted' }, 'Leave a field empty to keep the Elefin value (fields mode). To pin a category, use the "Category" control in the trader section above. The reason above is required.'),
+    wrap.append(h('h2', {}, 'Manual data'),
+      h('p', { class: 'muted' }, (isManual ? 'Mode full: every field is needed. ' : 'Mode fields: fill only what to change; empty fields keep the Elefin value. Mode full: fill every field. ') +
+        'Switch off keeps the numbers but stops using them; Delete entry removes them. Saving re-scores the board straight away. The reason above is optional here; to pin a category use "Save category" above.'),
       h('div', { class: 'grid' }, field('Mode', mode, 'm-mode'), field('Source', source, 'm-source'), field('Source reference', ref, 'm-ref')), grid,
-      h('div', { class: 'row', style: 'margin-top:12px' }, preview, save, off), err, out);
+      h('div', { class: 'row', style: 'margin-top:12px' }, preview, save, off, del), err, out);
     return wrap;
   }
 

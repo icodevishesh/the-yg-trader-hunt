@@ -159,6 +159,44 @@ const mongoRepo = {
     }
   },
 
+  async deleteManual(cohort, wallet) {
+    await (await connect()).collection(C.manual).deleteOne({ _id: `${cohort}:${wallet}` });
+  },
+
+  /**
+   * Deletes everything one trader has in a cohort, in one transaction where available, and returns
+   * what was deleted so the audit log keeps a restorable copy.
+   */
+  async deleteTrader(cohort, email, wallet) {
+    const d = await connect();
+    const id = key(cohort, email);
+    const manualId = `${cohort}:${wallet}`;
+    const ops = async (session) => {
+      const o = session ? { session } : {};
+      const snapshot = {
+        trader: await d.collection(C.traders).findOne({ _id: id }, o),
+        baseline: await d.collection(C.baseline).findOne({ _id: id }, o),
+        manual: wallet ? await d.collection(C.manual).findOne({ _id: manualId }, o) : null,
+      };
+      await d.collection(C.baseline).deleteOne({ _id: id }, o);
+      await d.collection(C.entries).deleteOne({ _id: id }, o);
+      if (wallet) await d.collection(C.manual).deleteOne({ _id: manualId }, o);
+      await d.collection(C.traders).deleteOne({ _id: id }, o);
+      return snapshot;
+    };
+    const session = (await getClient()).startSession();
+    try {
+      let snapshot;
+      await session.withTransaction(async () => { snapshot = await ops(session); });
+      return snapshot;
+    } catch (err) {
+      if (err.code === 20 || /Transaction numbers are only allowed|replica set/i.test(err.message)) return ops(null);
+      throw err;
+    } finally {
+      await session.endSession();
+    }
+  },
+
   async acquireLock(name) {
     try {
       await (await connect()).collection(C.locks).insertOne({ _id: name, acquired_at: new Date() });

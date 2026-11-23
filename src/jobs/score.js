@@ -101,7 +101,17 @@ async function runScoring({ store, elefin, cfg, nowMs = Date.now(), finalize = f
       scoring,
     });
     if (decision.changed) await store.saveBaseline(cohort, trader.email, decision.doc);
-    const decided = decision.doc;
+    let decided = decision.doc;
+    // A "fields" manual entry that carries a whole start line stands in for a missing one (e.g. the
+    // account was never funded inside the entry window). It is an admin start line, so not late.
+    const mf = useManual && manual.mode === 'fields' ? manual.fields || {} : null;
+    if (decided.status !== 'frozen' && mf && ['start_capital', 'balance_start', 'captured_at'].every((k) => mf[k] !== undefined && mf[k] !== null)) {
+      decided = {
+        wallet_id: String(account.login), currency: 'USD', status: 'frozen', source: 'admin', admin_baseline: true,
+        captured_at: new Date(mf.captured_at).toISOString(), start_capital: mf.start_capital, start_capital_usd: mf.start_capital,
+        balance_start: mf.balance_start, total_deposit_start: null, total_withdrawal_start: null, category: null,
+      };
+    }
 
     if (decided.status !== 'frozen') {
       stats[decided.status === 'excluded' ? 'excluded' : 'pending'] += 1;

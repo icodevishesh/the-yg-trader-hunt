@@ -54,7 +54,8 @@ function scoreTrader({ trader, baseline, account, summary, flows, overrides = nu
   // Check A (account aggregates since baseline) against check B (ledger). Skipped when the
   // flows themselves were entered by hand, or when there is no live account to compare.
   let flowMismatch = false;
-  if (account && !has(ov.dep_w) && !has(ov.wdr_w)) {
+  // Also skipped when the start line carries no account totals (a start line typed in "fields").
+  if (account && !has(ov.dep_w) && !has(ov.wdr_w) && has(baseline.total_deposit_start) && has(baseline.total_withdrawal_start)) {
     const aggDep = Number(account.total_deposit) - baseline.total_deposit_start;
     const aggWdr = Number(account.total_withdrawal) - baseline.total_withdrawal_start;
     flowMismatch = Math.abs(aggDep - depW) > scoring.flowToleranceUsd || Math.abs(aggWdr - wdrW) > scoring.flowToleranceUsd;
@@ -72,8 +73,8 @@ function scoreTrader({ trader, baseline, account, summary, flows, overrides = nu
   // An admin-set start line -- "Set baseline" (snapshot now) or "Start line" (rebuilt at a chosen
   // time / capital set by hand) -- is a deliberate, audited admin action. Its captured_at is
   // usually after the cutoff, so it is exempt from the cutoff exactly as a manual entry is.
-  // Both markers are accepted: `admin_baseline: true` and `source: 'admin'`.
-  const adminBaseline = !!baseline.admin_baseline || baseline.source === 'admin';
+  // Markers: `admin_baseline: true`, `source: 'admin'`, or a manual entry saved with `rebaseline`.
+  const adminBaseline = !!baseline.admin_baseline || baseline.source === 'admin' || !!(manual && manual.rebaseline);
   if (trader.account_source !== 'manual' && !adminBaseline && Date.parse(baseline.captured_at) > competition.cutoffMs) reasons.push('entered_after_cutoff');
   if (!baseline.category) reasons.push('no_category');
   if (ret === null) reasons.push('invalid_net_capital');

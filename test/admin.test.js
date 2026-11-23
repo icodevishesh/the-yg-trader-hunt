@@ -26,7 +26,7 @@ function memRepo() {
   const r = {
     traders: new Map(), manual: new Map(), log: [], baselines: new Map(), entries: new Map(), current: null,
     loadCurrent: async () => r.current,
-    getTrader: async (c, email) => r.traders.get(email) || null,
+    getTrader: async (c, email) => (String(c).endsWith('-w2') ? null : r.traders.get(email) || null), // no week-2 rows here
     getTraderByWallet: async (c, w) => [...r.traders.values()].find((t) => t.wallet_id === w) || null,
     listTraders: async () => ({ rows: [...r.traders.values()], total: r.traders.size, counts: {} }),
     insertTrader: async (c, row) => {
@@ -81,6 +81,12 @@ function memRepo() {
       if (m && walletChanged && m.enabled) Object.assign(m, { enabled: false, version: m.version + 1 });
       if (m && !walletChanged) m.email = doc.email;
       return true;
+    },
+    deleteManual: async (c, w) => { r.manual.delete(w); },
+    deleteTrader: async (c, email, wallet) => {
+      const snapshot = { trader: r.traders.get(email) || null, baseline: r.baselines.get(email) || null, manual: r.manual.get(wallet) || null };
+      r.traders.delete(email); r.baselines.delete(email); r.entries.delete(email); r.manual.delete(wallet);
+      return snapshot;
     },
     locks: new Set(),
     acquireLock: async (n) => (r.locks.has(n) ? false : (r.locks.add(n), true)),
@@ -371,8 +377,96 @@ test('setManual: start-line fields after the cutoff need an explicit re-baseline
   const s = setup({ nowMs: comp.cutoffMs + 1000 });
   s.repo.traders.set('amrit@x.com', { email: 'amrit@x.com', wallet_id: NEW.wallet_id, version: 1 });
   const input = { mode: 'fields', fields: { balance_start: 90 }, source: 'organiser', reason: REASON };
+  // Without any start line, a partial patch would be ignored by scoring, so it is refused.
+  await assert.rejects(s.service.setManual(s.ctx, NEW.wallet_id, { ...input, rebaseline: true }), (e) => e.code === 'no_start_line');
+  s.repo.baselines.set('amrit@x.com', { status: 'frozen' });
   await assert.rejects(s.service.setManual(s.ctx, NEW.wallet_id, input), (e) => e.code === 'rebaseline_required');
   assert.ok(await s.service.setManual(s.ctx, NEW.wallet_id, { ...input, rebaseline: true }));
+});
+
+test('setManual: a manual trader must use mode full; saving and deleting re-score', async () => {
+  const s = setup();
+  const t = await s.service.addTrader(s.ctx, { email: 'm@x.com', wallet_id: 'Manual ID #1', manual: true, reason: REASON });
+  await assert.rejects(s.service.setManual(s.ctx, t.wallet_id, { mode: 'fields', fields: { closed_pnl: 5 }, source: 'organiser' }), (e) => e.code === 'full_required');
+  const d = await s.service.setManual(s.ctx, t.wallet_id, { mode: 'full', fields: FULL, source: 'organiser' });
+  assert.equal(d.mode, 'full');
+  assert.deepEqual(s.triggered, ['admin']);
+
+  await s.service.deleteManual(s.ctx, t.wallet_id, {});
+  assert.equal(s.repo.manual.has(t.wallet_id), false);
+  assert.equal(s.repo.log.at(-1).action, 'manual.delete');
+  assert.equal(s.repo.log.at(-1).before.version, 1); // History keeps the deleted numbers
+  await assert.rejects(s.service.deleteManual(s.ctx, t.wallet_id, {}), (e) => e.status === 404);
+  assert.deepEqual(s.triggered, ['admin', 'admin']);
+});
+
+test('scorer: a "fields" entry with a whole start line stands in for a missing one', async () => {
+  const at = comp.cutoffMs + 1000;
+  const fields = { start_capital: 500, balance_start: 480, captured_at: iso(at) };
+  const store = scoringStore({ traders: [tr], manual: [{ wallet_id: '1', enabled: true, mode: 'fields', fields, rebaseline: true, source: 'mt5_statement' }] });
+  const win = { trade_ticket_id: 'W', instrument: 'XAUUSD', type: 'BUY', lots: 0.1, open_time: iso(at + 1000), close_time: iso(at + 5000), open_price: 100, close_price: 101, swap: 0 };
+  const elefin = { getTransactions: async () => ({ ok: true, rows: [] }), getAccount: async () => ({ ok: true, account: acct({ balance: 490, equity: 490, trades: 1 }) }), getTrades: async () => ({ ok: true, rows: [win] }) };
+  await runScoring({ store, elefin, cfg, nowMs: at + 20000 }); // no stored baseline; after the cutoff it would be "entry_closed"
+  const row = store.entries.get('t@x.com');
+  assert.deepEqual(row.reasons, []);
+  assert.equal(row.category, 'gold'); // from the typed 500
+  assert.equal(row.return_pct, 2); // +10 on 500
+  assert.ok(!row.flags.includes('flow_mismatch')); // no account totals to compare against
+  assert.ok(!row.flags.includes('pnl_mismatch')); // 480 + 10 = 490
+});
+
+test('deleteTrader: needs the typed email, refuses winners and week-2 entrants, removes everything', async () => {
+  const s = setup();
+  await s.service.addTrader(s.ctx, NEW);
+  const del = (body) => s.service.deleteTrader(s.ctx, 'amrit@x.com', body);
+  await assert.rejects(del({ confirm_email: 'wrong@x.com' }), (e) => e.code === 'confirm_required');
+  s.repo.traders.get('amrit@x.com').wins = [{ round: 'week1', category: 'gold' }];
+  await assert.rejects(del({ confirm_email: 'amrit@x.com' }), (e) => e.code === 'is_winner');
+  delete s.repo.traders.get('amrit@x.com').wins;
+  s.repo.locks.add(`score:${comp.cohort}`);
+  await assert.rejects(del({ confirm_email: 'Amrit@X.com' }), (e) => e.code === 'scoring_running');
+  s.repo.locks.clear();
+
+  const r = await del({ confirm_email: ' Amrit@X.com ' });
+  assert.equal(r.deleted, true);
+  assert.equal(s.repo.traders.has('amrit@x.com'), false);
+  const a = s.repo.log.at(-1);
+  assert.equal(a.action, 'trader.delete');
+  assert.equal(a.before.trader.wallet_id, NEW.wallet_id); // restorable copy
+  assert.deepEqual(s.triggered, ['admin']);
+});
+
+test('setManual / disableManual: the reason is optional', async () => {
+  const s = setup();
+  await s.service.addTrader(s.ctx, NEW);
+  const d = await s.service.setManual(s.ctx, NEW.wallet_id, { mode: 'fields', fields: { closed_pnl: 5 }, source: 'organiser' });
+  assert.equal(d.reason, null);
+  const off = await s.service.disableManual(s.ctx, NEW.wallet_id, {});
+  assert.equal(off.enabled, false);
+  assert.deepEqual(s.repo.log.slice(-2).map((a) => [a.action, a.admin, a.reason]), [['manual.set', 'vipin', null], ['manual.disable', 'vipin', null]]);
+});
+
+test('setManual: an Elefin trader\'s full data with a start time after the cutoff saves with re-baseline and scores eligible', async () => {
+  const s = setup({ nowMs: comp.cutoffMs + 60000 });
+  s.repo.traders.set('amrit@x.com', { email: 'amrit@x.com', wallet_id: NEW.wallet_id, version: 1, status: 'active' });
+  const fields = { start_capital: 1000, balance_start: 1000, captured_at: iso(comp.cutoffMs + 30000), dep_w: 0, wdr_w: 0, closed_pnl: 200, closed_trades: 2 };
+  const input = { mode: 'full', fields, source: 'mt5_statement' };
+  await assert.rejects(s.service.setManual(s.ctx, NEW.wallet_id, input), (e) => e.code === 'invalid_field' && e.field === 'captured_at');
+  const d = await s.service.setManual(s.ctx, NEW.wallet_id, { ...input, rebaseline: true });
+  assert.equal(d.rebaseline, true);
+
+  const p = await s.service.preview(NEW.wallet_id, { mode: 'full', fields, rebaseline: true });
+  assert.equal(p.eligible, true);
+  assert.equal(p.reasons.includes('entered_after_cutoff'), false);
+  assert.equal(p.return_pct, 20);
+  assert.ok(p.flags.includes('admin_baseline'));
+
+  // Scoring reads the saved doc the same way.
+  const store = scoringStore({ traders: [{ ...tr, wallet_id: NEW.wallet_id }], manual: [{ ...d }] });
+  await runScoring({ store, elefin: { getTransactions: async () => ({ ok: true, rows: [] }) }, cfg, nowMs: comp.cutoffMs + 90000 });
+  const row = store.entries.get('t@x.com');
+  assert.deepEqual(row.reasons, []);
+  assert.equal(row.category, 'platinum');
 });
 
 test('setManual: a manual trader can be added and fully baselined after the entry cutoff, no re-baseline flag needed', async () => {
@@ -741,4 +835,25 @@ test('scorer: an admin-set start line after the cutoff is not a late entry and i
   assert.equal(row.winner_eligible, true);
   assert.equal(row.return_pct, 5);
   assert.equal(store.baselines.get('t@x.com').source, 'admin'); // the scorer never replaces it
+});
+
+test('HTTP: manual entry with a text id (save, switch off, delete) and trader delete', async () => {
+  await withAdmin(async ({ call, repo }) => {
+    const cookie = await login(call);
+    const add = await call('/api/traders', { method: 'POST', cookie, body: { email: 'm@x.com', wallet_id: 'YG Sir / #1?', manual: true, reason: REASON } });
+    assert.equal(add.status, 201);
+    const W = encodeURIComponent('YG Sir / #1?');
+    const put = await call(`/api/manual/${W}`, { method: 'PUT', cookie, body: { mode: 'full', fields: FULL, source: 'organiser' } }); // no reason
+    assert.equal(put.status, 200, await put.clone().text());
+    assert.equal((await (await call(`/api/manual/${W}`, { cookie })).json()).current.enabled, true);
+    assert.equal((await call(`/api/manual/${W}/disable`, { method: 'POST', cookie, body: {} })).status, 200);
+    assert.equal((await call(`/api/manual/${W}/delete`, { method: 'POST', cookie, body: {} })).status, 200);
+    assert.equal((await (await call(`/api/manual/${W}`, { cookie })).json()).current, null);
+
+    const bad = await call('/api/traders/m%40x.com/delete', { method: 'POST', cookie, body: { confirm_email: 'nope' } });
+    assert.equal(bad.status, 400);
+    const del = await call('/api/traders/m%40x.com/delete', { method: 'POST', cookie, body: { confirm_email: 'm@x.com' } });
+    assert.equal(del.status, 200);
+    assert.equal(repo.traders.size, 0);
+  });
 });
