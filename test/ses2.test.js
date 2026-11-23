@@ -360,6 +360,26 @@ test('API: pending before any board exists; unknown category -> 400; no PII in e
   });
 });
 
+test('API: public board shows the top 5 per category; entered traders only fill free slots; stats keep full counts', async () => {
+  const mk = (i, o = {}) => ({ rank: i, email: `t${i}@x.com`, name: `Trader ${i}`, category: 'bronze', return_pct: 10 - i, pnl: 1, start_capital: 100, net_capital: 100, closed_trades: 2, flags: [], reasons: [], ...o });
+  const store = fakeStore({ traders: [] });
+  store.loadCurrent = async () => ({
+    generated_at: 'x', window_end: 'y', competition_over: false, stats: { registered: 12, frozen: 12, ranked: 8 },
+    categories: {
+      bronze: { stats: { ranked: 7, entered: 2 }, entries: [1, 2, 3, 4, 5, 6, 7].map((i) => mk(i)), entered: [mk(8, { no_trades: true }), mk(9, { no_trades: true })] },
+      silver: { stats: { ranked: 1, entered: 3 }, entries: [mk(1, { category: 'silver' })], entered: [2, 3, 4].map((i) => mk(i, { category: 'silver', no_trades: true })) },
+    },
+  });
+  await withServer(store, async (url) => {
+    const body = await (await fetch(`${url}/api/leaderboard`)).json();
+    assert.deepEqual(body.boards.bronze.entries.map((e) => e.rank), [1, 2, 3, 4, 5]);
+    assert.equal(body.boards.bronze.entered.length, 0); // 5 ranked -> no free slot
+    assert.deepEqual(body.boards.bronze.stats, { ranked: 7, entered: 2 });
+    assert.equal(body.boards.silver.entries.length, 1);
+    assert.equal(body.boards.silver.entered.length, 3); // 1 ranked + 3 entered = 4 <= 5
+  });
+});
+
 test('API: refresh needs the exact token; static repo files are not served', async () => {
   let triggered = 0;
   const secured = { ...cfg, refreshToken: 'right-token' };

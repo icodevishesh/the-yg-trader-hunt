@@ -1,7 +1,7 @@
 'use strict';
 
 const { runScoring } = require('./score');
-const { applyPnlFix, compareRows, PNL_FIX_MIN_TRADES } = require('../domain/scoring');
+const { applyPnlFix, compareRows } = require('../domain/scoring');
 
 /*
  * Rounds, finalized by an admin with a button.
@@ -134,15 +134,16 @@ function createRounds({ store, elefin, cfg, now = Date.now }) {
 
   /**
    * Corrects week-1 rows whose reconstructed pnl doesn't match the account's real balance move
-   * (flag 'pnl_mismatch') by trusting the ledger instead (see applyPnlFix). Only rows with
-   * >= PNL_FIX_MIN_TRADES closed trades are touched. Safe to run after week 1 is finalized --
+   * (flag 'pnl_mismatch') by trusting the account balance instead (see applyPnlFix). Every
+   * flagged row is fixed, whatever its trade count: the balance is the account's real money, so
+   * it is the trustworthy figure even for a thin sample. Safe to run after week 1 is finalized --
    * it never calls Elefin, only edits the already-published board and (if finalized) the
    * recorded winners/standings; week 1 stays finalized either way.
    */
   async function fixPnlMismatch() {
     const cohort = base;
     const entriesMap = await store.loadEntries(cohort);
-    const targets = [...entriesMap.values()].filter((r) => (r.flags || []).includes('pnl_mismatch') && (r.closed_trades || 0) >= PNL_FIX_MIN_TRADES);
+    const targets = [...entriesMap.values()].filter((r) => (r.flags || []).includes('pnl_mismatch'));
     if (!targets.length) return { fixed: 0, changes: [], winners: null, finalized: false };
 
     const strip = ({ _id, cohort: _c, checked_at: _ca, ...rest }) => rest;

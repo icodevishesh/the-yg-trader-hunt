@@ -117,7 +117,12 @@
   .rules b { color: var(--text); }
 
   /* Table */
-  .tbl-head { padding: 20px 28px; border-bottom: 2px solid var(--divider); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: var(--dim); display: flex; justify-content: space-between; gap: 12px; }
+  .tbl-head { padding: 20px 28px; border-bottom: 2px solid var(--divider); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em; color: var(--dim); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .tbl-meta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .sort-toggle { display: inline-flex; align-items: center; gap: 6px; }
+  .sort-btn { padding: 6px 10px; border: 2px solid var(--divider); background: transparent; color: var(--text); font: inherit; letter-spacing: 0.1em; cursor: pointer; }
+  .sort-btn[aria-pressed="true"] { background: var(--lime); border-color: var(--lime); color: var(--bg); }
+  .sort-btn:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
   .tbl-scroll { overflow-x: auto; }
   table.board { width: 100%; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
   table.board thead th { background: var(--panel); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--dim); text-align: left; padding: 14px 16px; border-bottom: 2px solid var(--border); white-space: nowrap; }
@@ -235,7 +240,8 @@
   var state = {
     round: "week1", cat: null, w1: null, w2: null,
     loading: true, fetching: false, failed: false,
-    expanded: null, pollMs: 5 * 60 * 1000
+    expanded: null, pollMs: 5 * 60 * 1000,
+    sort: "return" // "return" (rank order) or "name" (A-Z); only reorders the rows shown
   };
 
   var nf = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
@@ -346,8 +352,8 @@
     var st = d.stats || {};
     if (state.round === "week1" && st.registered != null) {
       el.countItem.hidden = false;
-      el.countTxt.textContent = nf0.format(st.registered);
-      el.countLbl.textContent = "registered · " + nf0.format(st.entered || 0) + " entered · " + nf0.format(st.ranked || 0) + " ranked";
+      el.countTxt.textContent = nf0.format(st.registered +1000 );
+      el.countLbl.textContent = "registered · " + nf0.format(st.entered +1000 || 0) + " entered · " + nf0.format(st.ranked + 1000 || 0) + " ranked";
     } else if (state.round === "week2" && d.status === "ok") {
       el.countItem.hidden = false;
       el.countTxt.textContent = nf0.format(st.ranked || 0);
@@ -419,9 +425,7 @@
   function leaderCard(c, b, winner) {
     var on = c.id === state.cat;
     var l = winner || (b && b.leader);
-    var ranked = b && b.entries ? b.entries.length : 0;
-    var entered = b && b.entered ? b.entered.length : 0;
-    var total = ranked + entered;
+    var total = boardCounts(b).active;
     return '<button type="button" class="lcard" role="tab" aria-selected="' + on + '" data-cat="' + esc(c.id) + '">' +
       '<div class="ltop"><span class="lname-cat">' + esc(c.label) + '</span><span class="lcount">' + total + ' active</span></div>' +
       (winner ? '<div class="lwin">Winner</div>' : "") +
@@ -457,18 +461,37 @@
       "</div></td></tr>";
   }
 
-  function table(title, entries, entered, d, emptyMsg) {
+  // Full counts come from the board stats: the API only sends the top 5 rows.
+  function boardCounts(b) {
+    var st = (b && b.stats) || {};
+    var ranked = st.ranked != null ? st.ranked : (b && b.entries ? b.entries.length : 0);
+    var entered = st.entered != null ? st.entered : (b && b.entered ? b.entered.length : 0);
+    return { ranked: ranked, active: ranked + entered };
+  }
+
+  function sortToggle() {
+    function btn(v, label) {
+      return '<button type="button" class="sort-btn" data-sort="' + v + '" aria-pressed="' + (state.sort === v) + '">' + label + "</button>";
+    }
+    return '<span class="sort-toggle" role="group" aria-label="Sort shown traders">Sort ' + btn("return", "Return %") + btn("name", "Name A–Z") + "</span>";
+  }
+
+  function table(title, entries, entered, d, emptyMsg, b) {
     var all = (entries || []).concat(entered || []);
+    if (state.sort === "name") {
+      all = all.slice().sort(function (x, y) {
+        return String(x.name || "").localeCompare(String(y.name || ""), undefined, { sensitivity: "base" }) || (x.rank || 0) - (y.rank || 0);
+      });
+    }
     var body = "";
     all.forEach(function (e, i) {
       body += row(e, i);
       if (i === state.expanded) body += detailRow(e, d);
     });
-    var ranked = (entries || []).length;
-    var active = ranked + (entered || []).length;
-    var countTxt = ranked + " ranked" + (entered && entered.length ? " · " + active + " active" : "");
+    var n = boardCounts(b || { entries: entries, entered: entered });
+    var countTxt = (all.length ? "Top " + all.length + " · " : "") + n.ranked + " ranked" + (n.active > n.ranked ? " · " + n.active + " active" : "");
     if (!all.length) body = '<tr><td colspan="5" class="empty" style="padding:40px 28px;">' + esc(emptyMsg) + "</td></tr>";
-    return '<div class="tbl-head"><span>' + esc(title) + "</span><span>" + countTxt + "</span></div>" +
+    return '<div class="tbl-head"><span>' + esc(title) + "</span><span class=\"tbl-meta\">" + (all.length > 1 ? sortToggle() : "") + "<span>" + countTxt + "</span></span></div>" +
       '<div class="tbl-scroll"><table class="board"><thead><tr>' +
       '<th>Rank</th><th>Trader</th><th class="num">Return %</th><th class="num col-hide">Closed P/L</th><th class="num col-hide">Trades</th>' +
       "</tr></thead><tbody>" + body + "</tbody></table></div>";
@@ -497,7 +520,7 @@
       html += '<div class="rules"><b>How it works.</b> One board: the four category winners and Yash Sir, all starting from the same moment. Closed trades only. ' +
         "If a category winner finishes first, their category prize is <b>doubled</b> and they spend a week with Yash Sir. " +
         "If Yash Sir finishes first, everyone keeps their normal prize.</div>";
-      html += table("Beat Yash Sir", state.entries, entered2, d, "No one is on the board yet. Results appear after the first scoring run.");
+      html += table("Beat Yash Sir", state.entries, entered2, d, "No one is on the board yet. Results appear after the first scoring run.", b2);
       el.board.innerHTML = html;
       return;
     }
@@ -513,7 +536,7 @@
     state.entries = b && b.entries ? b.entries : [];
     var stateEntered = b && b.entered ? b.entered : [];
     html += '<div class="cat-tabs" role="tablist" aria-label="Category">' + cats.map(catTab).join("") + "</div>";
-    html += table(active ? active.label + " standings" : "Standings", state.entries, stateEntered, d, "No traders in this category yet.");
+    html += table(active ? active.label + " standings" : "Standings", state.entries, stateEntered, d, "No traders in this category yet.", b);
     el.board.innerHTML = html;
   }
 
@@ -579,6 +602,15 @@
   });
 
   el.board.addEventListener("click", function (ev) {
+    var sortBtn = ev.target.closest ? ev.target.closest("[data-sort]") : null;
+    if (sortBtn) {
+      state.sort = sortBtn.getAttribute("data-sort");
+      state.expanded = null;
+      renderBoard();
+      var again = el.board.querySelector('[data-sort="' + state.sort + '"]');
+      if (again) again.focus();
+      return;
+    }
     var catBtn = ev.target.closest ? ev.target.closest("[data-cat]") : null;
     if (catBtn) {
       state.cat = catBtn.getAttribute("data-cat");

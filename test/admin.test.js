@@ -596,7 +596,7 @@ test('rescore triggers the locked run and is audited', async () => {
   assert.equal(s.repo.log[0].action, 'rescore');
 });
 
-test('fixPnlMismatch: validates the reason before delegating, then audits per-trader plus a summary row', async () => {
+test('fixPnlMismatch: reason is optional; audits per-trader plus a summary row', async () => {
   const repo = memRepo();
   const calls = [];
   const stubRounds = {
@@ -611,10 +611,10 @@ test('fixPnlMismatch: validates the reason before delegating, then audits per-tr
   const service = createAdminService({ repo, elefin: {}, cfg, trigger: () => {}, rounds: stubRounds, now: () => T0 + 1000 });
   const ctx = { admin: 'vipin', ip: '1.2.3.4' };
 
-  await assert.rejects(service.fixPnlMismatch(ctx, { reason: 'short' }), (e) => e.code === 'reason_required');
+  await assert.rejects(service.fixPnlMismatch(ctx, { bogus: 1 }), (e) => e.code === 'unknown_field');
   assert.equal(calls.length, 0); // rejected before it ever reached rounds
 
-  const res = await service.fixPnlMismatch(ctx, { reason: REASON });
+  const res = await service.fixPnlMismatch(ctx, {});
   assert.equal(res.fixed, 1);
   assert.equal(calls.length, 1);
   assert.equal(repo.log.filter((l) => l.action === 'pnl_fix.apply').length, 1);
@@ -628,11 +628,13 @@ test('fixPnlMismatch: switches the fixed traders to balance P/L so the next run 
   const repo = memRepo();
   repo.traders.set('a@x.com', { email: 'a@x.com', wallet_id: '1', version: 2 });
   const stubRounds = { fixPnlMismatch: async () => ({ fixed: 1, finalized: false, winners: null, changes: [{ email: 'a@x.com' }, { email: 'gone@x.com' }] }) };
-  const service = createAdminService({ repo, elefin: {}, cfg, trigger: () => {}, rounds: stubRounds, now: () => T0 + 1000 });
+  const triggered = [];
+  const service = createAdminService({ repo, elefin: {}, cfg, trigger: (w) => triggered.push(w), rounds: stubRounds, now: () => T0 + 1000 });
   const res = await service.fixPnlMismatch({ admin: 'vipin' }, { reason: REASON });
   assert.equal(res.persisted, 1);
   assert.equal(repo.traders.get('a@x.com').pnl_source, 'balance');
   assert.equal(repo.traders.get('a@x.com').version, 3);
+  assert.deepEqual(triggered, ['admin']); // board re-scored from live balances right away
 });
 
 // ---------- P/L check ----------

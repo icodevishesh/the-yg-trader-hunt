@@ -72,11 +72,11 @@
     </section>
 
     <section class="panel" aria-labelledby="pf-h">
-      <h2 id="pf-h">Fix PNL mismatches</h2>
-      <p class="muted">For every trader currently flagged <code>pnl_mismatch</code> with at least 2 closed trades: replaces the trade-rebuilt P/L with the balance figure, re-ranks the affected categories (and corrects week-1 winners if it is already finalized), and switches those traders to <b>balance P/L</b> so later scoring runs keep the fix. To look at one trader's closed trades first, open the trader and use "P/L check".</p>
+      <h2 id="pf-h">Fix PNL mismatches (all traders)</h2>
+      <p class="muted">One click for every trader currently flagged <code>pnl_mismatch</code>: replaces the trade-rebuilt P/L with the balance figure, re-ranks the affected categories (and corrects week-1 winners if it is already finalized), and switches those traders to <b>balance P/L</b> so later scoring runs keep the fix. To look at one trader's closed trades first, open the trader and use "P/L check".</p>
       <div class="row" style="margin-bottom:12px">
-        <label style="flex:1;min-width:220px">Reason <input id="pf-reason" placeholder="e.g. Reconstructed pnl ignores commission (min 10 characters)"></label>
-        <button id="pf-run" class="primary" type="button" style="align-self:end">Fix PNL mismatches</button>
+        <label style="flex:1;min-width:220px">Reason (optional) <input id="pf-reason" placeholder="e.g. Trade feed misses commission"></label>
+        <button id="pf-run" class="primary" type="button" style="align-self:end">Fix all PNL mismatches</button>
       </div>
       <div id="pf-out"></div>
       <p id="pf-err" class="err" role="alert"></p>
@@ -617,15 +617,15 @@
   $('pf-run').addEventListener('click', async () => {
     $('pf-err').textContent = '';
     const reason = $('pf-reason').value;
-    const msg = 'Fix PNL mismatches for every trader with 2+ closed trades currently flagged pnl_mismatch?\n\nThis edits the published board in place, and the finalized winners/standings too if week 1 is already finalized.';
+    const msg = 'Fix P/L for EVERY trader currently flagged pnl_mismatch?\n\nTheir P/L becomes the real balance movement since their start line (deposits and withdrawals taken out), and stays that way on every later scoring run.\n\nThis edits the published board in place, and the finalized winners/standings too if week 1 is already finalized.';
     if (!window.confirm(msg)) return;
     try {
       const r = await api('/pnl-fix', { method: 'POST', body: { reason } });
       $('pf-out').replaceChildren(
         r.fixed === 0
-          ? h('p', { class: 'muted' }, 'Nothing to fix - no trader is currently flagged pnl_mismatch with 2+ closed trades.')
+          ? h('p', { class: 'muted' }, 'Nothing to fix - no trader is currently flagged pnl_mismatch.')
           : h('div', {},
-              h('p', {}, 'Fixed ' + r.fixed + ' trader(s).' + (r.finalized ? ' Week 1 was finalized - its winners/standings were corrected too.' : '')),
+              h('p', {}, 'Fixed ' + r.fixed + ' trader(s); ' + (r.persisted || 0) + ' switched to balance P/L. The board refreshes from live balances in a few seconds.' + (r.finalized ? ' Week 1 was finalized - its winners/standings were corrected too.' : '')),
               h('div', { class: 'table-wrap' }, h('table', {}, h('thead', {}, h('tr', {}, ['Email', 'Category', 'P/L', 'Return %', 'Winner-eligible'].map((x) => h('th', {}, x)))),
                 h('tbody', {}, r.changes.map(pnlFixRow)))),
               r.winners ? h('p', { class: 'muted', style: 'margin-top:8px' }, 'New winners - ' + Object.entries(r.winners).map(([c, w]) => c + ': ' + (w ? w.name : 'no winner')).join(', ')) : '',

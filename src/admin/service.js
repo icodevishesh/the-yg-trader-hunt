@@ -843,7 +843,7 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
     async fixPnlMismatch(ctx, input) {
       rejectUnknown(input, ['reason']);
       if (!rounds) throw new AdminError(500, 'rounds_unavailable', 'Rounds module not configured.');
-      const reason = requireReason(input);
+      const reason = optionalReason(input);
       const res = await rounds.fixPnlMismatch();
       for (const c of res.changes) await audit(ctx, 'pnl_fix.apply', c.email, null, c, reason);
       // The patch above is overwritten by the next scoring run; switching these traders to balance
@@ -859,7 +859,8 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
         }
       }
       res.persisted = persisted;
-      await audit(ctx, 'pnl_fix.run', null, null, { count: res.fixed, finalized: res.finalized, winners: res.winners }, reason);
+      await audit(ctx, 'pnl_fix.run', null, null, { count: res.fixed, persisted, finalized: res.finalized, winners: res.winners }, reason);
+      if (persisted) rescore(); // refresh the board from live balances straight away
       return res;
     },
 

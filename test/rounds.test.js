@@ -198,11 +198,11 @@ function entryRow(email, o = {}) {
 }
 
 /** a: mismatched but tradeable (5 closed trades) -- the fix should flip it to prize-eligible and on top.
- *  b: mismatched but only 1 closed trade -- too thin a sample, the fix must leave it alone.
+ *  b: mismatched with only 1 closed trade -- fixed too (the balance is trusted whatever the count).
  *  c: already clean and winning, pre-fix. */
 function seedPnlFixBoard(store) {
   const a = entryRow('a@x.com', { pnl: 10, return_pct: 10, closed_trades: 5, reconcile_diff: 15, flags: ['pnl_mismatch'] });
-  const b = entryRow('b@x.com', { pnl: 5, return_pct: 5, closed_trades: 1, reconcile_diff: 50, flags: ['pnl_mismatch'] });
+  const b = entryRow('b@x.com', { pnl: 5, return_pct: 5, closed_trades: 1, reconcile_diff: 10, flags: ['pnl_mismatch'] });
   const c = entryRow('c@x.com', { pnl: 20, return_pct: 20, closed_trades: 5, winner_eligible: true });
   for (const r of [a, b, c]) store.entries.set(`ses-2:${r.email}`, { ...r, _id: `ses-2:${r.email}`, cohort: 'ses-2', checked_at: 'x' });
   store.current.set('ses-2', {
@@ -212,12 +212,14 @@ function seedPnlFixBoard(store) {
   return { a, b, c };
 }
 
-test('fixPnlMismatch: trusts pnl + reconcile_diff for rows with >=2 closed trades, re-ranks the category, leaves thin samples alone', async () => {
+test('fixPnlMismatch: trusts pnl + reconcile_diff for every flagged row (thin samples too) and re-ranks the category', async () => {
   const store = memStore([]);
   seedPnlFixBoard(store);
   const res = await roundsFor(store, {}, T0 + 60000).fixPnlMismatch();
 
-  assert.equal(res.fixed, 1); // b@x.com has only 1 closed trade -- not touched
+  assert.equal(res.fixed, 2); // b@x.com has only 1 closed trade -- fixed as well
+  assert.deepEqual(res.changes.map((c) => c.email).sort(), ['a@x.com', 'b@x.com']);
+  res.changes.sort((x, y) => x.email.localeCompare(y.email));
   assert.equal(res.changes[0].email, 'a@x.com');
   assert.equal(res.changes[0].pnl.from, 10);
   assert.equal(res.changes[0].pnl.to, 25);
@@ -230,11 +232,13 @@ test('fixPnlMismatch: trusts pnl + reconcile_diff for rows with >=2 closed trade
   assert.equal(fixedA.pnl, 25);
   assert.equal(fixedA.return_pct, 25);
   assert.deepEqual(fixedA.flags, []);
-  assert.deepEqual(store.entries.get('ses-2:b@x.com').flags, ['pnl_mismatch']); // untouched
+  const fixedB = store.entries.get('ses-2:b@x.com');
+  assert.equal(fixedB.pnl, 15);
+  assert.deepEqual(fixedB.flags, []);
 
   const board = store.current.get('ses-2').categories.bronze;
-  assert.deepEqual(board.entries.map((e) => e.email), ['a@x.com', 'c@x.com', 'b@x.com']); // a now outranks c
-  assert.equal(board.stats.flagged, 1); // only b still carries a flag
+  assert.deepEqual(board.entries.map((e) => e.email), ['a@x.com', 'c@x.com', 'b@x.com']); // a (25%) now outranks c (20%); b 15%
+  assert.equal(board.stats.flagged, 0);
 });
 
 test('fixPnlMismatch: also corrects an already-finalized round\'s winners/standings without reopening it', async () => {

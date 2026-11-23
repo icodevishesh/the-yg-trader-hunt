@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 const express = require('express');
 
+const TOP_N = 5; // traders shown per category on the public board
 const round2 = (n) => (Number.isFinite(n) ? Math.round(n * 100) / 100 : null);
 
 /** "Yash Agarwal" -> "Yash A."; never expose emails, wallet ids or review flags. */
@@ -109,8 +110,10 @@ function createLeaderboardRouter({ store, trigger, cfg, now = Date.now, rounds }
       for (const c of scoring.categories) {
         if (want && c.id !== want) continue;
         const b = cur.categories[c.id] || { entries: [], entered: [], stats: {} };
-        const entries = b.entries.map(publicEntry);
-        const entered = (b.entered || []).map(publicEntry);
+        // Public board shows the top TOP_N only. Entered traders who have not traded yet fill any
+        // free slots. Full counts stay in `stats`.
+        const entries = b.entries.slice(0, TOP_N).map(publicEntry);
+        const entered = (b.entered || []).slice(0, Math.max(0, TOP_N - entries.length)).map(publicEntry);
         boards[c.id] = { stats: b.stats, leader: entries[0] || null, entries, entered };
       }
 
