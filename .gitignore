@@ -18,3 +18,4 @@ uploads/*
 
 data/trades-report-*.csv
 data/elefin-dump/
+data/trader-trades-*.csv
