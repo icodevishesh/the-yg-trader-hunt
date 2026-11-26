@@ -215,7 +215,7 @@
       h('td', {}, t.email), h('td', {}, t.wallet_id || '—'), h('td', {}, t.name || '—'),
       h('td', {}, badge(t.status, t.status === 'active' ? 'ok' : t.status === 'disqualified' ? 'bad' : 'warn')),
       h('td', {}, t.category || '—'),
-      h('td', { title: (t.reasons || []).join(', ') || undefined }, t.return_pct == null ? '—' : [t.return_pct.toFixed(2) + '%', t.winner_eligible ? badge('prize-eligible', 'ok') : t.eligible ? badge('flagged', 'warn') : badge('ineligible', 'bad')]),
+      h('td', { title: (t.reasons || []).join(', ') || undefined }, t.return_pct == null ? '—' : [t.return_pct.toFixed(2) + '%', t.winner_eligible ? badge('prize-eligible', 'ok') : t.eligible ? ((t.flags || []).includes('pnl_auto_fixed') ? badge('prize: review P/L', 'warn') : (t.flags || []).includes('flow_pending') ? badge('prize: deposit/withdrawal pending', 'warn') : badge('flagged', 'warn')) : badge('ineligible', 'bad')]),
       h('td', {}, isManual ? badge('manual', 'warn') : chk ? [badge(chk.owner_match ? 'owner match' : 'no match', chk.owner_match ? 'ok' : 'bad'), h('div', { class: 'muted' }, when(chk.at))] : '—'),
       h('td', {}, (t.flags || []).map((f) => badge(f, /mismatch|unpriceable/.test(f) ? 'bad' : '')), t.manual ? badge('manual: ' + t.manual, 'warn') : ''),
       h('td', {}, h('button', { type: 'button', on: { click: () => openEditor(t) } }, 'Open')));
@@ -420,7 +420,7 @@
     const srcLabel = (source, flags) => 'P/L source: ' + (source === 'balance'
       ? 'balance (fixed by an admin)'
       : (flags || []).includes('pnl_auto_fixed')
-        ? 'balance (auto-fixed by the last scoring run: trade P/L did not match the balance)'
+        ? 'balance (auto-fixed by the last scoring run: trade P/L did not match the balance) — prize on hold until approved'
         : 'closed trades (default)');
     let lastFlags = t.flags || [];
     const src = h('p', { class: 'muted' }, srcLabel(t.pnl_source, lastFlags));
@@ -432,7 +432,7 @@
     const setSource = (to) => async () => {
       err.textContent = '';
       const msg = to === 'balance'
-        ? 'Use the balance P/L for this trader from now on?\n\nEvery scoring run will take P/L = balance now − balance at start − deposits + withdrawals. This clears pnl_mismatch for good and includes trades that were open at the start line, unpriceable instruments and commission.'
+        ? 'Use the balance P/L for this trader from now on?\n\nEvery scoring run will take P/L = balance now − balance at start − deposits + withdrawals. This clears pnl_mismatch for good and includes trades that were open at the start line, unpriceable instruments and commission.\n\nThis also approves the P/L for the prize: only do it after checking the trader\'s MT5 statement.'
         : 'Go back to the P/L rebuilt from closed trades (the default)?';
       if (!window.confirm(msg)) return;
       try {
@@ -469,7 +469,7 @@
           r.causes.length ? '\nWhy:\n- ' + r.causes.join('\n- ') : null,
           r.scored ? '\nOn the board now: P/L ' + num2(r.scored.pnl) + ', return ' + (r.scored.return_pct == null ? '—' : r.scored.return_pct.toFixed(2) + '%') + (r.scored.flags.length ? ', flags: ' + r.scored.flags.join(', ') : '') : null,
           lastFlags.includes('balance_without_trades') ? '\nNot ranked: no trade has closed since the start line, so this balance change is not counted as a trading result. The trader is ranked once they close a trade.' : null,
-          r.mismatch && r.pnl_source !== 'balance' && autoFixed && !lastFlags.includes('balance_without_trades') ? '\nAlready fixed: every scoring run uses the balance P/L (' + num2(r.balance_pnl) + ') for this trader automatically.' : null,
+          r.mismatch && r.pnl_source !== 'balance' && autoFixed && !lastFlags.includes('balance_without_trades') ? '\nOn the board: every scoring run uses the balance P/L (' + num2(r.balance_pnl) + ') for this trader automatically. The prize stays on hold until you check the MT5 statement and click "Use balance P/L" to approve it.' : null,
           r.mismatch && r.pnl_source !== 'balance' && !autoFixed ? '\nTo fix: "Use balance P/L" — the board then shows ' + num2(r.balance_pnl) + '.' : null,
         ].filter(Boolean).join('\n');
         tableBox.replaceChildren(r.trades.length ? h('table', {},

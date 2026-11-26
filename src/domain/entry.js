@@ -1,15 +1,46 @@
 'use strict';
 
-const { round2, categoryFor, netCapital, returnPct, ledgerSum, reconcile, accountActivity } = require('./scoring');
+const { BLOCKING_FLAGS, round2, categoryFor, netCapital, returnPct, ledgerSum, reconcile, accountActivity } = require('./scoring');
 
 // Inputs an organiser may override from our own database (admin-plan §3b).
 const OVERRIDABLE = ['start_capital', 'balance_start', 'captured_at', 'dep_w', 'wdr_w', 'closed_pnl', 'closed_trades'];
 const has = (v) => v !== undefined && v !== null;
+const finite = (v) => has(v) && v !== '' && Number.isFinite(Number(v));
 
-/** Deposit/withdrawal sums for one baseline window (check B: the ledger). */
+// Ledger statuses that mean the money will never move. Anything else that is not "success"
+// (pending, processing, ...) is still in flight.
+const FLOW_DONE = new Set(['success', 'failed', 'rejected', 'cancelled', 'canceled', 'declined', 'expired', 'reversed', 'refunded', 'error']);
+// A row still "pending" after this long is treated as abandoned, not in flight.
+const PENDING_WINDOW_MS = 48 * 3600 * 1000;
+
+/**
+ * Deposit/withdrawal sums for one baseline window (check B: the ledger), plus how many of this
+ * login's rows are still in flight (created in the last 48 h, neither successful nor failed).
+ */
 function ledgerFlows(ledger, baseline, windowEnd) {
   const q = { login: baseline.wallet_id, from: baseline.captured_at, to: windowEnd };
-  return { depW: ledgerSum(ledger, { ...q, type: 'deposit' }), wdrW: ledgerSum(ledger, { ...q, type: 'withdrawal' }) };
+  const toMs = Date.parse(windowEnd);
+  const fromMs = Math.max(Date.parse(baseline.captured_at), toMs - PENDING_WINDOW_MS);
+  let pending = 0;
+  for (const r of ledger) {
+    if (String(r.login) !== String(baseline.wallet_id)) continue;
+    if (!['deposit', 'withdrawal'].includes(String(r.type).toLowerCase())) continue;
+    if (FLOW_DONE.has(String(r.status || 'success').toLowerCase())) continue;
+    const at = Date.parse(r.created_at);
+    if (at >= fromMs && at <= toMs) pending += 1;
+  }
+  return { depW: ledgerSum(ledger, { ...q, type: 'deposit' }), wdrW: ledgerSum(ledger, { ...q, type: 'withdrawal' }), pending };
+}
+
+/**
+ * Deposits/withdrawals since the start line from the account record (check A), or null when the
+ * start line carries no account totals. These are read in the same call as the balance, so balance
+ * P/L built from them cannot pick up a flow the ledger has not caught up with yet.
+ */
+function accountFlows(account, baseline) {
+  if (!account || !has(baseline.total_deposit_start) || !has(baseline.total_withdrawal_start)) return null;
+  if (!finite(account.total_deposit) || !finite(account.total_withdrawal)) return null;
+  return { depW: Number(account.total_deposit) - baseline.total_deposit_start, wdrW: Number(account.total_withdrawal) - baseline.total_withdrawal_start };
 }
 
 /**
@@ -46,8 +77,14 @@ function scoreTrader({ trader, baseline, account, summary, flows, overrides = nu
   const reasons = [];
   const flags = [];
 
-  const depW = has(ov.dep_w) ? ov.dep_w : flows.depW;
-  const wdrW = has(ov.wdr_w) ? ov.wdr_w : flows.wdrW;
+  // Flows come from the account record when the start line has its totals (same snapshot as the
+  // balance); the ledger is the check (flow_mismatch). Without totals, the ledger is all there is.
+  const handFlows = has(ov.dep_w) || has(ov.wdr_w);
+  // A start time typed by an admin no longer matches the totals captured with the start line.
+  const acctFlows = has(ov.captured_at) ? null : accountFlows(account, baseline);
+  const src = acctFlows || flows;
+  const depW = has(ov.dep_w) ? ov.dep_w : src.depW;
+  const wdrW = has(ov.wdr_w) ? ov.wdr_w : src.wdrW;
   // P/L source. Default: rebuilt from closed trades. "balance" (set per trader by an admin to fix a
   // pnl_mismatch): the account's real balance movement since the start line, net of deposits and
   // withdrawals -- closed trades only (the balance ignores open positions), including trades that
@@ -66,18 +103,16 @@ function scoreTrader({ trader, baseline, account, summary, flows, overrides = nu
   // The feed also misses rows, so the account's own trade counter / last_trade_at is the floor.
   const feedCount = summary.closedTrades + (fromBalance ? (summary.openAtEntry || 0) + (summary.unpricedTrades || 0) : 0);
   const activity = fromBalance ? accountActivity(account, baseline) : null;
-  const acctCount = activity ? (activity.since !== null ? activity.since : activity.tradedSince ? 1 : 0) : 0;
+  const acctCount = activity ? Math.max(activity.since !== null ? activity.since : 0, activity.tradedSince ? 1 : 0) : 0;
   const closedTrades = has(ov.closed_trades) ? ov.closed_trades : Math.max(feedCount, acctCount);
 
   // Check A (account aggregates since baseline) against check B (ledger). Skipped when the
   // flows themselves were entered by hand, or when there is no live account to compare.
-  let flowMismatch = false;
   // Also skipped when the start line carries no account totals (a start line typed in "fields").
-  if (account && !has(ov.dep_w) && !has(ov.wdr_w) && has(baseline.total_deposit_start) && has(baseline.total_withdrawal_start)) {
-    const aggDep = Number(account.total_deposit) - baseline.total_deposit_start;
-    const aggWdr = Number(account.total_withdrawal) - baseline.total_withdrawal_start;
-    flowMismatch = Math.abs(aggDep - depW) > scoring.flowToleranceUsd || Math.abs(aggWdr - wdrW) > scoring.flowToleranceUsd;
-  }
+  const flowMismatch = !!acctFlows && !handFlows &&
+    (Math.abs(acctFlows.depW - flows.depW) > scoring.flowToleranceUsd || Math.abs(acctFlows.wdrW - flows.wdrW) > scoring.flowToleranceUsd);
+  // A deposit/withdrawal still in flight: the balance may already have moved for it.
+  const flowPending = !handFlows && (flows.pending || 0) > 0;
 
   const net = netCapital({ startCapital: baseline.start_capital_usd, depW, wdrW });
   const ret = returnPct(pnl, net);
@@ -107,13 +142,14 @@ function scoreTrader({ trader, baseline, account, summary, flows, overrides = nu
   // adjustment, not trading profit. The trader stays unranked (no_closed_trade) until they trade.
   if (activity && activity.tradedSince === false && feedCount === 0 && Math.abs(pnl) > scoring.pnlToleranceUsd) flags.push('balance_without_trades');
   if (flowMismatch) flags.push('flow_mismatch');
+  if (flowPending) flags.push('flow_pending');
   if (summary.openAtEntry) flags.push('open_at_entry');
   if (baseline.late_entry && !adminBaseline) flags.push('late_entry');
   if (adminBaseline) flags.push('admin_baseline'); // informational, never blocks a prize
   if (manual) flags.push(`manual_${manual.mode}`);
 
   const eligible = reasons.length === 0;
-  const blocking = ['pnl_unpriceable', 'pnl_mismatch', 'flow_mismatch'];
+  const blocking = BLOCKING_FLAGS;
 
   return {
     email: trader.email,
@@ -137,6 +173,10 @@ function scoreTrader({ trader, baseline, account, summary, flows, overrides = nu
     winner_eligible: eligible && !flags.some((f) => blocking.includes(f)),
     reasons,
     flags,
+    // The scoring run keeps the previous row while this is true (see jobs/score.js). Not for a
+    // plain flow_mismatch: P/L uses the account's own totals, so a lagging ledger cannot skew it;
+    // a pending flow can, if the balance moves before the totals do.
+    flows_unsettled: flowPending,
     manual: manual ? { mode: manual.mode, fields: manual.mode === 'fields' ? Object.keys(ov).filter((k) => has(ov[k])) : OVERRIDABLE, source: manual.source || null, entered_by: manual.entered_by || null, entered_at: manual.entered_at || null } : null,
   };
 }
@@ -165,4 +205,4 @@ function scoreManualFull({ trader, doc, competition, scoring }) {
   });
 }
 
-module.exports = { scoreTrader, scoreManualFull, applyBaselineOverrides, ledgerFlows, OVERRIDABLE };
+module.exports = { scoreTrader, scoreManualFull, applyBaselineOverrides, ledgerFlows, accountFlows, OVERRIDABLE };

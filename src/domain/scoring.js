@@ -114,7 +114,14 @@ function reconcile({ balanceNow, balanceStart, depW, wdrW, pnl, toleranceUsd }) 
   return { diff: round2(diff), mismatch: Math.abs(diff) > toleranceUsd };
 }
 
-/** Min closed trades for a mismatch to be trusted either way (see applyPnlFix). */
+/**
+ * Flags that keep a ranked trader from winning a prize until an organiser checks them.
+ *   pnl_auto_fixed  the run switched to balance P/L by itself; an admin approves it by setting the
+ *                   trader's P/L source to "balance" after checking the MT5 statement (plan §1b)
+ *   flow_mismatch   the ledger and the account's deposit/withdrawal totals disagree
+ *   flow_pending    a deposit/withdrawal is still pending
+ */
+const BLOCKING_FLAGS = ['pnl_unpriceable', 'pnl_mismatch', 'flow_mismatch', 'flow_pending', 'pnl_auto_fixed'];
 
 /**
  * Replaces a row's reconstructed pnl (per-trade price legs, no commission) with the
@@ -125,7 +132,7 @@ function reconcile({ balanceNow, balanceStart, depW, wdrW, pnl, toleranceUsd }) 
 function applyPnlFix(row) {
   const pnl = round2((row.pnl || 0) + (row.reconcile_diff || 0));
   const flags = (row.flags || []).filter((f) => f !== 'pnl_mismatch');
-  const blocking = ['pnl_unpriceable', 'pnl_mismatch', 'flow_mismatch'];
+  const blocking = BLOCKING_FLAGS;
   return {
     ...row,
     pnl,
@@ -147,7 +154,10 @@ function accountActivity(account, baseline) {
   const since = counter !== null && start !== null ? Math.max(0, counter - start) : null;
   const lastMs = account && account.last_trade_at ? Date.parse(account.last_trade_at) : NaN;
   const startMs = baseline ? Date.parse(baseline.captured_at) : NaN;
-  const tradedSince = since !== null ? since > 0 : Number.isFinite(lastMs) && Number.isFinite(startMs) ? lastMs >= startMs : null;
+  // last_trade_at after the start line is direct evidence of a trade even when the counter-based
+  // count is 0 (an estimated trades_start can only undercount).
+  const lastAfter = Number.isFinite(lastMs) && Number.isFinite(startMs) ? lastMs >= startMs : null;
+  const tradedSince = since !== null ? since > 0 || lastAfter === true : lastAfter;
   return { counter, tradesStart: start, since, tradedSince, lastTradeAt: Number.isFinite(lastMs) ? new Date(lastMs).toISOString() : null };
 }
 
@@ -177,4 +187,4 @@ function rankByCategory(rows, categories) {
   return out;
 }
 
-module.exports = { round2, categoryFor, netCapital, returnPct, tradePnl, closedPnl, ledgerSum, reconcile, compareRows, rankByCategory, applyPnlFix, contractSizeFor, accountActivity };
+module.exports = { BLOCKING_FLAGS, round2, categoryFor, netCapital, returnPct, tradePnl, closedPnl, ledgerSum, reconcile, compareRows, rankByCategory, applyPnlFix, contractSizeFor, accountActivity };

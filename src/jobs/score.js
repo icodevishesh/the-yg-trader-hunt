@@ -7,9 +7,18 @@ const { scoreTrader, scoreManualFull, applyBaselineOverrides, ledgerFlows } = re
 // Bump when closed-trade pricing changes (2: broker-suffixed symbols, unpricedTrades) so every
 // cached summary is rebuilt once instead of waiting for the trader's next trade.
 const TRADE_CACHE_V = 2;
-// The trade feed can lag the account's trade counter; a summary fetched less than this long after
-// the last trade is re-fetched on the next run.
-const FEED_SETTLE_MS = 30 * 60 * 1000;
+// The trade feed can lag the account's trade counter by hours (seen 2026-11-25: 39 trades appeared
+// in the feed long after they closed). A summary fetched less than this long after the last trade
+// is re-fetched on the next run.
+const FEED_SETTLE_MS = 6 * 3600 * 1000;
+// When the account counter shows more trades than the cached summary, re-fetch at most this often.
+const FEED_GAP_RETRY_MS = 3600 * 1000;
+// While a deposit/withdrawal of the trader's is pending, the previous row is kept for at most this
+// long; after that the fresh row is published, still flagged (prize held).
+const FLOW_HOLD_MAX_MS = 6 * 3600 * 1000;
+
+const feedCount = (s) => (s.closedTrades || 0) + (s.openAtEntry || 0) + (s.unpricedTrades || 0);
+const counterOf = (account) => (account && account.trades !== null && account.trades !== undefined && account.trades !== '' && Number.isFinite(Number(account.trades)) ? Number(account.trades) : null);
 
 const emptyRow = (trader, baseline, reasons) => ({
   email: trader.email,
@@ -141,8 +150,19 @@ async function runScoring({ store, elefin, cfg, nowMs = Date.now(), finalize = f
     const cache = prev && prev.trade_cache;
     const lastTradeMs = account.last_trade_at ? Date.parse(account.last_trade_at) : NaN;
     const settled = !Number.isFinite(lastTradeMs) || (cache && Date.parse(cache.fetched_at) - lastTradeMs > FEED_SETTLE_MS);
+    // Start lines frozen before trades_start existed (2026-11-23) carry no counter; the estimate
+    // kept on the entry row stands in for it (see below).
+    const counter = counterOf(account);
+    const samePrev = prev && prev.captured_at === baseline.captured_at;
+    const knownStart = baseline.trades_start !== null && baseline.trades_start !== undefined && Number.isFinite(Number(baseline.trades_start));
+    const prevEst = !knownStart && samePrev && Number.isFinite(prev.trades_start_est) ? prev.trades_start_est : null;
+    const startCount = knownStart ? Number(baseline.trades_start) : prevEst;
+    const feedBehind = !!cache && !!cache.summary && counter !== null && startCount !== null && counter - startCount > feedCount(cache.summary) &&
+      !(nowMs - Date.parse(cache.fetched_at) < FEED_GAP_RETRY_MS);
+    // The first estimate must come from a fresh fetch, not an old cached summary.
+    const needsEstimate = !knownStart && counter !== null && prevEst === null;
     let summary;
-    if (cache && cache.v === TRADE_CACHE_V && settled && cache.acct_trades === account.trades && cache.captured_at === baseline.captured_at) {
+    if (cache && cache.v === TRADE_CACHE_V && settled && !feedBehind && !needsEstimate && cache.acct_trades === account.trades && cache.captured_at === baseline.captured_at) {
       summary = cache.summary;
     } else {
       const t = await elefin.getTrades(trader.wallet_id, { from: baseline.captured_at, to: windowEnd });
@@ -154,10 +174,45 @@ async function runScoring({ store, elefin, cfg, nowMs = Date.now(), finalize = f
       summary = closedPnl(t.rows, { from: baseline.captured_at, to: windowEnd, contractSize: scoring.contractSize });
     }
 
+    // Estimated counter at the start line: counter now minus the trades the feed shows since then.
+    // The feed only ever misses trades, so this is never below the true value, and the smallest
+    // estimate seen so far is the best one. closed_trades = max(feed, counter - estimate) >= feed.
+    let tradesStartEst = null;
+    if (!knownStart && counter !== null) {
+      const cand = Math.max(0, counter - feedCount(summary));
+      tradesStartEst = prevEst === null ? cand : Math.min(prevEst, cand);
+    }
+    const scoredBaseline = tradesStartEst === null ? baseline : { ...baseline, trades_start: tradesStartEst };
+
     const flows = ledgerFlows(ledger, baseline, windowEnd);
-    const row = scoreTrader({ trader, baseline, account, summary, flows, overrides, manual: useManual ? manual : null, competition: comp, scoring });
+    let row = scoreTrader({ trader, baseline: scoredBaseline, account, summary, flows, overrides, manual: useManual ? manual : null, competition: comp, scoring });
     const reused = cache && cache.summary === summary;
-    row.trade_cache = { v: TRADE_CACHE_V, acct_trades: account.trades, captured_at: baseline.captured_at, fetched_at: reused ? cache.fetched_at : new Date(nowMs).toISOString(), summary };
+    const tradeCache = { v: TRADE_CACHE_V, acct_trades: account.trades, captured_at: baseline.captured_at, fetched_at: reused ? cache.fetched_at : new Date(nowMs).toISOString(), summary };
+    row.trade_cache = tradeCache;
+    if (tradesStartEst !== null) row.trades_start_est = tradesStartEst;
+
+    // Money still moving: keep the last good figures instead of publishing the jump a pending
+    // withdrawal (balance already debited) would cause. Prize stays blocked meanwhile (flow_pending).
+    if (row.flows_unsettled) {
+      const since = samePrev && prev.flow_hold_since ? prev.flow_hold_since : new Date(nowMs).toISOString();
+      const prevGood = samePrev && (!prev.flows_unsettled || prev.flow_held);
+      if (prevGood && nowMs - Date.parse(since) < FLOW_HOLD_MAX_MS) {
+        const flowFlags = row.flags.filter((f) => f === 'flow_mismatch' || f === 'flow_pending');
+        const { stale: _s, ...kept } = prev;
+        row = {
+          ...kept,
+          flags: [...(prev.flags || []).filter((f) => f !== 'flow_mismatch' && f !== 'flow_pending'), ...flowFlags],
+          winner_eligible: false,
+          flows_unsettled: true,
+          flow_held: true,
+          flow_hold_since: since,
+          trade_cache: tradeCache,
+          ...(tradesStartEst !== null ? { trades_start_est: tradesStartEst } : {}),
+        };
+      } else {
+        row.flow_hold_since = since;
+      }
+    }
     rows.push(row);
   }
 

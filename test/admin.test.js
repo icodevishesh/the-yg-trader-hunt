@@ -697,7 +697,10 @@ test('scorer: pnl_source "balance" takes P/L from the balance, clears pnl_mismat
   assert.equal(auto.pnl, 60);
   assert.ok(!auto.flags.includes('pnl_mismatch'));
   assert.ok(auto.flags.includes('pnl_from_balance') && auto.flags.includes('pnl_auto_fixed'));
-  assert.equal(auto.winner_eligible, true);
+  // Plan §1b: an unchecked mismatch holds the prize until an admin approves the balance P/L
+  // (setting the source to "balance", as `after` above shows, releases it).
+  assert.equal(auto.eligible, true);
+  assert.equal(auto.winner_eligible, false);
 });
 
 test('scorer: auto fix leaves a trader whose trades already match the balance alone', async () => {
@@ -999,7 +1002,7 @@ test('scorer: with balance P/L, trades on an unpriceable instrument still count 
   const at = T0 + 1000;
   const odd = (id, h) => ({ trade_ticket_id: id, instrument: 'EURUSD.P', type: 'BUY', lots: 0.1, open_time: iso(at + h), close_time: iso(at + h + 1000), open_price: 1.1, close_price: 1.2, swap: 0 });
   const baseline = { status: 'frozen', wallet_id: '1', captured_at: iso(at), start_capital_usd: 500, start_capital: 500, balance_start: 500, total_deposit_start: 500, total_withdrawal_start: 0, category: 'gold' };
-  const elefin = { getTransactions: async () => ({ ok: true, rows: [] }), getAccount: async () => ({ ok: true, account: acct({ balance: 600, equity: 600, trades: 2 }) }), getTrades: async () => ({ ok: true, rows: [odd('A', 1000), odd('B', 3000)] }) };
+  const elefin = { getTransactions: async () => ({ ok: true, rows: [] }), getAccount: async () => ({ ok: true, account: acct({ balance: 600, equity: 600, trades: 2, total_deposit: 500 }) }), getTrades: async () => ({ ok: true, rows: [odd('A', 1000), odd('B', 3000)] }) };
   const store = scoringStore({ traders: [{ ...tr, pnl_source: 'balance' }], manual: [] });
   store.baselines.set('t@x.com', { ...baseline });
   await runScoring({ store, elefin, cfg, nowMs: at + 20000 });
@@ -1015,14 +1018,14 @@ describeFeed();
 function describeFeed() {
   const at = T0 + 1000;
   const base = { status: 'frozen', wallet_id: '1', captured_at: iso(at), start_capital_usd: 200, start_capital: 200, balance_start: 200, total_deposit_start: 200, total_withdrawal_start: 0, category: 'bronze' };
-  const runOne = async ({ account, rows = [], baseline = base, trader = tr, prev = null }) => {
+  const runOne = async ({ account, rows = [], baseline = base, trader = tr, prev = null, ledger = [], nowMs = at + 3 * 3600000 }) => {
     const calls = [];
-    const elefin = { getTransactions: async () => ({ ok: true, rows: [] }), getAccount: async () => ({ ok: true, account }), getTrades: async () => { calls.push('t'); return { ok: true, rows }; } };
+    const elefin = { getTransactions: async (type) => ({ ok: true, rows: ledger.filter((r) => r.type === type) }), getAccount: async () => ({ ok: true, account }), getTrades: async () => { calls.push('t'); return { ok: true, rows }; } };
     const store = scoringStore({ traders: [trader], manual: [] });
     store.baselines.set('t@x.com', { ...baseline });
     if (prev) store.entries.set('t@x.com', prev);
-    await runScoring({ store, elefin, cfg, nowMs: at + 3 * 3600000 });
-    return { row: store.entries.get('t@x.com'), calls };
+    await runScoring({ store, elefin, cfg, nowMs });
+    return { row: store.entries.get('t@x.com'), calls, store };
   };
 
   test('feed gap: the account counter says 3 trades since the start line, the feed returned none -> 3 trades, ranked', async () => {
@@ -1059,10 +1062,86 @@ function describeFeed() {
 
   test('trade cache: a current, settled summary is reused (no feed call)', async () => {
     const summary = { pnl: 10, closedTrades: 1, openAtEntry: 0, unpriceable: [], unpricedTrades: 0 };
-    const prev = { email: 't@x.com', trade_cache: { v: 2, acct_trades: 5, captured_at: iso(at), fetched_at: iso(at + 7200000), summary } };
-    const { row, calls } = await runOne({ account: acct({ balance: 210, equity: 210, trades: 5, last_trade_at: iso(at + 6000) }), prev });
+    // Fetched 7 h after the last trade: past the 6 h settle time.
+    const prev = { email: 't@x.com', trade_cache: { v: 2, acct_trades: 5, captured_at: iso(at), fetched_at: iso(at + 7 * 3600000), summary } };
+    const { row, calls } = await runOne({ account: acct({ balance: 210, equity: 210, trades: 5, last_trade_at: iso(at + 6000) }), baseline: { ...base, trades_start: 4 }, prev, nowMs: at + 8 * 3600000 });
     assert.deepEqual(calls, []);
     assert.equal(row.pnl, 10);
+  });
+
+  test('no trades_start and no estimate yet: one fresh fetch even with a settled cache, then the cache is reused', async () => {
+    const t = { trade_ticket_id: 'A', instrument: 'XAUUSD', type: 'BUY', lots: 0.1, open_time: iso(at + 1000), close_time: iso(at + 2000), open_price: 100, close_price: 101, swap: 0 };
+    const summary = { pnl: 0, closedTrades: 0, openAtEntry: 0, unpriceable: [], unpricedTrades: 0 }; // stale: feed had not caught up
+    const prev = { email: 't@x.com', captured_at: iso(at), trade_cache: { v: 2, acct_trades: 5, captured_at: iso(at), fetched_at: iso(at + 7 * 3600000), summary } };
+    const a = { balance: 210, equity: 210, trades: 5, last_trade_at: iso(at + 2000) };
+    const r1 = await runOne({ account: acct(a), rows: [t], prev, nowMs: at + 8 * 3600000 });
+    assert.deepEqual(r1.calls, ['t']);
+    assert.equal(r1.row.trades_start_est, 4); // 5 - 1, not 5 - 0
+    const r2 = await runOne({ account: acct(a), rows: [t], prev: r1.row, nowMs: at + 8.5 * 3600000 });
+    assert.deepEqual(r2.calls, []);
+    assert.equal(r2.row.trades_start_est, 4);
+  });
+
+  test('trade cache: a summary fetched under 6 h after the last trade is re-fetched (the feed backfills late)', async () => {
+    const summary = { pnl: 10, closedTrades: 1, openAtEntry: 0, unpriceable: [], unpricedTrades: 0 };
+    const prev = { email: 't@x.com', trade_cache: { v: 2, acct_trades: 5, captured_at: iso(at), fetched_at: iso(at + 3600000), summary } };
+    const { calls } = await runOne({ account: acct({ balance: 210, equity: 210, trades: 5, last_trade_at: iso(at + 6000) }), prev, nowMs: at + 2 * 3600000 });
+    assert.deepEqual(calls, ['t']);
+  });
+
+  test('trade cache: re-fetched when the counter shows more trades than the cached summary', async () => {
+    const summary = { pnl: 10, closedTrades: 1, openAtEntry: 0, unpriceable: [], unpricedTrades: 0 };
+    const prev = { email: 't@x.com', trade_cache: { v: 2, acct_trades: 13, captured_at: iso(at), fetched_at: iso(at + 7 * 3600000), summary } };
+    const { calls, row } = await runOne({ account: acct({ balance: 210, equity: 210, trades: 13, last_trade_at: iso(at + 6000) }), baseline: { ...base, trades_start: 10 }, prev, nowMs: at + 9 * 3600000 });
+    assert.deepEqual(calls, ['t']); // 3 since the start line, 1 cached
+    assert.equal(row.closed_trades, 3);
+  });
+
+  test('no trades_start on the start line: estimated from counter - feed, kept at its lowest, and the count follows the counter', async () => {
+    const t = (id, h) => ({ trade_ticket_id: id, instrument: 'XAUUSD', type: 'BUY', lots: 0.1, open_time: iso(at + h), close_time: iso(at + h + 1000), open_price: 100, close_price: 101, swap: 0 });
+    // Run 1: counter 12, feed shows 2 -> estimate 10.
+    const r1 = await runOne({ account: acct({ balance: 220, equity: 220, trades: 12 }), rows: [t('A', 1000), t('B', 2000)] });
+    assert.equal(r1.row.trades_start_est, 10);
+    assert.equal(r1.row.closed_trades, 2);
+    // Run 2: counter 15 (3 more closed) but the feed lags at 2 -> count 5 from the counter; estimate stays 10.
+    const r2 = await runOne({ account: acct({ balance: 250, equity: 250, trades: 15 }), rows: [t('A', 1000), t('B', 2000)], prev: r1.row, nowMs: at + 4 * 3600000 });
+    assert.equal(r2.row.trades_start_est, 10);
+    assert.equal(r2.row.closed_trades, 5);
+    assert.ok(r2.row.flags.includes('trade_feed_gap'));
+  });
+
+  test('a pending withdrawal: the previous row is kept (prize held) instead of a fake loss, then released', async () => {
+    const t = { trade_ticket_id: 'A', instrument: 'XAUUSD', type: 'BUY', lots: 0.1, open_time: iso(at + 1000), close_time: iso(at + 2000), open_price: 100, close_price: 110, swap: 0 }; // +100
+    const good = await runOne({ account: acct({ balance: 300, equity: 300, trades: 1 }), rows: [t], baseline: { ...base, trades_start: 0 } });
+    assert.equal(good.row.pnl, 100);
+    // Balance already debited 100, totals not yet, ledger row pending: fresh P/L would read 0.
+    const wdr = { login: '1', type: 'withdrawal', status: 'pending', amount: 100, created_at: iso(at + 3 * 3600000 + 60000) };
+    const held = await runOne({ account: acct({ balance: 200, equity: 200, trades: 1 }), rows: [t], baseline: { ...base, trades_start: 0 }, prev: good.row, ledger: [wdr], nowMs: at + 3 * 3600000 + 120000 });
+    assert.equal(held.row.pnl, 100);
+    assert.equal(held.row.return_pct, 50);
+    assert.ok(held.row.flags.includes('flow_pending') && held.row.flow_held);
+    assert.equal(held.row.winner_eligible, false);
+    // Settled: success row and totals updated -> fresh row, no hold, flags gone.
+    const done = await runOne({ account: acct({ balance: 200, equity: 200, trades: 1, total_withdrawal: 100 }), rows: [t], baseline: { ...base, trades_start: 0 }, prev: held.row, ledger: [{ ...wdr, status: 'success' }], nowMs: at + 4 * 3600000 });
+    assert.equal(done.row.pnl, 100);
+    assert.ok(!done.row.flags.includes('flow_pending') && !done.row.flow_held && !done.row.flow_hold_since);
+    // Stuck pending for over 6 h: the fresh row is published (still flagged, prize held).
+    const stuck = await runOne({ account: acct({ balance: 200, equity: 200, trades: 1 }), rows: [t], baseline: { ...base, trades_start: 0 }, prev: { ...held.row, flow_hold_since: iso(at) }, ledger: [wdr], nowMs: at + 7 * 3600000 });
+    assert.ok(!stuck.row.flow_held);
+    assert.equal(stuck.row.pnl, 0);
+    assert.ok(stuck.row.flags.includes('flow_pending'));
+    assert.equal(stuck.row.winner_eligible, false);
+  });
+
+  test('ledger lags the account: P/L uses the account totals (no fake profit), prize blocked by flow_mismatch', async () => {
+    // A 100 deposit is in the balance and the account totals, but not yet in the ledger.
+    const t = { trade_ticket_id: 'A', instrument: 'XAUUSD', type: 'BUY', lots: 0.1, open_time: iso(at + 1000), close_time: iso(at + 2000), open_price: 100, close_price: 101, swap: 0 }; // +10
+    const { row } = await runOne({ account: acct({ balance: 310, equity: 310, trades: 1, total_deposit: 300 }), rows: [t], baseline: { ...base, trades_start: 0 } });
+    assert.equal(row.pnl, 10);
+    assert.equal(row.dep_w, 100);
+    assert.equal(row.net_capital, 300);
+    assert.ok(row.flags.includes('flow_mismatch'));
+    assert.equal(row.winner_eligible, false);
   });
 }
 

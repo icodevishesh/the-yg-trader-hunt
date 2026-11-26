@@ -428,8 +428,11 @@ function createAdminService({ repo, elefin, cfg, trigger, rounds, now = Date.now
         if (!r.ok) throw new AdminError(502, 'elefin_unavailable', `Elefin ${type} lookup failed: ${r.error}`);
         ledger.push(...r.rows);
       }
-      const res = pnlCheck({ account: acct.account, trades: tr.rows, ledger, startLine, nowMs, contractSize: cfg.scoring.contractSize, toleranceUsd: cfg.scoring.pnlToleranceUsd, listFromMs });
       const entry = await repo.getEntry(cohort, t.email);
+      // Start lines frozen before trades_start existed: use the scorer's estimate (jobs/score.js).
+      const noStart = startLine.trades_start === null || startLine.trades_start === undefined;
+      const est = noStart && entry && entry.captured_at === startLine.captured_at && Number.isFinite(entry.trades_start_est) ? entry.trades_start_est : null;
+      const res = pnlCheck({ account: acct.account, trades: tr.rows, ledger, startLine: est === null ? startLine : { ...startLine, trades_start: est }, nowMs, contractSize: cfg.scoring.contractSize, toleranceUsd: cfg.scoring.pnlToleranceUsd, listFromMs });
       return {
         ...res,
         wallet_id: t.wallet_id,
